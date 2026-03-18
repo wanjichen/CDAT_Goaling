@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CDAT MFG Goaling Report</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+
+<body>
+    <div id="toast-container"></div>
+
+    <div class="header">
+        <div class="header-left">
+            <h2><a class="header-home-link" href="{{ url_for('index') }}">CDAT MFG Goaling Report</a></h2>
+            <div class="header-meta-banner">
+                <span class="meta-chip">
+                    <span class="icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M6 2.75a.75.75 0 0 1 .75.75V5h10.5V3.5a.75.75 0 0 1 1.5 0V5h.25A2.75 2.75 0 0 1 21.75 7.75v11.5A2.75 2.75 0 0 1 19 22H5a2.75 2.75 0 0 1-2.75-2.75V7.75A2.75 2.75 0 0 1 5 5h.25V3.5A.75.75 0 0 1 6 2.75Zm13.75 7.5H3.75v9a1.25 1.25 0 0 0 1.25 1.25h14a1.25 1.25 0 0 0 1.25-1.25v-9ZM5 6.5a1.25 1.25 0 0 0-1.25 1.25v1h16v-1A1.25 1.25 0 0 0 19 6.5H5Z" />
+                        </svg>
+                    </span>
+                    <span class="value">{{ current_date }}</span>
+                </span>
+                <span class="meta-chip">
+                    <span class="icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 1.75a10.25 10.25 0 1 0 10.25 10.25A10.262 10.262 0 0 0 12 1.75Zm0 19a8.75 8.75 0 1 1 8.75-8.75A8.76 8.76 0 0 1 12 20.75Zm.75-13.5a.75.75 0 0 0-1.5 0v5a.75.75 0 0 0 .33.62l3.5 2.33a.75.75 0 1 0 .84-1.24l-3.17-2.11Z" />
+                        </svg>
+                    </span>
+                    <span class="value">{{ current_shift or 'N/A' }}</span>
+                </span>
+                <span class="meta-chip">
+                    <span class="icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 12.75a5.25 5.25 0 1 0-5.25-5.25A5.256 5.256 0 0 0 12 12.75Zm0-9a3.75 3.75 0 1 1-3.75 3.75A3.754 3.754 0 0 1 12 3.75Zm0 10.5c-4.79 0-8.25 2.35-8.25 5.58a.75.75 0 0 0 1.5 0c0-2.2 2.68-4.08 6.75-4.08s6.75 1.88 6.75 4.08a.75.75 0 0 0 1.5 0c0-3.23-3.46-5.58-8.25-5.58Z" />
+                        </svg>
+                    </span>
+                    <span class="value">{{ current_user or 'N/A' }}</span>
+                </span>
+
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="tab-link btn-primary" onclick="openModal()">+ Add New Goal</button>
+            <button class="tab-link btn-secondary btn-export" onclick="exportToCSV()"><span class="btn-icon"
+                    aria-hidden="true">&#8681;</span>Export CSV</button>
+            <a class="tab-link btn-secondary btn-issue" href="mailto:wanji.chen@intel.com"
+                onclick="return confirmReportIssue(event)">
+                <span class="btn-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                        <path
+                            d="M5.5 5.25A2.25 2.25 0 0 0 3.25 7.5v9A2.25 2.25 0 0 0 5.5 18.75h13A2.25 2.25 0 0 0 20.75 16.5v-9A2.25 2.25 0 0 0 18.5 5.25h-13Zm-.2 2.28a.75.75 0 0 1 1.02-.27L12 10.4l5.68-3.14a.75.75 0 1 1 .72 1.32l-6.04 3.34a.75.75 0 0 1-.72 0L5.57 8.55a.75.75 0 0 1-.27-1.02Z" />
+                    </svg>
+                </span>Report Issue
+            </a>
+
+        </div>
+    </div>
+
+    <div class="shift-filter-bar" role="region" aria-label="Shift data filter">
+        <div class="shift-filter-controls">
+            <form class="shift-filter-form" method="get" action="{{ url_for('index') }}">
+                <input type="hidden" name="page" value="{{ current_page }}">
+                <label for="shift_select">Shift View</label>
+                <select id="shift_select" name="shift" onchange="this.form.submit()">
+                    {% for shift_item in available_shifts %}
+                    <option value="{{ shift_item }}" {% if selected_shift==shift_item %}selected{% endif %}>{{
+                        shift_item }}</option>
+                    {% else %}
+                    <option value="" selected disabled>No shift data</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <div class="shift-filter-note" role="note" aria-label="Data refresh schedule">
+                * Goaling data refreshes around 08:00/20:00 every shift. Please verify after these times for the current
+                shift.
+            </div>
+            {% if shift_mismatch or not selected_shift %}
+            <div class="shift-filter-status{% if shift_mismatch %} is-warning{% endif %}">
+                {% if shift_mismatch %}
+                Data is not refreshed yet: calendar shift is {{ current_shift }}, but latest DB shift is {{
+                latest_db_shift
+                }}.
+                {% elif not selected_shift %}
+                No shift data is available.
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        <!-- Navigation -->
+        <div class="nav-tabs">
+            <div class="nav-tabs-links">
+                <a href="{{ url_for('index', page='TCB', shift=selected_shift) }}" class="tab-link">TCB</a>
+                <a href="{{ url_for('index', page='HBC-JDC', shift=selected_shift) }}" class="tab-link">HBC/JDC</a>
+                <a href="{{ url_for('index', page='DIA', shift=selected_shift) }}" class="tab-link">DIA</a>
+                <a href="{{ url_for('index', page='TPX', shift=selected_shift) }}" class="tab-link">TPX</a>
+                <a href="{{ url_for('index', page='DFLX', shift=selected_shift) }}" class="tab-link">DFLX</a>
+                <a href="{{ url_for('index', page='EPX', shift=selected_shift) }}" class="tab-link">EPX</a>
+                <a href="{{ url_for('index', page='CURE', shift=selected_shift) }}" class="tab-link">CURE</a>
+                <a href="{{ url_for('index', page='PXVI', shift=selected_shift) }}" class="tab-link">PXVI</a>
+                <a href="{{ url_for('index', page='CTC', shift=selected_shift) }}" class="tab-link">CTC</a>
+                <a href="{{ url_for('index', page='TACS23', shift=selected_shift) }}" class="tab-link">TACS23</a>
+                <a href="{{ url_for('index', page='2D-Xray', shift=selected_shift) }}" class="tab-link">2D-Xray</a>
+                <a href="{{ url_for('index', page='BA', shift=selected_shift) }}" class="tab-link">BA</a>
+                <a href="{{ url_for('wip_lot_status') }}" class="tab-link wip-link">
+                    <span class="tab-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M4.75 3.25a.75.75 0 0 1 .75.75v14.25H20a.75.75 0 0 1 0 1.5H4.75a.75.75 0 0 1-.75-.75V4a.75.75 0 0 1 .75-.75Zm13.77 3.72a.75.75 0 0 1 .01 1.06l-4.1 4.2a.75.75 0 0 1-1.06.01l-2.09-2.03-3.76 4.03a.75.75 0 1 1-1.1-1.02l4.28-4.58a.75.75 0 0 1 1.08-.03l2.1 2.04 3.58-3.67a.75.75 0 0 1 1.06-.01Z" />
+                        </svg>
+                    </span>
+                    <span>Current WIP Status</span>
+                </a>
+            </div>
+            <button class="tab-link copy-tab-btn" onclick="copyTableToClipboard()"
+                title="Copy the visible table rows and columns to your clipboard"
+                aria-label="Copy the visible table rows and columns to your clipboard"><span class="btn-icon"
+                    aria-hidden="true">&#128203;</span>Copy Table</button>
+        </div>
+    </div>
+
+    <!-- Modal Form -->
+    <div id="modalOverlay" onclick="if(event.target==this) closeModal()">
+        <div class="modal-card">
+            <h3>New Factory Goal</h3>
+            <div class="modal-body-scroll" onkeypress="if(event.key === 'Enter') submitNewGoal()">
+                <label>PRODGROUP3 *</label>
+                <input type="text" id="n_pg3" class="form-input" placeholder="e.g. ADLP282">
+                <label>OPERATION *</label>
+                <input type="text" id="n_oper" class="form-input" placeholder="e.g. 2171">
+                <label>GOAL *</label>
+                <input type="number" id="n_goal" class="form-input" placeholder="Must enter a number > 0">
+                <label>REASON *</label>
+                <textarea id="n_reason" class="form-input textarea-reason"></textarea>
+            </div>
+            <div class="modal-footer-actions">
+                <button class="tab-link modal-action-btn" id="btn-modal-submit" onclick="submitNewGoal()">Save
+                    Goal</button>
+                <button class="tab-link modal-action-btn" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Content -->
+    <div class="content">
+        <div class="table-container">
+            <table id="mainTable">
+                <thead>
+                    <!-- Sortable Column Headers -->
+                    <tr>
+                        <th class="sticky-col col-1 sortable" data-col="shift" onclick="sortTable(this, 'shift')">Shift
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sticky-col col-2 sortable" data-col="prodgroup3"
+                            onclick="sortTable(this, 'prodgroup3')">Prodgroup3 <span class="sort-icon">⇕</span></th>
+                        <!-- Shortened text from 'Operation' to 'Oper' so it fits in the tiny 50px column -->
+                        <th class="sticky-col col-3 sortable" data-col="operation"
+                            onclick="sortTable(this, 'operation')">Operation <span class="sort-icon">⇕</span></th>
+                        <th class="sticky-col col-4 sortable" data-col="shift_start_wip"
+                            onclick="sortTable(this, 'shift_start_wip')">Shift Start WIP <span
+                                class="sort-icon">⇕</span></th>
+                        <th class="sortable w-25" data-col="entity" onclick="sortTable(this, 'entity')">
+                            Entity <span class="sort-icon">⇕</span></th>
+                        <th class="sortable w-25" data-col="qtg1" onclick="sortTable(this, 'qtg1')">QTG1
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable w-25" data-col="qps1" onclick="sortTable(this, 'qps1')">QPS1
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable w-25" data-col="mor" onclick="sortTable(this, 'mor')">MOR
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable w-25" data-col="tr" onclick="sortTable(this, 'tr')">TR <span
+                                class="sort-icon">⇕</span></th>
+                        <th class="sortable w-25" data-col="output" onclick="sortTable(this, 'output')">
+                            Output <span class="sort-icon">⇕</span></th>
+                        <th class="sortable highlight-col w-30" data-col="system_goal"
+                            onclick="sortTable(this, 'system_goal')">Goal <span class="sort-icon">⇕</span></th>
+                        <th class="sortable w-45" data-col="subcell_info" onclick="sortTable(this, 'subcell_info')">
+                            {% if current_page == 'DIA' %}Suggest Goal{% elif current_page == 'BA' %}Comment{% else
+                            %}Subcell{% endif %}
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable w-30" data-col="manual_goal" onclick="sortTable(this, 'manual_goal')">
+                            Adjusted Goal <span class="sort-icon">⇕</span></th>
+                        <th class="sortable w-reason" data-col="adjust_reason"
+                            onclick="sortTable(this, 'adjust_reason')">Adjusted Reason <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable w-comment" data-col="miss_comment"
+                            onclick="sortTable(this, 'miss_comment')">Miss Goal Comment <span class="sort-icon">⇕</span>
+                        </th>
+                    </tr>
+
+                    <!-- Filter Row -->
+                    <tr class="filter-row">
+                        <th class="sticky-col col-1" data-col="shift"><input type="text" class="filter-input-field"
+                                data-filter-col="shift" oninput="applyFilters()"></th>
+                        <th class="sticky-col col-2" data-col="prodgroup3"><input type="text" class="filter-input-field"
+                                data-filter-col="prodgroup3" oninput="applyFilters()"></th>
+                        <th class="sticky-col col-3" data-col="operation"><input type="text" class="filter-input-field"
+                                data-filter-col="operation" oninput="applyFilters()"></th>
+                        <th class="sticky-col col-4" data-col="shift_start_wip"><input type="text"
+                                class="filter-input-field" data-filter-col="shift_start_wip" oninput="applyFilters()">
+                        </th>
+                        <th data-col="entity"><input type="text" class="filter-input-field" data-filter-col="entity"
+                                oninput="applyFilters()"></th>
+                        <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1"
+                                oninput="applyFilters()"></th>
+                        <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
+                                oninput="applyFilters()"></th>
+                        <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
+                                oninput="applyFilters()"></th>
+                        <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
+                                oninput="applyFilters()"></th>
+                        <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output"
+                                oninput="applyFilters()"></th>
+                        <th class="highlight-col" data-col="system_goal"><input type="text" class="filter-input-field"
+                                data-filter-col="system_goal" oninput="applyFilters()"></th>
+                        <th data-col="subcell_info"><input type="text" class="filter-input-field"
+                                data-filter-col="subcell_info" oninput="applyFilters()"></th>
+                        <th data-col="manual_goal"><input type="text" class="filter-input-field"
+                                data-filter-col="manual_goal" oninput="applyFilters()"></th>
+                        <th data-col="adjust_reason"><input type="text" class="filter-input-field"
+                                data-filter-col="adjust_reason" oninput="applyFilters()"></th>
+                        <th data-col="miss_comment"><input type="text" class="filter-input-field"
+                                data-filter-col="miss_comment" oninput="applyFilters()"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in reports %}
+                    <tr data-id="{{ r.id }}">
+                        <td class="sticky-col col-1" data-col="shift">{{ r.shift or '' }}</td>
+                        <td class="sticky-col col-2" data-col="prodgroup3">{{ r.prodgroup3 or '' }}</td>
+                        <td class="sticky-col col-3" data-col="operation">{{ ((r.operation|string)[:-2]) if (r.operation
+                            is not none and (r.operation|string).endswith('.0')) else (r.operation if r.operation is not
+                            none else '') }}</td>
+                        <td class="sticky-col col-4" data-col="shift_start_wip">{{ (r.shift_start_wip | round(3)) if
+                            r.shift_start_wip else '' }}</td>
+                        <td data-col="entity">{{ r.entity or '' }}</td>
+                        <td data-col="qtg1">{{ (r.qtg1 | round(3)) if r.qtg1 else '' }}</td>
+                        <td data-col="qps1">{{ (r.qps1 | round(3)) if r.qps1 else '' }}</td>
+                        <td class="mor-val" data-col="mor">{{ (r.mor | round(3)) if r.mor else '' }}</td>
+                        <td class="tr-val" data-col="tr">{{ (r.tr | round(3)) if r.tr else '' }}</td>
+                        <td data-col="output">{{ (r.output | round(3)) if r.output else '' }}</td>
+                        <td class="highlight-col" data-col="system_goal">{{
+                            (r.system_suggested_goal | round(3)) if r.system_suggested_goal else '' }}</td>
+
+                        <td data-col="subcell_info" title="{{ r.subcell_info or '' }}">{{ r.subcell_info or '' }}</td>
+
+                        <td class="cell-pad-4" data-col="manual_goal"
+                            title="Adjusted by: {{ r.goal_adjusted_by or 'N/A' }}&#10;At: {{ r.goal_adjusted_at.strftime('%Y-%m-%d %H:%M:%S') if r.goal_adjusted_at else 'N/A' }}">
+                            <input type="number"
+                                class="table-input goal-input {% if (r.manual_adjusted_goal and r.manual_adjusted_goal > 0) or (r.manual_adjusted_goal == 0 and r.goal_adjusted_at) %}is-intervened{% endif %}"
+                                value="{{ (r.manual_adjusted_goal | round(3)) if (r.manual_adjusted_goal and r.manual_adjusted_goal > 0) or (r.manual_adjusted_goal == 0 and r.goal_adjusted_at) else '' }}"
+                                data-original="{{ (r.manual_adjusted_goal | round(3)) if (r.manual_adjusted_goal and r.manual_adjusted_goal > 0) or (r.manual_adjusted_goal == 0 and r.goal_adjusted_at) else '' }}"
+                                oninput="handleInput(this, 'goal')">
+                        </td>
+
+                        <td class="cell-pad-4" data-col="adjust_reason"
+                            title="Adjusted by: {{ r.goal_adjusted_by or 'N/A' }}&#10;At: {{ r.goal_adjusted_at.strftime('%Y-%m-%d %H:%M:%S') if r.goal_adjusted_at else 'N/A' }}">
+                            <div class="action-group" id="group-goal-{{ r.id }}">
+                                <input type="text" class="table-input reason-input"
+                                    value="{{ r.goal_adjusted_reason or '' }}"
+                                    data-original="{{ r.goal_adjusted_reason or '' }}"
+                                    oninput="handleInput(this, 'goal')">
+                                <button class="btn-mini btn-save" onclick="saveRow(this, 'goal')">Save</button>
+                                <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'goal')">✖</button>
+                            </div>
+                        </td>
+
+                        <td class="cell-pad-4" data-col="miss_comment"
+                            title="Comment by: {{ r.miss_goal_comment_updated_by or 'N/A' }}&#10;At: {{ r.miss_goal_comment_updated_at.strftime('%Y-%m-%d %H:%M:%S') if r.miss_goal_comment_updated_at else 'N/A' }}">
+                            <div class="action-group" id="group-comment-{{ r.id }}">
+                                <input type="text" class="table-input comment-input"
+                                    value="{{ r.miss_goal_comment or '' }}"
+                                    data-original="{{ r.miss_goal_comment or '' }}"
+                                    oninput="handleInput(this, 'comment')">
+                                <button class="btn-mini btn-save" onclick="saveRow(this, 'comment')">Save</button>
+                                <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'comment')">✖</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr class="empty-state-row">
+                        <td colspan="14" class="empty-state-cell">
+                            No records found for this view.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <!-- Add Total Footer Here -->
+                <tfoot>
+                    <tr>
+                        <td class="col-1 align-center">Total</td>
+                        <td class="col-2"></td>
+                        <td class="col-3"></td>
+                        <td id="total-shift_start_wip" class="col-4" data-col="shift_start_wip">0</td>
+                        <td data-col="entity"></td>
+                        <td data-col="qtg1"></td>
+                        <td data-col="qps1"></td>
+                        <td data-col="mor"></td>
+                        <td id="total-tr" data-col="tr">0</td>
+                        <td id="total-output" data-col="output">0</td>
+                        <td id="total-system_goal" class="highlight-col" data-col="system_goal">0</td>
+                        <td data-col="subcell_info"></td>
+
+                        <td id="total-manual_goal" data-col="manual_goal">0</td>
+                        <td data-col="adjust_reason"></td>
+                        <td data-col="miss_comment"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+</body>
+
+</html>
