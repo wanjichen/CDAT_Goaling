@@ -421,3 +421,13 @@ Exception: WSGI_HANDLER env var must be set
 2026-03-18 15:24:42.081729: wfastcgi.py 3.0.0 initializing
 2026-03-18 15:24:42.737985: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
 2026-03-18 15:24:42.737985: wfastcgi.py 3.0.0 initialized
+2026-03-18 18:00:59.734910: wfastcgi.py 3.0.0 started
+2026-03-18 18:00:59.735911: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-18 18:00:59.736909: wfastcgi.py 3.0.0 initializing
+2026-03-18 18:01:00.618130: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-18 18:01:00.619131: wfastcgi.py 3.0.0 initialized
+2026-03-18 18:02:16.984521: wfastcgi.py 3.0.0 started
+2026-03-18 18:02:16.984521: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-18 18:02:16.984521: wfastcgi.py 3.0.0 initializing
+2026-03-18 18:02:17.640772: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-18 18:02:17.640772: wfastcgi.py 3.0.0 initialized

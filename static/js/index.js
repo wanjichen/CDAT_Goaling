@@ -63,8 +63,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // --- FLEXIBLE COLUMN VISIBILITY ---
     const columnVisibilityConfig = {
         'entity': ['TCB', 'HBC-JDC', 'DIA', 'BA'],
-        'qtg1': ['EPX'],
-        'qps1': ['EPX'],
         'subcell_info': ['TCB', 'DIA', 'BA']
     };
 
