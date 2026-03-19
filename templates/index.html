@@ -108,15 +108,6 @@
                 <a href="{{ url_for('index', page='TACS23', shift=selected_shift) }}" class="tab-link">TACS23</a>
                 <a href="{{ url_for('index', page='2D-Xray', shift=selected_shift) }}" class="tab-link">2D-Xray</a>
                 <a href="{{ url_for('index', page='BA', shift=selected_shift) }}" class="tab-link">BA</a>
-                <a href="{{ url_for('wip_lot_status') }}" class="tab-link wip-link">
-                    <span class="tab-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
-                            <path
-                                d="M4.75 3.25a.75.75 0 0 1 .75.75v14.25H20a.75.75 0 0 1 0 1.5H4.75a.75.75 0 0 1-.75-.75V4a.75.75 0 0 1 .75-.75Zm13.77 3.72a.75.75 0 0 1 .01 1.06l-4.1 4.2a.75.75 0 0 1-1.06.01l-2.09-2.03-3.76 4.03a.75.75 0 1 1-1.1-1.02l4.28-4.58a.75.75 0 0 1 1.08-.03l2.1 2.04 3.58-3.67a.75.75 0 0 1 1.06-.01Z" />
-                        </svg>
-                    </span>
-                    <span>Current WIP Status</span>
-                </a>
             </div>
             <button class="tab-link copy-tab-btn" onclick="copyTableToClipboard()"
                 title="Copy the visible table rows and columns to your clipboard"

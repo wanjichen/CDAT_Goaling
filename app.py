@@ -74,21 +74,12 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = _engine_opts
 db = SQLAlchemy(app)
 
 
-_WIP_CSV_CACHE = {
-    "path": None,
-    "mtime": None,
-    "rows": []
-}
-_WIP_CSV_CACHE_LOCK = Lock()
-
 _CALENDAR_CACHE = {"mtime": None, "shift": None, "year": None}
 _CALENDAR_CACHE_LOCK = Lock()
 
 _SHIFTS_CACHE: dict = {}
 _SHIFTS_CACHE_LOCK = Lock()
 _SHIFTS_CACHE_TTL = 60  # seconds
-WIP_LOT_STATUS_CSV_PATH = os.path.join(
-    app.root_path, 'data', 'WIP_LOT_STATUS.csv')
 
 IDENTITY_HEADER_KEYS = [
     'X-Forwarded-User',
@@ -225,8 +216,6 @@ def debug_identity():
 
 if ENABLE_IDENTITY_DEBUG_ENDPOINT:
     app.add_url_rule('/api/debug-identity', view_func=debug_identity)
-    app.add_url_rule('/CDAT_Goaling/api/debug-identity',
-                     view_func=debug_identity)
 
 
 def get_request_payload():
@@ -363,66 +352,11 @@ def persist_report_version(old_report, **updates):
     return new_entry
 
 
-def load_wip_lot_status_rows(csv_path):
-    try:
-        current_mtime = os.path.getmtime(csv_path)
-    except OSError:
-        return []
-
-    with _WIP_CSV_CACHE_LOCK:
-        if (
-            _WIP_CSV_CACHE["path"] == csv_path
-            and _WIP_CSV_CACHE["mtime"] == current_mtime
-        ):
-            return _WIP_CSV_CACHE["rows"]
-
-    rows = []
-    with open(csv_path, mode='r', encoding='utf-8-sig', newline='') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            raw_wip = (row.get('CURRENT_WIP') or '').strip()
-            if raw_wip == '':
-                continue
-
-            try:
-                current_wip = float(raw_wip)
-            except ValueError:
-                continue
-
-            rows.append({
-                'prodgroup3': (row.get('PRODGROUP3') or '').strip(),
-                'operation': (row.get('OPERATION') or '').strip(),
-                'oper_short_desc': (row.get('OPER_SHORT_DESC') or '').strip(),
-                'current_wip': current_wip
-            })
-
-    with _WIP_CSV_CACHE_LOCK:
-        _WIP_CSV_CACHE["path"] = csv_path
-        _WIP_CSV_CACHE["mtime"] = current_mtime
-        _WIP_CSV_CACHE["rows"] = rows
-
-    return rows
-
-
 @app.route('/')
 def root_redirect():
     # If this app is hosted under an IIS Application (with URL_PREFIX), the app root is already /CDAT_Goaling.
     # Serve the index directly at the app root to avoid double-prefix URLs like /CDAT_Goaling/CDAT_Goaling.
     return index()
-
-
-# When this Flask app is hosted as an IIS Application at /CDAT_Goaling, some links/bookmarks
-# can accidentally double the prefix (e.g. /CDAT_Goaling/CDAT_Goaling). Canonicalize it.
-@app.route('/CDAT_Goaling/CDAT_Goaling')
-def doubled_prefix_redirect():
-    return redirect('/CDAT_Goaling', code=302)
-
-
-@app.route('/CDAT_Goaling')
-def legacy_prefix_redirect():
-    # When hosted under IIS Application at /CDAT_Goaling, this path can accidentally become
-    # /CDAT_Goaling/CDAT_Goaling (double prefix). Redirect to the app root instead.
-    return redirect('/', code=302)
 
 
 @app.route('/page=<page_name>')
@@ -438,14 +372,9 @@ def legacy_page_style_redirect(page_name='TCB'):
 @app.route('/dashboard')
 @app.route('/dashboard/page=<page_name>')
 @app.route('/index.html')
-@app.route('/CDAT_Goaling/index')
-@app.route('/CDAT_Goaling/home')
-@app.route('/CDAT_Goaling/dashboard')
-@app.route('/CDAT_Goaling/index.html')
-@app.route('/CDAT_Goaling/page=<page_name>')
 def index(page_name='TCB'):
     # Canonicalize legacy path-style URLs to query-style URLs.
-    if request.path.startswith('/CDAT_Goaling/page=') or request.path.startswith('/index/page=') or request.path.startswith('/home/page='):
+    if request.path.startswith('/index/page=') or request.path.startswith('/home/page='):
         return redirect(url_for('index', page=page_name), code=302)
 
     # 1. Get the friendly page name from URL
@@ -574,28 +503,6 @@ def update_comment():
     except Exception as e:
         db.session.rollback()
         return json_error(str(e))
-
-
-@app.route('/wip-lot-status')
-@app.route('/CDAT_Goaling/wip-lot-status')
-def wip_lot_status():
-    csv_path = WIP_LOT_STATUS_CSV_PATH
-
-    if not os.path.exists(csv_path):
-        return render_template(
-            'wip_lot_status.html',
-            rows=[],
-            csv_found=False
-        )
-
-    rows = load_wip_lot_status_rows(csv_path)
-
-    return render_template(
-        'wip_lot_status.html',
-        rows=rows,
-        csv_found=True
-    )
-
 
 if __name__ == '__main__':
     app.run(
