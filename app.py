@@ -240,6 +240,40 @@ def json_error(message, status_code=400):
     return jsonify({"status": "error", "message": message}), status_code
 
 
+def report_to_dict(r: Report):
+    return {
+        "id": r.id,
+        "year": r.year,
+        "shift": r.shift,
+        "prodgroup3": r.prodgroup3,
+        "operation": r.operation,
+        "entity": r.entity,
+        "qtg1": r.qtg1,
+        "qps1": r.qps1,
+        "mor": r.mor,
+        "tr": r.tr,
+        "output": r.output,
+        "shift_start_wip": r.shift_start_wip,
+        "system_suggested_goal": r.system_suggested_goal,
+        "subcell_info": r.subcell_info,
+        "manual_adjusted_goal": r.manual_adjusted_goal,
+        "goal_adjusted_reason": r.goal_adjusted_reason,
+        "miss_goal_comment": r.miss_goal_comment,
+        "goal_adjusted_by": r.goal_adjusted_by,
+        "goal_adjusted_at": r.goal_adjusted_at.strftime('%Y-%m-%d %H:%M:%S') if r.goal_adjusted_at else None,
+        "miss_goal_comment_updated_by": r.miss_goal_comment_updated_by,
+        "miss_goal_comment_updated_at": r.miss_goal_comment_updated_at.strftime('%Y-%m-%d %H:%M:%S') if r.miss_goal_comment_updated_at else None,
+    }
+
+
+@app.route('/api/report/<int:report_id>')
+def get_report(report_id: int):
+    r = db.session.get(Report, report_id)
+    if not r:
+        return json_error('Record not found', 404)
+    return json_success(report=report_to_dict(r))
+
+
 def _read_calendar_file():
     """Read calendar.csv with mtime-based caching to avoid disk I/O on every request."""
     calendar_path = os.path.join(
@@ -431,11 +465,14 @@ def add_new_goal():
     user = get_current_user()
     try:
         default_year, default_shift = get_current_year_and_shift_from_calendar()
+        raw_entity = (data.get('entity') or '').strip()
+        entity = raw_entity if raw_entity else None
         new_entry = Report(
             year=default_year,            # 使用最新记录的年份
             shift=default_shift,          # 使用最新记录的班次
             prodgroup3=data.get('prodgroup3'),
             operation=data.get('operation'),
+            entity=entity,
             manual_adjusted_goal=float(data.get('goal') or 0),
             goal_adjusted_reason=data.get('reason'),
             goal_adjusted_at=datetime.now(),

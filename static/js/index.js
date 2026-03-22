@@ -75,9 +75,38 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // --- DEFAULT SORT (ASC): ENTITY if visible, otherwise PRODGROUP3 ---
+    applyDefaultSort();
+
     // Calculate totals on initial page load
     calculateTotals();
 });
+
+function applyDefaultSort() {
+    const table = document.getElementById('mainTable');
+    if (!table) return;
+
+    const thead = table.querySelector('thead tr:first-child');
+    if (!thead) return;
+
+    const entityTh = thead.querySelector('th[data-col="entity"]');
+    const pg3Th = thead.querySelector('th[data-col="prodgroup3"]');
+    const chosen = (entityTh && entityTh.style.display !== 'none') ? entityTh : pg3Th;
+    if (!chosen) return;
+
+    const colName = chosen.getAttribute('data-col');
+    forceSortAscending(chosen, colName);
+}
+
+function forceSortAscending(thElement, colName) {
+    // sortTable() toggles based on data-sort, so clear state first to guarantee ASC.
+    thElement.setAttribute('data-sort', '');
+    sortTable(thElement, colName);
+    if (thElement.getAttribute('data-sort') !== 'asc') {
+        // Safety: if anything weird happened, click-sort one more time.
+        sortTable(thElement, colName);
+    }
+}
 
 // --- Calculate Totals Function ---
 function calculateTotals() {
@@ -458,6 +487,7 @@ async function submitNewGoal() {
     const originalText = btn.innerText;
     const pg3 = document.getElementById('n_pg3').value;
     const oper = document.getElementById('n_oper').value;
+    const entity = (document.getElementById('n_entity')?.value || '').trim();
     const goal = document.getElementById('n_goal').value;
 
     if (!pg3 || !oper || !goal) { showToast('Please fill in all required fields (*)', 'error'); return; }
@@ -465,13 +495,19 @@ async function submitNewGoal() {
     btn.innerText = '...'; btn.disabled = true;
 
     const data = { prodgroup3: pg3, operation: oper, goal: goal, reason: document.getElementById('n_reason').value };
+    if (entity) {
+        data.entity = entity;
+    }
 
     try {
     const res = await fetch(apiUrl('/api/add-new-goal'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         const json = await res.json();
         if (json.status === 'success') {
             showToast('New Goal Added!', 'success');
-            setTimeout(() => location.reload(), 800);
+            closeModal();
+            if (json.new_id) {
+                await insertNewGoalRowIntoTable(json.new_id);
+            }
         } else {
             showToast('Error: ' + json.message, 'error');
             btn.innerText = originalText; btn.disabled = false;
@@ -480,6 +516,116 @@ async function submitNewGoal() {
         showToast('Submission failed', 'error');
         btn.innerText = originalText; btn.disabled = false;
     }
+}
+
+async function insertNewGoalRowIntoTable(newId) {
+    const table = document.getElementById('mainTable');
+    const tbody = table ? table.querySelector('tbody') : null;
+    if (!tbody) return;
+
+    try {
+        const res = await fetch(apiUrl(`/api/report/${newId}`));
+        const json = await res.json();
+        if (!res.ok || json.status !== 'success' || !json.report) {
+            return;
+        }
+
+        const r = json.report;
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-id', r.id);
+
+        const cell = (col, html, extraClass = '') => {
+            const td = document.createElement('td');
+            if (extraClass) td.className = extraClass;
+            td.setAttribute('data-col', col);
+            td.innerHTML = html;
+            return td;
+        };
+
+        // Keep styling consistent with existing rows.
+        tr.appendChild(cell('shift', escapeHtml(r.shift || ''), 'sticky-col col-1'));
+        tr.appendChild(cell('prodgroup3', escapeHtml(r.prodgroup3 || ''), 'sticky-col col-2'));
+        tr.appendChild(cell('operation', escapeHtml(r.operation || ''), 'sticky-col col-3'));
+        tr.appendChild(cell('shift_start_wip', formatNum(r.shift_start_wip), 'sticky-col col-4'));
+        tr.appendChild(cell('entity', escapeHtml(r.entity || '')));
+        tr.appendChild(cell('qtg1', formatNum(r.qtg1)));
+        tr.appendChild(cell('qps1', formatNum(r.qps1)));
+        tr.appendChild(cell('mor', formatNum(r.mor), 'mor-val'));
+        tr.appendChild(cell('tr', formatNum(r.tr), 'tr-val'));
+        tr.appendChild(cell('output', formatNum(r.output)));
+        tr.appendChild(cell('system_goal', formatNum(r.system_suggested_goal), 'highlight-col'));
+
+        // subcell_info column changes header text based on page, but underlying data-col stays subcell_info.
+        tr.appendChild(cell('subcell_info', escapeHtml(r.subcell_info || '')));
+
+        // manual_goal: use the same input class so existing JS handlers work.
+        tr.appendChild(cell(
+            'manual_goal',
+            `<input type="number" class="table-input goal-input" value="" data-original="" oninput="handleInput(this, 'goal')">`,
+            'cell-pad-4'
+        ));
+
+        tr.appendChild(cell(
+            'adjust_reason',
+            `<div class="action-group" id="group-goal-${r.id}">
+                <input type="text" class="table-input reason-input" value="" data-original="" oninput="handleInput(this, 'goal')">
+                <button class="btn-mini btn-save" onclick="saveRow(this, 'goal')">Save</button>
+                <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'goal')">✖</button>
+            </div>`,
+            'cell-pad-4'
+        ));
+
+        tr.appendChild(cell(
+            'miss_comment',
+            `<div class="action-group" id="group-comment-${r.id}">
+                <input type="text" class="table-input comment-input" value="" data-original="" oninput="handleInput(this, 'comment')">
+                <button class="btn-mini btn-save" onclick="saveRow(this, 'comment')">Save</button>
+                <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'comment')">✖</button>
+            </div>`,
+            'cell-pad-4'
+        ));
+
+        // Remove empty-state row if present.
+        const emptyRow = tbody.querySelector('tr.empty-state-row');
+        if (emptyRow) emptyRow.remove();
+
+        tbody.prepend(tr);
+
+        // Respect column visibility rules (hide entity / subcell columns depending on page).
+        const activePage = getCurrentPageFromUrl();
+        const columnVisibilityConfig = {
+            'entity': ['TCB', 'HBC-JDC', 'DIA', 'BA'],
+            'subcell_info': ['TCB', 'DIA', 'BA']
+        };
+        for (const [colName, allowedPages] of Object.entries(columnVisibilityConfig)) {
+            if (!allowedPages.includes(activePage)) {
+                const els = tr.querySelectorAll(`[data-col="${colName}"]`);
+                els.forEach(el => el.style.display = 'none');
+            }
+        }
+
+        // Recalculate totals.
+        calculateTotals();
+    } catch (e) {
+        // If anything fails, we just leave the UI as-is (goal is already saved server-side).
+    }
+}
+
+function formatNum(v) {
+    if (v === null || v === undefined || v === '') return '';
+    const n = Number(v);
+    if (Number.isNaN(n)) return '';
+    // Match server-side rounding in template (3 decimals).
+    return parseFloat(n.toFixed(3)).toString();
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 function showToast(msg, type = 'success') {
