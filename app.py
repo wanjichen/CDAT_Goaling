@@ -5,7 +5,7 @@ import re
 import time
 from threading import Lock
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import desc, inspect
 
@@ -42,10 +42,10 @@ def env_flag(name, default='false'):
     return os.getenv(name, default).lower() in {'1', 'true', 'yes', 'on'}
 
 
-# --- 数据库配置 (根据您的本地/开发环境填写) ---
+# --- Database configuration ---
 db_user = os.getenv("GOALING_DB_USER", "atmoperationdatastor_rw")
 db_password = urllib.parse.quote_plus(
-    os.getenv("GOALING_DB_PASSWORD", "r1xItKhOzS1ZpM2")
+    os.getenv("GOALING_DB_PASSWORD", "")
 )
 db_host = os.getenv("GOALING_DB_HOST", "postgres5109-lb-pg-in.iglb.intel.com")
 db_port = os.getenv("GOALING_DB_PORT", "5433")
@@ -72,6 +72,24 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = _engine_opts
 
 
 db = SQLAlchemy(app)
+
+
+@app.route('/download/wip-goal-reckon-raw')
+def download_wip_goal_reckon_raw():
+    """Download the raw validation CSV used for data checking."""
+    csv_path = os.path.join(app.root_path, 'data', 'wip_goal_reckon_raw.csv')
+    if not os.path.exists(csv_path):
+        return json_error('CSV file not found', 404)
+
+    # Use conditional=False to avoid IIS/proxy caching oddities for a frequently-updated file.
+    return send_file(
+        csv_path,
+        as_attachment=True,
+        download_name='wip_goal_reckon_raw.csv',
+        mimetype='text/csv',
+        conditional=False,
+        max_age=0,
+    )
 
 
 _CALENDAR_CACHE = {"mtime": None, "shift": None, "year": None}
@@ -399,16 +417,11 @@ def legacy_page_style_redirect(page_name='TCB'):
     return redirect(url_for('index', page=page_name), code=302)
 
 
-@app.route('/index')
 @app.route('/index/page=<page_name>')
-@app.route('/home')
-@app.route('/home/page=<page_name>')
-@app.route('/dashboard')
-@app.route('/dashboard/page=<page_name>')
 @app.route('/index.html')
 def index(page_name='TCB'):
     # Canonicalize legacy path-style URLs to query-style URLs.
-    if request.path.startswith('/index/page=') or request.path.startswith('/home/page='):
+    if request.path.startswith('/index/page='):
         return redirect(url_for('index', page=page_name), code=302)
 
     # 1. Get the friendly page name from URL

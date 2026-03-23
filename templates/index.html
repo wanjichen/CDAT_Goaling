@@ -78,13 +78,13 @@
                 </select>
             </form>
             <div class="shift-filter-note" role="note" aria-label="Data refresh schedule">
-                * Goaling data refreshes around 08:00/20:00 every shift. Please verify after these times for the current
+                * Goaling data refreshes around 07:40/19:40 every shift. Please verify after these times for the current
                 shift.
             </div>
             {% if shift_mismatch or not selected_shift %}
             <div class="shift-filter-status{% if shift_mismatch %} is-warning{% endif %}">
                 {% if shift_mismatch %}
-                Data is not refreshed yet: calendar shift is {{ current_shift }}, but latest DB shift is {{
+                Data is not refreshed yet: calendar shift is {{ current_shift }}, but latest shift available is {{
                 latest_db_shift
                 }}.
                 {% elif not selected_shift %}
@@ -113,6 +113,10 @@
                 title="Copy the visible table rows and columns to your clipboard"
                 aria-label="Copy the visible table rows and columns to your clipboard"><span class="btn-icon"
                     aria-hidden="true">&#128203;</span>Copy Table</button>
+            <a class="tab-link copy-tab-btn" href="{{ url_for('download_wip_goal_reckon_raw') }}"
+                title="Download wip_goal_reckon_raw.csv" aria-label="Download raw validation CSV">
+                <span class="btn-icon" aria-hidden="true">&#128229;</span>Download Raw Data
+            </a>
         </div>
     </div>
 

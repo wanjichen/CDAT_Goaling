@@ -184,7 +184,6 @@ function exportToCSV() {
         return;
     }
 
-    const pageName = getCurrentPageFromUrl();
     const csvContent = [];
 
     // 2. Extract and format Headers
@@ -213,6 +212,7 @@ function exportToCSV() {
 
     const dateStr = new Date().toISOString().split('T')[0];
     link.setAttribute("href", url);
+    const pageName = getCurrentPageFromUrl();
     link.setAttribute("download", `CDAT_Goaling_${pageName}_${dateStr}.csv`);
     link.style.visibility = 'hidden';
 

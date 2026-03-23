@@ -1482,3 +1482,182 @@ Exception: WSGI_HANDLER env var must be set
 2026-03-22 14:52:44.318022: wfastcgi.py 3.0.0 initializing
 2026-03-22 14:52:44.998202: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
 2026-03-22 14:52:44.998202: wfastcgi.py 3.0.0 initialized
+2026-03-22 20:11:16.276344: wfastcgi.py 3.0.0 started
+2026-03-22 20:11:16.276344: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-22 20:11:16.276344: wfastcgi.py 3.0.0 initializing
+2026-03-22 20:11:16.948226: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-22 20:11:16.948226: wfastcgi.py 3.0.0 initialized
+2026-03-22 20:12:55.329280: wfastcgi.py 3.0.0 started
+2026-03-22 20:12:55.329280: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-22 20:12:55.329280: wfastcgi.py 3.0.0 initializing
+2026-03-22 20:12:55.969916: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-22 20:12:55.969916: wfastcgi.py 3.0.0 initialized
+2026-03-22 20:22:05.237870: wfastcgi.py 3.0.0 started
+2026-03-22 20:22:05.237870: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-22 20:22:05.237870: wfastcgi.py 3.0.0 initializing
+2026-03-22 20:22:05.894127: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-22 20:22:05.894127: wfastcgi.py 3.0.0 initialized
+2026-03-22 20:22:10.960496: wfastcgi.py 3.0.0 started
+2026-03-22 20:22:10.960496: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-22 20:22:10.960496: wfastcgi.py 3.0.0 initializing
+2026-03-22 20:22:11.616755: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-22 20:22:11.616755: wfastcgi.py 3.0.0 initialized
+2026-03-22 21:48:24.726577: wfastcgi.py 3.0.0 started
+2026-03-22 21:48:24.726577: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-22 21:48:24.726577: wfastcgi.py 3.0.0 initializing
+2026-03-22 21:48:25.382840: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-22 21:48:25.382840: wfastcgi.py 3.0.0 initialized
+2026-03-22 21:55:36.983757: wfastcgi.py 3.0.0 started
+2026-03-22 21:55:36.983757: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-22 21:55:36.983757: wfastcgi.py 3.0.0 initializing
+2026-03-22 21:55:37.671261: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-22 21:55:37.671261: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:06:38.704521: wfastcgi.py 3.0.0 started
+2026-03-23 08:06:38.720146: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:06:38.720146: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:06:40.376406: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:06:40.376406: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:15:32.927580: wfastcgi.py 3.0.0 started
+2026-03-23 08:15:32.928579: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:15:32.928579: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:15:33.622149: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:15:33.623153: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:17:04.496056: wfastcgi.py exiting because app.py has changed, matching .*((\.py)|(\.config))$
+2026-03-23 08:17:04.496056: Running on_exit tasks
+2026-03-23 08:17:07.261354: wfastcgi.py 3.0.0 started
+2026-03-23 08:17:07.261354: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:17:07.261354: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:17:08.026980: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:17:08.026980: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:17:54.679340: wfastcgi.py 3.0.0 started
+2026-03-23 08:17:54.680340: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:17:54.680340: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:17:55.321302: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:17:55.322300: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:19:40.951931: wfastcgi.py exiting because app.py has changed, matching .*((\.py)|(\.config))$
+2026-03-23 08:19:40.951931: wfastcgi.py exiting because app.py has changed, matching .*((\.py)|(\.config))$
+2026-03-23 08:19:40.952969: Running on_exit tasks
+2026-03-23 08:19:40.952969: Running on_exit tasks
+2026-03-23 08:19:54.072301: wfastcgi.py 3.0.0 started
+2026-03-23 08:19:54.072301: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:19:54.072301: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:19:54.826895: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:19:54.826895: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:20:07.426548: wfastcgi.py exiting because app.py has changed, matching .*((\.py)|(\.config))$
+2026-03-23 08:20:07.426548: Running on_exit tasks
+2026-03-23 08:20:09.359482: wfastcgi.py 3.0.0 started
+2026-03-23 08:20:09.360481: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:20:09.360481: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:20:09.375482: Error occurred while reading WSGI handler:
+
+Traceback (most recent call last):
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 791, in main
+    env, handler = read_wsgi_handler(response.physical_path)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 633, in read_wsgi_handler
+    handler = get_wsgi_handler(os.getenv("WSGI_HANDLER"))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 600, in get_wsgi_handler
+    handler = __import__(module_name, fromlist=[name_list[0][0]])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\app.py", line 64
+    _engine_opts = {
+                   ^
+SyntaxError: '{' was never closed
+
+
+StdOut: 
+
+StdErr: 
+2026-03-23 08:20:09.375482: Unhandled exception in wfastcgi.py: Traceback (most recent call last):
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 791, in main
+    env, handler = read_wsgi_handler(response.physical_path)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 633, in read_wsgi_handler
+    handler = get_wsgi_handler(os.getenv("WSGI_HANDLER"))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 600, in get_wsgi_handler
+    handler = __import__(module_name, fromlist=[name_list[0][0]])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\app.py", line 64
+    _engine_opts = {
+                   ^
+SyntaxError: '{' was never closed
+2026-03-23 08:20:09.376482: Running on_exit tasks
+2026-03-23 08:20:09.376482: wfastcgi.py 3.0.0 closed
+2026-03-23 08:20:12.345061: wfastcgi.py 3.0.0 started
+2026-03-23 08:20:12.345061: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:20:12.346060: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:20:12.361985: Error occurred while reading WSGI handler:
+
+Traceback (most recent call last):
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 791, in main
+    env, handler = read_wsgi_handler(response.physical_path)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 633, in read_wsgi_handler
+    handler = get_wsgi_handler(os.getenv("WSGI_HANDLER"))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 600, in get_wsgi_handler
+    handler = __import__(module_name, fromlist=[name_list[0][0]])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\app.py", line 64
+    _engine_opts = {
+                   ^
+SyntaxError: '{' was never closed
+
+
+StdOut: 
+
+StdErr: 
+2026-03-23 08:20:12.363985: Unhandled exception in wfastcgi.py: Traceback (most recent call last):
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 791, in main
+    env, handler = read_wsgi_handler(response.physical_path)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 633, in read_wsgi_handler
+    handler = get_wsgi_handler(os.getenv("WSGI_HANDLER"))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\python311\Lib\site-packages\wfastcgi.py", line 600, in get_wsgi_handler
+    handler = __import__(module_name, fromlist=[name_list[0][0]])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\app.py", line 64
+    _engine_opts = {
+                   ^
+SyntaxError: '{' was never closed
+2026-03-23 08:20:12.363985: Running on_exit tasks
+2026-03-23 08:20:12.364985: wfastcgi.py 3.0.0 closed
+2026-03-23 08:20:20.243368: wfastcgi.py 3.0.0 started
+2026-03-23 08:20:20.244368: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:20:20.245369: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:20:20.921863: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:20:20.922864: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:22:02.754974: wfastcgi.py exiting because app.py has changed, matching .*((\.py)|(\.config))$
+2026-03-23 08:22:02.755974: Running on_exit tasks
+2026-03-23 08:31:34.526795: wfastcgi.py 3.0.0 started
+2026-03-23 08:31:34.527795: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:31:34.528796: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:31:35.376532: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:31:35.377533: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:31:57.577061: wfastcgi.py exiting because app.py has changed, matching .*((\.py)|(\.config))$
+2026-03-23 08:31:57.578390: Running on_exit tasks
+2026-03-23 08:31:59.876230: wfastcgi.py 3.0.0 started
+2026-03-23 08:31:59.876230: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:31:59.876230: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:32:00.594990: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:32:00.594990: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:40:25.442187: wfastcgi.py exiting because app.py has changed, matching .*((\.py)|(\.config))$
+2026-03-23 08:40:25.447199: Running on_exit tasks
+2026-03-23 08:41:50.476094: wfastcgi.py 3.0.0 started
+2026-03-23 08:41:50.476094: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:41:50.476094: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:41:51.132348: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:41:51.132348: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:45:54.539120: wfastcgi.py 3.0.0 started
+2026-03-23 08:45:54.540119: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:45:54.540119: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:45:55.221393: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:45:55.222392: wfastcgi.py 3.0.0 initialized
+2026-03-23 08:51:30.212307: wfastcgi.py 3.0.0 started
+2026-03-23 08:51:30.212307: Python version: 3.11.8 (tags/v3.11.8:db85d51, Feb  6 2024, 22:03:32) [MSC v.1937 64 bit (AMD64)]
+2026-03-23 08:51:30.212307: wfastcgi.py 3.0.0 initializing
+2026-03-23 08:51:30.868469: wfastcgi.py will restart when files in C:\inetpub\wwwroot\cdatdelivery\CDAT_Goaling\ are changed: .*((\.py)|(\.config))$
+2026-03-23 08:51:30.868469: wfastcgi.py 3.0.0 initialized

@@ -394,6 +394,15 @@ body {
             box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
         }
 
+        /* Normalize <a> and <button> rendering so the download link matches the Copy Table button height. */
+        .shift-filter-bar .nav-tabs a.copy-tab-btn {
+            line-height: 1;
+            padding-top: 8px;
+            padding-bottom: 8px;
+            min-height: 26px;
+            box-sizing: border-box;
+        }
+
         .shift-filter-form {
             display: inline-flex;
             align-items: center;
@@ -530,12 +539,35 @@ body {
             font-weight: 600;
             line-height: 1;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+            text-decoration: none;
+            cursor: pointer;
+            box-sizing: border-box;
+            font: inherit;
+        }
+
+        /* Remove browser-native button styling so <button> and <a> match exactly. */
+        .nav-tabs button.copy-tab-btn {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-clip: padding-box;
+        }
+
+        /* Ensure <a> use the same color in all link states (so it matches the <button>). */
+        .nav-tabs a.copy-tab-btn:visited {
+            color: var(--pane-text);
         }
 
         .nav-tabs .copy-tab-btn:hover {
             background: linear-gradient(180deg, #ffffff 0%, #eef3f8 100%);
             border-color: var(--primary-border);
             color: var(--primary-ink);
+            text-decoration: none;
+        }
+
+        .nav-tabs .copy-tab-btn:focus-visible {
+            outline: 2px solid rgba(37, 99, 235, 0.55);
+            outline-offset: 2px;
         }
 
         .nav-tabs .copy-tab-btn .btn-icon {
