@@ -379,9 +379,18 @@ body {
             box-shadow: 0 6px 14px rgba(37, 99, 235, 0.2);
         }
 
-        .shift-filter-bar .nav-tabs .wip-link {
-            margin-left: 0;
-            white-space: nowrap;
+        /* Normalize <a> and <button> rendering so both controls are pixel-identical. */
+        .shift-filter-bar .nav-tabs .copy-tab-btn {
+            box-sizing: border-box;
+            line-height: 1;
+            height: 32px;
+            padding-top: 8px;
+            padding-bottom: 8px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(180deg, var(--nav-copy-bg) 0%, #f1f5f9 100%);
+            color: var(--pane-text);
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
         }
 
         .shift-filter-bar .nav-tabs .copy-tab-btn {
