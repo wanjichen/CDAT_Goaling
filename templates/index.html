@@ -109,6 +109,10 @@
                 <a href="{{ url_for('index', page='2D-Xray', shift=selected_shift) }}" class="tab-link">2D-Xray</a>
                 <a href="{{ url_for('index', page='BA', shift=selected_shift) }}" class="tab-link">BA</a>
             </div>
+            <button class="tab-link copy-tab-btn" onclick="saveAllGoalChanges()"
+                title="Save all adjusted goal + reason changes in one batch"
+                aria-label="Save all adjusted goal and reason changes"><span class="btn-icon"
+                    aria-hidden="true">&#128190;</span>Save All Changes</button>
             <button class="tab-link copy-tab-btn" onclick="copyTableToClipboard()"
                 title="Copy the visible table rows and columns to your clipboard"
                 aria-label="Copy the visible table rows and columns to your clipboard"><span class="btn-icon"

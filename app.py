@@ -532,6 +532,104 @@ def update_goal():
         return json_error(str(e))
 
 
+@app.route('/api/update-goals-batch', methods=['POST'])
+def update_goals_batch():
+    """Best-effort batch update for adjusted goal + adjusted reason.
+
+    Request JSON:
+      {"updates": [{"id": 1, "manual_goal": 10, "reason": "..."}, ...]}
+
+    Response JSON:
+      {"status": "success", "results": [{"old_id": 1, "new_id": 2, "status": "success"}, ...]}
+    """
+    payload = get_request_payload()
+    updates = payload.get('updates')
+    user = get_current_user()
+
+    if not isinstance(updates, list):
+        return json_error('updates must be a list', 400)
+
+    results = []
+
+    for item in updates:
+        if not isinstance(item, dict):
+            results.append({
+                'status': 'error',
+                'message': 'Invalid update item'
+            })
+            continue
+
+        old_id = item.get('id')
+        try:
+            old_id_int = int(old_id)
+        except Exception:
+            results.append({
+                'old_id': old_id,
+                'status': 'error',
+                'message': 'Invalid id'
+            })
+            continue
+
+        old = db.session.get(Report, old_id_int)
+        if not old:
+            results.append({
+                'old_id': old_id_int,
+                'status': 'error',
+                'message': 'Record not found'
+            })
+            continue
+
+        raw_goal = item.get('manual_goal')
+        raw_reason = item.get('reason')
+        reason_val = ('' if raw_reason is None else str(raw_reason)).strip()
+        goal_provided = raw_goal is not None and str(raw_goal).strip() != ''
+        reason_provided = reason_val != ''
+
+        # Enforce the same rule as the UI: goal and reason must be provided together.
+        if goal_provided != reason_provided:
+            results.append({
+                'old_id': old_id_int,
+                'status': 'error',
+                'message': 'Both Manual Goal and Adjust Reason must be filled'
+            })
+            continue
+
+        try:
+            new_goal = float(raw_goal or 0)
+        except Exception:
+            results.append({
+                'old_id': old_id_int,
+                'status': 'error',
+                'message': 'Invalid manual_goal'
+            })
+            continue
+
+        try:
+            calculated_tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
+            new_entry = persist_report_version(
+                old,
+                manual_adjusted_goal=new_goal,
+                tr=calculated_tr,
+                goal_adjusted_reason=reason_val,
+                goal_adjusted_at=datetime.now(),
+                goal_adjusted_by=user
+            )
+            results.append({
+                'old_id': old_id_int,
+                'new_id': new_entry.id,
+                'status': 'success'
+            })
+        except Exception as e:
+            db.session.rollback()
+            results.append({
+                'old_id': old_id_int,
+                'status': 'error',
+                'message': str(e)
+            })
+
+    return json_success(results=results)
+
+
 @app.route('/api/update-comment', methods=['POST'])
 def update_comment():
     data = get_request_payload()
@@ -553,6 +651,51 @@ def update_comment():
     except Exception as e:
         db.session.rollback()
         return json_error(str(e))
+
+
+@app.route('/api/update-comments-batch', methods=['POST'])
+def update_comments_batch():
+    """Best-effort batch update for miss goal comment."""
+    payload = get_request_payload()
+    updates = payload.get('updates')
+    user = get_current_user()
+
+    if not isinstance(updates, list):
+        return json_error('updates must be a list', 400)
+
+    results = []
+
+    for item in updates:
+        if not isinstance(item, dict):
+            results.append({'status': 'error', 'message': 'Invalid update item'})
+            continue
+
+        old_id = item.get('id')
+        try:
+            old_id_int = int(old_id)
+        except Exception:
+            results.append({'old_id': old_id, 'status': 'error', 'message': 'Invalid id'})
+            continue
+
+        old = db.session.get(Report, old_id_int)
+        if not old:
+            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Record not found'})
+            continue
+
+        comment_val = '' if item.get('comment') is None else str(item.get('comment'))
+        try:
+            new_entry = persist_report_version(
+                old,
+                miss_goal_comment=comment_val,
+                miss_goal_comment_updated_at=datetime.now(),
+                miss_goal_comment_updated_by=user
+            )
+            results.append({'old_id': old_id_int, 'new_id': new_entry.id, 'status': 'success'})
+        except Exception as e:
+            db.session.rollback()
+            results.append({'old_id': old_id_int, 'status': 'error', 'message': str(e)})
+
+    return json_success(results=results)
 
 if __name__ == '__main__':
     app.run(

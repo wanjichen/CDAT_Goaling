@@ -478,6 +478,133 @@ async function saveRow(btn, type) {
     }
 }
 
+
+async function saveAllGoalChanges() {
+    const rows = getDataRows();
+    const goalUpdates = [];
+    const commentUpdates = [];
+
+    let hasIncompleteGoalRow = false;
+
+    rows.forEach(row => {
+        if (row.style.display === 'none') return;
+
+        const id = row.getAttribute('data-id');
+        if (!id) return;
+
+        // --- Goal+Reason updates ---
+        const goalInput = row.querySelector('.goal-input');
+        const reasonInput = row.querySelector('.reason-input');
+        if (goalInput && reasonInput) {
+            const goalVal = String(goalInput.value ?? '');
+            const goalOrig = String(goalInput.getAttribute('data-original') ?? '');
+            const reasonVal = String(reasonInput.value ?? '');
+            const reasonOrig = String(reasonInput.getAttribute('data-original') ?? '');
+
+            const goalDirty = goalVal !== goalOrig;
+            const reasonDirty = reasonVal !== reasonOrig;
+            if (goalDirty || reasonDirty) {
+                const trimmedGoal = goalVal.trim();
+                const trimmedReason = reasonVal.trim();
+                const goalProvided = trimmedGoal !== '';
+                const reasonProvided = trimmedReason !== '';
+
+                if (goalProvided !== reasonProvided) {
+                    hasIncompleteGoalRow = true;
+                } else {
+                    goalUpdates.push({
+                        id: id,
+                        manual_goal: trimmedGoal === '' ? 0 : trimmedGoal,
+                        reason: trimmedReason,
+                    });
+                }
+            }
+        }
+
+        // --- Comment updates ---
+        const commentInput = row.querySelector('.comment-input');
+        if (commentInput) {
+            const commentVal = String(commentInput.value ?? '');
+            const commentOrig = String(commentInput.getAttribute('data-original') ?? '');
+            if (commentVal !== commentOrig) {
+                commentUpdates.push({
+                    id: id,
+                    comment: commentVal,
+                });
+            }
+        }
+    });
+
+    if (hasIncompleteGoalRow) {
+        showToast('Some rows are incomplete: both Manual Goal and Adjust Reason must be filled.', 'error');
+        return;
+    }
+
+    if (goalUpdates.length === 0 && commentUpdates.length === 0) {
+        showToast('No changes to save.', 'error');
+        return;
+    }
+
+    // Disable the button to prevent double-submit.
+    const btn = document.querySelector('button[onclick="saveAllGoalChanges()"]');
+    const originalText = btn ? btn.innerText : '';
+    if (btn) {
+        btn.innerText = '...';
+        btn.disabled = true;
+    }
+
+    try {
+        let goalOk = 0, goalErr = 0, commentOk = 0, commentErr = 0;
+
+        if (goalUpdates.length > 0) {
+            const resGoals = await fetch(apiUrl('/api/update-goals-batch'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ updates: goalUpdates })
+            });
+            const jsonGoals = await resGoals.json();
+            if (!resGoals.ok || jsonGoals.status !== 'success') {
+                showToast('Goal batch save failed: ' + (jsonGoals.message || 'Unknown'), 'error');
+                if (btn) { btn.innerText = originalText; btn.disabled = false; }
+                return;
+            }
+            const results = Array.isArray(jsonGoals.results) ? jsonGoals.results : [];
+            goalOk = results.filter(r => r && r.status === 'success').length;
+            goalErr = results.filter(r => r && r.status !== 'success').length;
+        }
+
+        if (commentUpdates.length > 0) {
+            const resComments = await fetch(apiUrl('/api/update-comments-batch'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ updates: commentUpdates })
+            });
+            const jsonComments = await resComments.json();
+            if (!resComments.ok || jsonComments.status !== 'success') {
+                showToast('Comment batch save failed: ' + (jsonComments.message || 'Unknown'), 'error');
+                if (btn) { btn.innerText = originalText; btn.disabled = false; }
+                return;
+            }
+            const results = Array.isArray(jsonComments.results) ? jsonComments.results : [];
+            commentOk = results.filter(r => r && r.status === 'success').length;
+            commentErr = results.filter(r => r && r.status !== 'success').length;
+        }
+
+        const totalOk = goalOk + commentOk;
+        const totalErr = goalErr + commentErr;
+        if (totalErr === 0) {
+            showToast(`Saved ${totalOk} change(s).`, 'success');
+        } else {
+            showToast(`Saved ${totalOk} change(s), ${totalErr} failed.`, 'error');
+        }
+
+        setTimeout(() => location.reload(), 800);
+    } catch (e) {
+        showToast('Batch save failed. Please try again.', 'error');
+        if (btn) { btn.innerText = originalText; btn.disabled = false; }
+    }
+}
+
 // --- Modal Logic ---
 function openModal() { document.getElementById('modalOverlay').classList.add('active'); setTimeout(() => document.getElementById('n_pg3').focus(), 100); }
 function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
