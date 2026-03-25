@@ -91,11 +91,58 @@ function applyDefaultSort() {
 
     const entityTh = thead.querySelector('th[data-col="entity"]');
     const pg3Th = thead.querySelector('th[data-col="prodgroup3"]');
-    const chosen = (entityTh && entityTh.style.display !== 'none') ? entityTh : pg3Th;
-    if (!chosen) return;
+    const hasEntity = !!(entityTh && entityTh.style.display !== 'none');
 
-    const colName = chosen.getAttribute('data-col');
-    forceSortAscending(chosen, colName);
+    // Default sort contract:
+    // - If ENTITY visible: sort by ENTITY ASC, then PRODGROUP3 ASC.
+    // - Else: sort by PRODGROUP3 ASC.
+    if (hasEntity) {
+        sortByMultipleAsc(['entity', 'prodgroup3']);
+    } else if (pg3Th) {
+        sortByMultipleAsc(['prodgroup3']);
+    }
+}
+
+function sortByMultipleAsc(colNames) {
+    const table = document.getElementById('mainTable');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.empty-state-row)'));
+    if (rows.length === 0) return;
+
+    // Clear any sort glyphs/state.
+    table.querySelectorAll('th.sortable').forEach(el => {
+        el.setAttribute('data-sort', '');
+        const icon = el.querySelector('.sort-icon');
+        if (icon) icon.innerText = '⇕';
+    });
+
+    // Set the first sort column glyph to ASC.
+    const first = colNames && colNames.length ? colNames[0] : null;
+    if (first) {
+        const th = table.querySelector(`thead tr:first-child th.sortable[data-col="${first}"]`);
+        if (th) {
+            th.setAttribute('data-sort', 'asc');
+            const icon = th.querySelector('.sort-icon');
+            if (icon) icon.innerText = '⇑';
+        }
+    }
+
+    rows.sort((a, b) => {
+        for (const col of colNames) {
+            const tdA = a.querySelector(`td[data-col="${col}"]`);
+            const tdB = b.querySelector(`td[data-col="${col}"]`);
+            const valA = getCellValue(tdA);
+            const valB = getCellValue(tdB);
+            const cmp = valA.localeCompare(valB);
+            if (cmp !== 0) return cmp;
+        }
+        return 0;
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
 }
 
 function forceSortAscending(thElement, colName) {
@@ -551,7 +598,42 @@ async function saveRow(btn, type) {
         const data = await res.json();
         if (data.status === 'success') {
             showToast('Saved successfully', 'success');
-            setTimeout(() => location.reload(), 500);
+
+            // Keep current sort order: do NOT reload the page.
+            // Instead, update the inputs' original values and hide action buttons.
+            const row = btn.closest('tr');
+            const rowId = row ? row.getAttribute('data-id') : null;
+
+            if (type === 'goal' && row) {
+                const goalInput = row.querySelector('.goal-input');
+                const reasonInput = row.querySelector('.reason-input');
+                if (goalInput) {
+                    goalInput.setAttribute('data-original', String(goalInput.value ?? ''));
+                    goalInput.classList.remove('input-dirty');
+                }
+                if (reasonInput) {
+                    reasonInput.setAttribute('data-original', String(reasonInput.value ?? ''));
+                    reasonInput.classList.remove('input-dirty');
+                }
+                hideActions(rowId ? document.getElementById(`group-goal-${rowId}`) : null);
+            } else if (type === 'comment' && row) {
+                const commentInput = row.querySelector('.comment-input');
+                if (commentInput) {
+                    commentInput.setAttribute('data-original', String(commentInput.value ?? ''));
+                    commentInput.classList.remove('input-dirty');
+                }
+                hideActions(rowId ? document.getElementById(`group-comment-${rowId}`) : null);
+            } else if (type === 'entity' && row) {
+                const entityInput = row.querySelector('.entity-input');
+                if (entityInput) {
+                    entityInput.setAttribute('data-original', String(entityInput.value ?? ''));
+                    entityInput.classList.remove('input-dirty');
+                }
+                hideActions(rowId ? document.getElementById(`group-entity-${rowId}`) : null);
+            }
+
+            btn.innerText = originalText;
+            btn.disabled = false;
         } else {
             showToast('Server Error: ' + (data.message || 'Unknown'), 'error');
             btn.innerText = originalText; btn.disabled = false;
@@ -682,7 +764,10 @@ async function saveAllGoalChanges() {
             showToast(`Saved ${totalOk} change(s), ${totalErr} failed.`, 'error');
         }
 
-        setTimeout(() => location.reload(), 800);
+    // Keep current sort order: do NOT reload automatically.
+    // Users can refresh manually if they want to pull the latest server-side values.
+    if (btn) { btn.innerText = originalText; btn.disabled = false; }
+    return;
     } catch (e) {
         showToast('Batch save failed. Please try again.', 'error');
         if (btn) { btn.innerText = originalText; btn.disabled = false; }
