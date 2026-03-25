@@ -1,9 +1,103 @@
 body {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* --- Pinned (sticky) left columns for the main goaling table --- */
+/* Pinned columns: Prodgroup3, Operation, Shift Start WIP, Entity (if visible). */
+/* Notes:
+   - Scoped to #mainTable so other tables (e.g. CSV view) aren't affected.
+   - We must override later `th { position: static; }` rules, so use !important.
+*/
+#mainTable {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+#mainTable th.pinned-col,
+#mainTable td.pinned-col {
+    position: sticky !important;
+    left: 0;
+    z-index: 2;
+    background-clip: padding-box;
+    /* Ensure the pinned cell always paints on top and doesn't visually blend with neighbors. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Solid background so scrolled text can't show behind pinned columns. */
+#mainTable td.pinned-col {
+    background: var(--bg-surface);
+}
+
+/* Sticky headers (vertical) while scrolling the table */
+#mainTable thead th {
+    position: sticky !important;
+    top: 0;
+}
+
+/* Sticky filter row sits right under the header row */
+#mainTable thead tr.filter-row th {
+    position: sticky !important;
+    top: 44px;
+}
+
+/* Header pinned cells must sit above body pinned cells. */
+#mainTable thead th.pinned-col {
+    z-index: 30;
+    background: linear-gradient(180deg, var(--table-head-bg) 0%, var(--table-head-bg-strong) 100%) !important;
+}
+
+/* Filter row pinned cells should sit below header row but above body. */
+#mainTable thead tr.filter-row th.pinned-col {
+    z-index: 25;
+    background: var(--table-head-bg) !important;
+}
+
+/* Keep hover background on pinned data cells too. */
+#mainTable tbody tr:hover td.pinned-col {
+    background: var(--table-hover-bg) !important;
+}
+
+/* Pinned Total row cells should stay pinned and stay on top of body cells. */
+#mainTable tfoot td.pinned-col {
+    position: sticky !important;
+    left: 0;
+    z-index: 10;
+    background: #f8f9fa !important;
+}
+
+/* Divider after the last pinned column */
+#mainTable th.pinned-last,
+#mainTable td.pinned-last {
+    /* Clearer boundary between pinned and scrollable area */
+    box-shadow:
+        1px 0 0 rgba(148, 163, 184, 0.95),
+        6px 0 10px rgba(15, 23, 42, 0.10);
+    position: relative;
+}
+
+/* Optional soft fade into the scrollable columns to make the divider feel less harsh */
+#mainTable td.pinned-last::after,
+#mainTable th.pinned-last::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: -14px;
+    width: 14px;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0));
+}
+
+/* Offsets are set dynamically in JS (based on the real rendered widths),
+   to avoid any overlap when widths/padding/fonts differ by browser/zoom. */
+#mainTable .pinned-col.pinned-1 { left: var(--pinned-left-1, 0px); }
+#mainTable .pinned-col.pinned-2 { left: var(--pinned-left-2, 0px); }
+#mainTable .pinned-col.pinned-3 { left: var(--pinned-left-3, 0px); }
+#mainTable .pinned-col.pinned-4 { left: var(--pinned-left-4, 0px); }
 
         /* --- Header --- */
         .header {

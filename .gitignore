@@ -1,5 +1,19 @@
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Logs
+logs/
+*.log
+
+# Local runtime/temp
+*.tmp
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 venv/
 env/
 .venv/

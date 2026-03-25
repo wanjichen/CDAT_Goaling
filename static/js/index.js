@@ -75,12 +75,52 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // --- PINNED COLUMN OFFSETS ---
+    // Compute sticky `left` offsets from the real rendered widths to prevent overlap
+    // across browsers/zoom and when columns are hidden (e.g., Entity).
+    updatePinnedColumnOffsets();
+    window.addEventListener('resize', () => {
+        // Use rAF to coalesce rapid resize events.
+        window.requestAnimationFrame(updatePinnedColumnOffsets);
+    });
+
     // --- DEFAULT SORT (ASC): ENTITY if visible, otherwise PRODGROUP3 ---
     applyDefaultSort();
 
     // Calculate totals on initial page load
     calculateTotals();
 });
+
+function updatePinnedColumnOffsets() {
+    const table = document.getElementById('mainTable');
+    if (!table) return;
+
+    const headerRow = table.querySelector('thead tr:first-child');
+    if (!headerRow) return;
+
+    const getWidthIfVisible = (colName) => {
+        const th = headerRow.querySelector(`th[data-col="${colName}"]`);
+        if (!th) return 0;
+        if (th.style.display === 'none') return 0;
+        // offsetWidth includes padding and borders - exactly what sticky needs.
+        return th.offsetWidth || 0;
+    };
+
+    const w1 = getWidthIfVisible('prodgroup3');
+    const w2 = getWidthIfVisible('operation');
+    const w3 = getWidthIfVisible('shift_start_wip');
+
+    // Entity might be hidden on some pages.
+    const left1 = 0;
+    const left2 = left1 + w1;
+    const left3 = left2 + w2;
+    const left4 = left3 + w3;
+
+    table.style.setProperty('--pinned-left-1', `${left1}px`);
+    table.style.setProperty('--pinned-left-2', `${left2}px`);
+    table.style.setProperty('--pinned-left-3', `${left3}px`);
+    table.style.setProperty('--pinned-left-4', `${left4}px`);
+}
 
 function applyDefaultSort() {
     const table = document.getElementById('mainTable');
