@@ -81,11 +81,14 @@ def download_wip_goal_reckon_raw():
     if not os.path.exists(csv_path):
         return json_error('CSV file not found', 404)
 
+    ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+    download_filename = f'goal_raw_data_{ts}.csv'
+
     # Use conditional=False to avoid IIS/proxy caching oddities for a frequently-updated file.
     return send_file(
         csv_path,
         as_attachment=True,
-        download_name='wip_goal_reckon_raw.csv',
+    download_name=download_filename,
         mimetype='text/csv',
         conditional=False,
         max_age=0,

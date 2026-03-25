@@ -996,7 +996,7 @@ async function insertNewGoalRowIntoTable(newId) {
         tr.appendChild(cell(
             'miss_comment',
             `<div class="action-group" id="group-comment-${r.id}">
-                <input type="text" class="table-input comment-input" value="" data-original="" oninput="handleInput(this, 'comment')">
+                <textarea class="table-input comment-input comment-textarea" rows="2" data-original="" oninput="handleInput(this, 'comment')"></textarea>
                 <button class="btn-mini btn-save" onclick="saveRow(this, 'comment')">Save</button>
                 <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'comment')">✖</button>
             </div>`,

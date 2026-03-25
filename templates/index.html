@@ -92,6 +92,12 @@
                 {% endif %}
             </div>
             {% endif %}
+
+            {% if selected_shift and current_shift and selected_shift != current_shift %}
+            <div class="shift-filter-status is-warning">
+                Reminder: you are viewing shift {{ selected_shift }}, not the latest calendar shift ({{ current_shift }}).
+            </div>
+            {% endif %}
         </div>
         <!-- Navigation -->
         <div class="nav-tabs">
@@ -110,7 +116,7 @@
                 <a href="{{ url_for('index', page='BA', shift=selected_shift) }}" class="tab-link">BA</a>
             </div>
             <button class="tab-link copy-tab-btn" onclick="saveAllGoalChanges()"
-                title="Save all adjusted goal + reason changes in one batch"
+                title="Save all changes in one batch"
                 aria-label="Save all adjusted goal and reason changes"><span class="btn-icon"
                     aria-hidden="true">&#128190;</span>Save All Changes</button>
             <button class="tab-link copy-tab-btn" onclick="copyTableToClipboard()"
@@ -118,7 +124,7 @@
                 aria-label="Copy the visible table rows and columns to your clipboard"><span class="btn-icon"
                     aria-hidden="true">&#128203;</span>Copy Table</button>
             <a class="tab-link copy-tab-btn" href="{{ url_for('download_wip_goal_reckon_raw') }}"
-                title="Download wip_goal_reckon_raw.csv" aria-label="Download raw validation CSV">
+                title="Download raw data for validation purpose" aria-label="Download raw validation CSV">
                 <span class="btn-icon" aria-hidden="true">&#128229;</span>Download Raw Data
             </a>
         </div>
@@ -283,10 +289,10 @@
                         <td class="cell-pad-4" data-col="miss_comment"
                             title="Comment by: {{ r.miss_goal_comment_updated_by or 'N/A' }}&#10;At: {{ r.miss_goal_comment_updated_at.strftime('%Y-%m-%d %H:%M:%S') if r.miss_goal_comment_updated_at else 'N/A' }}">
                             <div class="action-group" id="group-comment-{{ r.id }}">
-                                <input type="text" class="table-input comment-input"
-                                    value="{{ r.miss_goal_comment or '' }}"
+                                <textarea class="table-input comment-input comment-textarea"
+                                    rows="2"
                                     data-original="{{ r.miss_goal_comment or '' }}"
-                                    oninput="handleInput(this, 'comment')">
+                                    oninput="handleInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
                                 <button class="btn-mini btn-save" onclick="saveRow(this, 'comment')">Save</button>
                                 <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'comment')">✖</button>
                             </div>

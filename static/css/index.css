@@ -944,6 +944,17 @@ body {
             transition: all 0.2s;
         }
 
+        /* Allow multi-line input for Miss Goal Comment */
+        textarea.table-input.comment-textarea {
+            height: auto;
+            min-height: 28px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            resize: vertical;
+            white-space: pre-wrap;
+            line-height: 1.25;
+        }
+
         /* Keep the very narrow Adjusted Goal cell from clipping input borders. */
         td[data-col="manual_goal"].cell-pad-4 {
             padding: 2px;
