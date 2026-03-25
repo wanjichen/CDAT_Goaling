@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // --- FLEXIBLE COLUMN VISIBILITY ---
     const columnVisibilityConfig = {
-        'entity': ['TCB', 'HBC-JDC', 'DIA', 'BA'],
+        'entity': ['TCB', 'HBC-JDC', 'DIA', 'BA', 'EPX'],
         'subcell_info': ['TCB', 'DIA', 'BA']
     };
 
@@ -397,9 +397,13 @@ function handleInput(input, type) {
 
         // Recalculate totals dynamically as the user types
         calculateTotals();
-    } else {
+    } else if (type === 'comment') {
         actionGroup = document.getElementById(`group-comment-${rowId}`);
         if (String(val) !== String(original)) showActions(actionGroup);
+        else hideActions(actionGroup);
+    } else if (type === 'entity') {
+        actionGroup = document.getElementById(`group-entity-${rowId}`);
+        if (String(val).trim() !== String(original).trim()) showActions(actionGroup);
         else hideActions(actionGroup);
     }
 }
@@ -426,19 +430,97 @@ function cancelRow(btn, type) {
 
         // Recalculate totals back to original
         calculateTotals();
-    } else {
+    } else if (type === 'comment') {
         const commentInput = row.querySelector('.comment-input');
         commentInput.value = commentInput.getAttribute('data-original');
         commentInput.classList.remove('input-dirty');
+    } else if (type === 'entity') {
+        const entityInput = row.querySelector('.entity-input');
+        entityInput.value = entityInput.getAttribute('data-original') || '';
+        entityInput.classList.remove('input-dirty');
     }
     hideActions(actionGroup);
+}
+
+// --- EPX ENTITY inline edit (no Save/Cancel buttons) ---
+function entityStartEdit(input) {
+    if (!input) return;
+    // Ensure original is captured (template sets data-original already).
+    if (input.getAttribute('data-original') === null) {
+        input.setAttribute('data-original', String(input.value ?? ''));
+    }
+}
+
+function entityHandleKeydown(evt, input) {
+    if (!evt || !input) return;
+    if (evt.key === 'Enter') {
+        evt.preventDefault();
+        entityCommitEdit(input);
+        input.blur();
+    } else if (evt.key === 'Escape') {
+        evt.preventDefault();
+        entityRevertEdit(input);
+        input.blur();
+    }
+}
+
+function entityRevertEdit(input) {
+    const row = input.closest('tr');
+    if (!row) return;
+    const original = input.getAttribute('data-original') ?? '';
+    input.value = original;
+    input.classList.remove('input-dirty');
+}
+
+async function entityCommitEdit(input) {
+    const row = input.closest('tr');
+    if (!row) return;
+
+    const id = row.getAttribute('data-id');
+    if (!id) return;
+
+    const original = String(input.getAttribute('data-original') ?? '');
+    const current = String(input.value ?? '');
+    if (current.trim() === original.trim()) {
+        input.classList.remove('input-dirty');
+        return;
+    }
+
+    // Optimistic UI state.
+    input.disabled = true;
+
+    try {
+        const res = await fetch(apiUrl('/api/update-entity'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, entity: current })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+            showToast('Server Error: ' + (data.message || 'Unknown'), 'error');
+            entityRevertEdit(input);
+        } else {
+            showToast('Saved successfully', 'success');
+            input.setAttribute('data-original', current);
+            input.classList.remove('input-dirty');
+        }
+    } catch (e) {
+        showToast('Network error, please try again.', 'error');
+        entityRevertEdit(input);
+    } finally {
+        input.disabled = false;
+    }
 }
 
 async function saveRow(btn, type) {
     const row = btn.closest('tr');
     const id = row.getAttribute('data-id');
 
-    const url = (type === 'goal') ? apiUrl('/api/update-goal') : apiUrl('/api/update-comment');
+    const url = (type === 'goal')
+        ? apiUrl('/api/update-goal')
+        : (type === 'comment')
+            ? apiUrl('/api/update-comment')
+            : apiUrl('/api/update-entity');
     let payload = { id: id };
 
     if (type === 'goal') {
@@ -454,8 +536,10 @@ async function saveRow(btn, type) {
 
         payload.manual_goal = rawGoal === '' ? 0 : rawGoal;
         payload.reason = reasonVal;
-    } else {
+    } else if (type === 'comment') {
         payload.comment = row.querySelector('.comment-input').value;
+    } else if (type === 'entity') {
+        payload.entity = row.querySelector('.entity-input').value;
     }
 
     const originalText = btn.innerText;
@@ -670,10 +754,10 @@ async function insertNewGoalRowIntoTable(newId) {
         };
 
         // Keep styling consistent with existing rows.
-        tr.appendChild(cell('shift', escapeHtml(r.shift || ''), 'sticky-col col-1'));
-        tr.appendChild(cell('prodgroup3', escapeHtml(r.prodgroup3 || ''), 'sticky-col col-2'));
-        tr.appendChild(cell('operation', escapeHtml(r.operation || ''), 'sticky-col col-3'));
-        tr.appendChild(cell('shift_start_wip', formatNum(r.shift_start_wip), 'sticky-col col-4'));
+    tr.appendChild(cell('shift', escapeHtml(r.shift || ''), 'col-1'));
+    tr.appendChild(cell('prodgroup3', escapeHtml(r.prodgroup3 || ''), 'col-2'));
+    tr.appendChild(cell('operation', escapeHtml(r.operation || ''), 'col-3'));
+    tr.appendChild(cell('shift_start_wip', formatNum(r.shift_start_wip), 'col-4'));
         tr.appendChild(cell('entity', escapeHtml(r.entity || '')));
         tr.appendChild(cell('qtg1', formatNum(r.qtg1)));
         tr.appendChild(cell('qps1', formatNum(r.qps1)));

@@ -629,8 +629,7 @@ body {
 
         /* Top Header Row */
         th {
-            position: sticky;
-            top: 0;
+            position: static;
             background: linear-gradient(180deg, var(--table-head-bg) 0%, var(--table-head-bg-strong) 100%);
             z-index: 20;
             font-size: 11px;
@@ -698,18 +697,11 @@ body {
             outline: none;
         }
 
-        td.sticky-col {
-            position: static !important;
-            left: auto !important;
-            z-index: auto !important;
-            background: inherit !important;
-        }
-
         .col-1 {
-            width: 20px;
-            min-width: 20px;
-            max-width: 20px;
-            padding-left: 4px;
+            width: 30px;
+            min-width: 30px;
+            max-width: 30px;
+            padding-left: 8px;
             padding-right: 4px;
         }
 
@@ -722,9 +714,9 @@ body {
         }
 
         .col-3 {
-            width: 28px;
-            min-width: 28px;
-            max-width: 28px;
+            width: 30px;
+            min-width: 30px;
+            max-width: 30px;
             padding-left: 4px;
             padding-right: 0;
             box-shadow: none;
@@ -740,8 +732,7 @@ body {
         }
 
         tfoot td {
-            position: sticky;
-            bottom: 0;
+            position: static;
             background: #f8f9fa !important;
             z-index: 20;
             font-weight: 700;
@@ -775,6 +766,25 @@ body {
             gap: 6px;
             width: 100%;
             height: 100%;
+        }
+
+        /* EPX ENTITY inline-edit: keep input wide and buttons compact */
+        .action-group.entity-action {
+            gap: 4px;
+        }
+
+        .action-group.entity-action .entity-input {
+            min-width: 0;
+        }
+
+        .btn-mini.btn-icon {
+            width: 26px;
+            min-width: 26px;
+            padding: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
         }
 
         .btn-mini {
@@ -980,6 +990,14 @@ body {
 
         .w-25 {
             width: 25px;
+        }
+
+        /* Ensure Entity column follows the same sizing as other w-25 columns */
+        th[data-col="entity"],
+        td[data-col="entity"] {
+            width: 25px;
+            min-width: 25px;
+            max-width: 25px;
         }
 
         .w-30 {

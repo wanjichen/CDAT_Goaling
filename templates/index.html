@@ -155,15 +155,12 @@
                 <thead>
                     <!-- Sortable Column Headers -->
                     <tr>
-                        <th class="sticky-col col-1 sortable" data-col="shift" onclick="sortTable(this, 'shift')">Shift
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sticky-col col-2 sortable" data-col="prodgroup3"
+                        <th class="col-1 sortable" data-col="prodgroup3"
                             onclick="sortTable(this, 'prodgroup3')">Prodgroup3 <span class="sort-icon">⇕</span></th>
                         <!-- Shortened text from 'Operation' to 'Oper' so it fits in the tiny 50px column -->
-                        <th class="sticky-col col-3 sortable" data-col="operation"
+                        <th class="col-2 sortable" data-col="operation"
                             onclick="sortTable(this, 'operation')">Operation <span class="sort-icon">⇕</span></th>
-                        <th class="sticky-col col-4 sortable" data-col="shift_start_wip"
+                        <th class="col-3 sortable" data-col="shift_start_wip"
                             onclick="sortTable(this, 'shift_start_wip')">Shift Start WIP <span
                                 class="sort-icon">⇕</span></th>
                         <th class="sortable w-25" data-col="entity" onclick="sortTable(this, 'entity')">
@@ -200,13 +197,11 @@
 
                     <!-- Filter Row -->
                     <tr class="filter-row">
-                        <th class="sticky-col col-1" data-col="shift"><input type="text" class="filter-input-field"
-                                data-filter-col="shift" oninput="applyFilters()"></th>
-                        <th class="sticky-col col-2" data-col="prodgroup3"><input type="text" class="filter-input-field"
+                        <th class="col-1" data-col="prodgroup3"><input type="text" class="filter-input-field"
                                 data-filter-col="prodgroup3" oninput="applyFilters()"></th>
-                        <th class="sticky-col col-3" data-col="operation"><input type="text" class="filter-input-field"
+                        <th class="col-2" data-col="operation"><input type="text" class="filter-input-field"
                                 data-filter-col="operation" oninput="applyFilters()"></th>
-                        <th class="sticky-col col-4" data-col="shift_start_wip"><input type="text"
+                        <th class="col-3" data-col="shift_start_wip"><input type="text"
                                 class="filter-input-field" data-filter-col="shift_start_wip" oninput="applyFilters()">
                         </th>
                         <th data-col="entity"><input type="text" class="filter-input-field" data-filter-col="entity"
@@ -236,14 +231,24 @@
                 <tbody>
                     {% for r in reports %}
                     <tr data-id="{{ r.id }}">
-                        <td class="sticky-col col-1" data-col="shift">{{ r.shift or '' }}</td>
-                        <td class="sticky-col col-2" data-col="prodgroup3">{{ r.prodgroup3 or '' }}</td>
-                        <td class="sticky-col col-3" data-col="operation">{{ ((r.operation|string)[:-2]) if (r.operation
+                        <td class="col-1" data-col="prodgroup3">{{ r.prodgroup3 or '' }}</td>
+                        <td class="col-2" data-col="operation">{{ ((r.operation|string)[:-2]) if (r.operation
                             is not none and (r.operation|string).endswith('.0')) else (r.operation if r.operation is not
                             none else '') }}</td>
-                        <td class="sticky-col col-4" data-col="shift_start_wip">{{ (r.shift_start_wip | round(3)) if
+                        <td class="col-3" data-col="shift_start_wip">{{ (r.shift_start_wip | round(3)) if
                             r.shift_start_wip else '' }}</td>
-                        <td data-col="entity">{{ r.entity or '' }}</td>
+                        <td class="cell-pad-4" data-col="entity">
+                            {% if current_page == 'EPX' %}
+                            <input type="text" class="table-input entity-input" placeholder=""
+                                value="{{ r.entity or '' }}"
+                                data-original="{{ r.entity or '' }}"
+                                onfocus="entityStartEdit(this)"
+                                onkeydown="entityHandleKeydown(event, this)"
+                                onblur="entityCommitEdit(this)">
+                            {% else %}
+                            {{ r.entity or '' }}
+                            {% endif %}
+                        </td>
                         <td data-col="qtg1">{{ (r.qtg1 | round(3)) if r.qtg1 else '' }}</td>
                         <td data-col="qps1">{{ (r.qps1 | round(3)) if r.qps1 else '' }}</td>
                         <td class="mor-val" data-col="mor">{{ (r.mor | round(3)) if r.mor else '' }}</td>
@@ -300,8 +305,7 @@
                     <tr>
                         <td class="col-1 align-center">Total</td>
                         <td class="col-2"></td>
-                        <td class="col-3"></td>
-                        <td id="total-shift_start_wip" class="col-4" data-col="shift_start_wip">0</td>
+                        <td id="total-shift_start_wip" class="col-3" data-col="shift_start_wip">0</td>
                         <td data-col="entity"></td>
                         <td data-col="qtg1"></td>
                         <td data-col="qps1"></td>

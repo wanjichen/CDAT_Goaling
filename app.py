@@ -653,6 +653,35 @@ def update_comment():
         return json_error(str(e))
 
 
+@app.route('/api/update-entity', methods=['POST'])
+def update_entity():
+    """Update ENTITY for a single row by id (in-place update).
+
+    Request JSON:
+      {"id": 1, "entity": "ABC123"}
+
+    ENTITY is optional and may be blank (treated as NULL).
+    """
+    data = get_request_payload()
+    old = db.session.get(Report, data.get('id'))
+
+    if not old:
+        return json_error("Record not found", 404)
+
+    try:
+        raw_entity = '' if data.get('entity') is None else str(data.get('entity'))
+        entity_val = raw_entity.strip()
+        entity_val = entity_val if entity_val else None
+
+        old.entity = entity_val
+        db.session.commit()
+
+        return json_success(id=old.id)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
 @app.route('/api/update-comments-batch', methods=['POST'])
 def update_comments_batch():
     """Best-effort batch update for miss goal comment."""
