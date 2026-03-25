@@ -120,6 +120,38 @@ function updatePinnedColumnOffsets() {
     table.style.setProperty('--pinned-left-2', `${left2}px`);
     table.style.setProperty('--pinned-left-3', `${left3}px`);
     table.style.setProperty('--pinned-left-4', `${left4}px`);
+
+    // Ensure the divider after the pinned columns always exists, even when Entity is hidden.
+    updatePinnedLastDivider(table);
+}
+
+function updatePinnedLastDivider(table) {
+    if (!table) return;
+
+    // Clear any previous marker.
+    table.querySelectorAll('.pinned-last').forEach(el => el.classList.remove('pinned-last'));
+
+    const headerRow = table.querySelector('thead tr:first-child');
+    if (!headerRow) return;
+
+    const isVisible = (el) => {
+        if (!el) return false;
+        if (el.style && el.style.display === 'none') return false;
+        return el.getClientRects && el.getClientRects().length > 0;
+    };
+
+    // Determine which pinned index is the last visible one.
+    const lastPinnedIdx = ['pinned-4', 'pinned-3', 'pinned-2', 'pinned-1']
+        .find(cls => isVisible(headerRow.querySelector(`th.${cls}`)));
+    if (!lastPinnedIdx) return;
+
+    // Apply pinned-last to all cells (thead/tbody/tfoot) belonging to that pinned column.
+    table.querySelectorAll(`.${lastPinnedIdx}`).forEach(el => {
+        if (!isVisible(el)) return;
+        if (el.classList.contains('pinned-col')) {
+            el.classList.add('pinned-last');
+        }
+    });
 }
 
 function applyDefaultSort() {
@@ -689,6 +721,7 @@ async function saveAllGoalChanges() {
     const rows = getDataRows();
     const goalUpdates = [];
     const commentUpdates = [];
+    const entityUpdates = [];
 
     let hasIncompleteGoalRow = false;
 
@@ -739,6 +772,19 @@ async function saveAllGoalChanges() {
                 });
             }
         }
+
+        // --- EPX Entity updates (only if an editable entity input exists in the row) ---
+        const entityInput = row.querySelector('.entity-input');
+        if (entityInput) {
+            const entityVal = String(entityInput.value ?? '');
+            const entityOrig = String(entityInput.getAttribute('data-original') ?? '');
+            if (entityVal.trim() !== entityOrig.trim()) {
+                entityUpdates.push({
+                    id: id,
+                    entity: entityVal,
+                });
+            }
+        }
     });
 
     if (hasIncompleteGoalRow) {
@@ -746,7 +792,7 @@ async function saveAllGoalChanges() {
         return;
     }
 
-    if (goalUpdates.length === 0 && commentUpdates.length === 0) {
+    if (goalUpdates.length === 0 && commentUpdates.length === 0 && entityUpdates.length === 0) {
         showToast('No changes to save.', 'error');
         return;
     }
@@ -760,7 +806,7 @@ async function saveAllGoalChanges() {
     }
 
     try {
-        let goalOk = 0, goalErr = 0, commentOk = 0, commentErr = 0;
+    let goalOk = 0, goalErr = 0, commentOk = 0, commentErr = 0, entityOk = 0, entityErr = 0;
 
         if (goalUpdates.length > 0) {
             const resGoals = await fetch(apiUrl('/api/update-goals-batch'), {
@@ -796,8 +842,44 @@ async function saveAllGoalChanges() {
             commentErr = results.filter(r => r && r.status !== 'success').length;
         }
 
-        const totalOk = goalOk + commentOk;
-        const totalErr = goalErr + commentErr;
+        // Entity changes are saved via the existing single-row endpoint.
+        // Keep it low-risk: batch calls with Promise.all, but don't fail the whole save if one row fails.
+        if (entityUpdates.length > 0) {
+            const results = await Promise.all(entityUpdates.map(async (u) => {
+                try {
+                    const res = await fetch(apiUrl('/api/update-entity'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: u.id, entity: u.entity })
+                    });
+                    const json = await res.json();
+                    if (!res.ok || json.status !== 'success') {
+                        return { status: 'error', message: json.message || 'Unknown' };
+                    }
+                    return { status: 'success' };
+                } catch (e) {
+                    return { status: 'error', message: 'Network error' };
+                }
+            }));
+
+            entityOk = results.filter(r => r && r.status === 'success').length;
+            entityErr = results.filter(r => r && r.status !== 'success').length;
+
+            // If successful, update originals so the UI is clean without reload.
+            if (entityOk > 0) {
+                entityUpdates.forEach(u => {
+                    const row = document.querySelector(`tr[data-id="${u.id}"]`);
+                    const input = row ? row.querySelector('.entity-input') : null;
+                    if (input) {
+                        input.setAttribute('data-original', String(input.value ?? ''));
+                        input.classList.remove('input-dirty');
+                    }
+                });
+            }
+        }
+
+        const totalOk = goalOk + commentOk + entityOk;
+        const totalErr = goalErr + commentErr + entityErr;
         if (totalErr === 0) {
             showToast(`Saved ${totalOk} change(s).`, 'success');
         } else {
