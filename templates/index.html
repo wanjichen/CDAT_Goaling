@@ -184,7 +184,8 @@
                         </th>
                         <th class="sortable w-25" data-col="tr" onclick="sortTable(this, 'tr')">TR <span
                                 class="sort-icon">⇕</span></th>
-                        <th class="sortable w-25" data-col="output" onclick="sortTable(this, 'output')">
+                        <th class="sortable w-25" data-col="output" onclick="sortTable(this, 'output')"
+                            {% if current_page == 'TACS23' %}title="2171&2174 outputs also include 2176&2177 rework locations"{% endif %}>
                             Output <span class="sort-icon">⇕</span></th>
                         <th class="sortable highlight-col w-30" data-col="system_goal"
                             onclick="sortTable(this, 'system_goal')">Goal <span class="sort-icon">⇕</span></th>
