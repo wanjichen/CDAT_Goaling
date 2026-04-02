@@ -338,19 +338,57 @@ def get_current_shift_from_calendar():
 
 
 def get_latest_report_ids_for_shift_and_page(latest_shift, page_name):
-    filtered = db.session.query(Report.id, Report.prodgroup3, Report.operation, Report.entity).filter(
+    filtered = db.session.query(
+        Report.id,
+        Report.prodgroup3,
+        Report.operation,
+        Report.entity
+    ).filter(
         Report.shift == latest_shift
     )
     filtered = apply_operation_group_filter(filtered, page_name)
 
-    latest_ids_subquery = filtered.with_entities(
-        db.func.max(Report.id).label('id')
+    # 1) Latest id per (prodgroup3, operation, entity)
+    latest_ids_per_entity = filtered.with_entities(
+        db.func.max(Report.id).label('id'),
+        Report.prodgroup3.label('prodgroup3'),
+        Report.operation.label('operation'),
+        Report.entity.label('entity')
     ).group_by(
         Report.prodgroup3,
-    Report.operation
+        Report.operation,
+        Report.entity
     ).subquery()
 
-    return latest_ids_subquery
+    # 2) For each (prodgroup3, operation), check if any non-NULL entity exists.
+    non_null_entity_exists = filtered.filter(
+        Report.entity.isnot(None)
+    ).with_entities(
+        Report.prodgroup3.label('prodgroup3'),
+        Report.operation.label('operation'),
+        db.literal(1).label('has_entity')
+    ).group_by(
+        Report.prodgroup3,
+        Report.operation
+    ).subquery()
+
+    # 3) Hide the NULL-entity latest row when a non-NULL entity exists for the same (prodgroup3, operation).
+    latest_ids_filtered = db.session.query(
+        latest_ids_per_entity.c.id.label('id')
+    ).outerjoin(
+        non_null_entity_exists,
+        db.and_(
+            non_null_entity_exists.c.prodgroup3 == latest_ids_per_entity.c.prodgroup3,
+            non_null_entity_exists.c.operation == latest_ids_per_entity.c.operation
+        )
+    ).filter(
+        db.or_(
+            latest_ids_per_entity.c.entity.isnot(None),
+            non_null_entity_exists.c.has_entity.is_(None)
+        )
+    ).subquery()
+
+    return latest_ids_filtered
 
 
 def get_recent_database_shifts_for_page(page_name, limit=5):
