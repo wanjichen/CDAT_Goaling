@@ -908,12 +908,21 @@ async function submitNewGoal() {
     const entity = (document.getElementById('n_entity')?.value || '').trim();
     const goal = document.getElementById('n_goal').value;
 
-    if (!pg3 || !oper || !goal) { showToast('Please fill in all required fields (*)', 'error'); return; }
+    const entityRequiredPages = ['TCB', 'HBC-JDC', 'DIA', 'EPX', 'BA'];
+    const currentPage = getCurrentPageFromUrl();
+    const isEntityRequired = entityRequiredPages.includes(currentPage);
+
+    if (!pg3 || !oper || !goal || (isEntityRequired && !entity)) {
+        showToast('Please fill in all required fields (*)', 'error');
+        return;
+    }
 
     btn.innerText = '...'; btn.disabled = true;
 
-    const data = { prodgroup3: pg3, operation: oper, goal: goal, reason: document.getElementById('n_reason').value };
-    if (entity) {
+    const data = { prodgroup3: pg3, operation: oper, goal: goal, reason: document.getElementById('n_reason').value, page: currentPage };
+    if (isEntityRequired) {
+        data.entity = entity;
+    } else if (entity) {
         data.entity = entity;
     }
 

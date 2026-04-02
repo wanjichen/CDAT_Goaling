@@ -347,8 +347,7 @@ def get_latest_report_ids_for_shift_and_page(latest_shift, page_name):
         db.func.max(Report.id).label('id')
     ).group_by(
         Report.prodgroup3,
-        Report.operation,
-        Report.entity
+    Report.operation
     ).subquery()
 
     return latest_ids_subquery
@@ -481,7 +480,12 @@ def add_new_goal():
     user = get_current_user()
     try:
         default_year, default_shift = get_current_year_and_shift_from_calendar()
+        page = (data.get('page') or '').strip()
+        entity_required_pages = {'TCB', 'HBC-JDC', 'DIA', 'EPX', 'BA'}
         raw_entity = (data.get('entity') or '').strip()
+        if page in entity_required_pages and not raw_entity:
+            return json_error('ENTITY is required for this page.', 400)
+
         entity = raw_entity if raw_entity else None
         new_entry = Report(
             year=default_year,            # 使用最新记录的年份
