@@ -969,12 +969,13 @@ async function insertNewGoalRowIntoTable(newId) {
             return td;
         };
 
-        // Keep styling consistent with existing rows.
-    tr.appendChild(cell('shift', escapeHtml(r.shift || ''), 'col-1'));
-    tr.appendChild(cell('prodgroup3', escapeHtml(r.prodgroup3 || ''), 'col-2'));
-    tr.appendChild(cell('operation', escapeHtml(r.operation || ''), 'col-3'));
-    tr.appendChild(cell('shift_start_wip', formatNum(r.shift_start_wip), 'col-4'));
-        tr.appendChild(cell('entity', escapeHtml(r.entity || '')));
+    // Keep styling consistent with existing rows.
+    // NOTE: Missing pinned/width classes here can cause the browser to recalculate the fixed table layout and
+    // make columns appear "squeezed" until a full refresh.
+    tr.appendChild(cell('prodgroup3', escapeHtml(r.prodgroup3 || ''), 'col-1 pinned-col pinned-1'));
+    tr.appendChild(cell('operation', escapeHtml(r.operation || ''), 'col-2 pinned-col pinned-2'));
+    tr.appendChild(cell('shift_start_wip', formatNum(r.shift_start_wip), 'col-3 pinned-col pinned-3'));
+    tr.appendChild(cell('entity', escapeHtml(r.entity || ''), 'cell-pad-4 pinned-col pinned-4 pinned-last'));
         tr.appendChild(cell('qtg1', formatNum(r.qtg1)));
         tr.appendChild(cell('qps1', formatNum(r.qps1)));
         tr.appendChild(cell('mor', formatNum(r.mor), 'mor-val'));
@@ -1018,6 +1019,10 @@ async function insertNewGoalRowIntoTable(newId) {
 
         tbody.prepend(tr);
 
+    // Force a layout pass so the fixed-layout table measures consistently after insertion.
+    // (This is a no-op visually but prevents the transient "squeezed" state seen until manual refresh.)
+    void table.offsetWidth;
+
         // Respect column visibility rules (hide entity / subcell columns depending on page).
         const activePage = getCurrentPageFromUrl();
         const columnVisibilityConfig = {
@@ -1030,6 +1035,9 @@ async function insertNewGoalRowIntoTable(newId) {
                 els.forEach(el => el.style.display = 'none');
             }
         }
+
+    // Update sticky/pinned layout after DOM changes.
+    updatePinnedColumnOffsets();
 
         // Recalculate totals.
         calculateTotals();
