@@ -61,6 +61,17 @@ body {
     background: var(--table-hover-bg) !important;
 }
 
+/* --- Alternating row colors (zebra striping) --- */
+/* Minimal change: stripe only tbody rows; keep hover styling on top. */
+#mainTable tbody tr:nth-child(even) td {
+    background-color: rgba(148, 163, 184, 0.16);
+}
+
+/* Ensure pinned columns match the row stripe color (they have their own solid background). */
+#mainTable tbody tr:nth-child(even) td.pinned-col {
+    background-color: rgba(148, 163, 184, 0.16) !important;
+}
+
 /* Pinned Total row cells should stay pinned and stay on top of body cells. */
 #mainTable tfoot td.pinned-col {
     position: sticky !important;
