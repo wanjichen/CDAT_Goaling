@@ -186,7 +186,8 @@ class Report(db.Model):
     system_suggested_goal_created_at = db.Column(db.DateTime)
     subcell_info = db.Column(db.String(100))
 
-    manual_adjusted_goal = db.Column(db.Float, default=0.0)
+    # Manual override; keep NULL distinct from 0 so versioning/comment-only updates don't turn NULL into 0.
+    manual_adjusted_goal = db.Column(db.Float, nullable=True)
     goal_adjusted_reason = db.Column(db.String(255))
     goal_adjusted_at = db.Column(db.DateTime)
     goal_adjusted_by = db.Column(db.String(100))
