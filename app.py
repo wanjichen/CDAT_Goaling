@@ -144,6 +144,27 @@ OPERATION_GROUPS = {
 }
 
 
+def derive_module_from_operation(operation_value) -> str:
+    """Derive module name from OPERATION_GROUPS.
+
+    Returns the module key (e.g. 'TCB', 'BA') when matched, otherwise 'Unknown'.
+    Matches common string variants: '1204', '1204.0', '1204.00'.
+    """
+    if operation_value is None:
+        return 'Unknown'
+
+    raw = str(operation_value).strip()
+    if not raw:
+        return 'Unknown'
+
+    for module_name, ops in OPERATION_GROUPS.items():
+        for op in ops:
+            if raw == str(op) or raw == f"{op}.0" or raw == f"{op}.00":
+                return module_name
+
+    return 'Unknown'
+
+
 class Report(db.Model):
     __tablename__ = 'cdat_goaling'
     __table_args__ = {'schema': db_schema} if db_schema else {}
@@ -153,6 +174,7 @@ class Report(db.Model):
     shift = db.Column(db.String(10))
     prodgroup3 = db.Column(db.String(50))
     operation = db.Column(db.String(50))
+    module = db.Column(db.String(50))
     qtg1 = db.Column(db.Float, default=0.0)
     qps1 = db.Column(db.Float, default=0.0)
     entity = db.Column(db.String(50))
@@ -248,6 +270,11 @@ def clone_report_with_updates(old_report, **updates):
         old_report).mapper.column_attrs if c.key != 'id']
     data = {c: getattr(old_report, c) for c in columns}
     data.update(updates)
+
+    # Ensure module is always populated unless explicitly overridden.
+    if 'module' not in updates:
+        data['module'] = derive_module_from_operation(data.get('operation'))
+
     return Report(**data)
 
 
@@ -268,6 +295,7 @@ def report_to_dict(r: Report):
         "shift": r.shift,
         "prodgroup3": r.prodgroup3,
         "operation": r.operation,
+    "module": r.module,
         "entity": r.entity,
         "qtg1": r.qtg1,
         "qps1": r.qps1,
@@ -525,11 +553,13 @@ def add_new_goal():
             return json_error('ENTITY is required for this page.', 400)
 
         entity = raw_entity if raw_entity else None
+        module_val = derive_module_from_operation(data.get('operation'))
         new_entry = Report(
             year=default_year,            # 使用最新记录的年份
             shift=default_shift,          # 使用最新记录的班次
             prodgroup3=data.get('prodgroup3'),
             operation=data.get('operation'),
+            module=module_val,
             entity=entity,
             manual_adjusted_goal=float(data.get('goal') or 0),
             goal_adjusted_reason=data.get('reason'),
