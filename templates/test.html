@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CDAT Goaling - Test Modules</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}">
+</head>
+<body>
+  <div id="toast-container"></div>
+
+  <div class="header">
+    <div class="header-left">
+      <h2><a class="header-home-link" href="{{ url_for('index') }}">CDAT MFG Goaling Report</a></h2>
+      <div class="header-meta-banner">
+        <span class="meta-chip">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+              <path
+                d="M6 2.75a.75.75 0 0 1 .75.75V5h10.5V3.5a.75.75 0 0 1 1.5 0V5h.25A2.75 2.75 0 0 1 21.75 7.75v11.5A2.75 2.75 0 0 1 19 22H5a2.75 2.75 0 0 1-2.75-2.75V7.75A2.75 2.75 0 0 1 5 5h.25V3.5A.75.75 0 0 1 6 2.75Zm13.75 7.5H3.75v9a1.25 1.25 0 0 0 1.25 1.25h14a1.25 1.25 0 0 0 1.25-1.25v-9ZM5 6.5a1.25 1.25 0 0 0-1.25 1.25v1h16v-1A1.25 1.25 0 0 0 19 6.5H5Z" />
+            </svg>
+          </span>
+          <span class="value">{{ current_date }}</span>
+        </span>
+        <span class="meta-chip">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+              <path
+                d="M12 1.75a10.25 10.25 0 1 0 10.25 10.25A10.262 10.262 0 0 0 12 1.75Zm0 19a8.75 8.75 0 1 1 8.75-8.75A8.76 8.76 0 0 1 12 20.75Zm.75-13.5a.75.75 0 0 0-1.5 0v5a.75.75 0 0 0 .33.62l3.5 2.33a.75.75 0 1 0 .84-1.24l-3.17-2.11Z" />
+            </svg>
+          </span>
+          <span class="value">{{ current_shift or 'N/A' }}</span>
+        </span>
+        <span class="meta-chip">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+              <path
+                d="M12 12.75a5.25 5.25 0 1 0-5.25-5.25A5.256 5.256 0 0 0 12 12.75Zm0-9a3.75 3.75 0 1 1-3.75 3.75A3.754 3.754 0 0 1 12 3.75Zm0 10.5c-4.79 0-8.25 2.35-8.25 5.58a.75.75 0 0 0 1.5 0c0-2.2 2.68-4.08 6.75-4.08s6.75 1.88 6.75 4.08a.75.75 0 0 0 1.5 0c0-3.23-3.46-5.58-8.25-5.58Z" />
+            </svg>
+          </span>
+          <span class="value">{{ current_user or 'N/A' }}</span>
+        </span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="tab-link btn-primary" onclick="openTestModal()">+ Add New Goal</button>
+      <button class="tab-link btn-secondary btn-export" onclick="exportTestToCSV()"><span class="btn-icon"
+          aria-hidden="true">&#8681;</span>Export CSV</button>
+      <a class="tab-link btn-secondary btn-issue" href="mailto:wanji.chen@intel.com"
+        onclick="return confirmReportIssue(event)">
+        <span class="btn-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+            <path
+              d="M5.5 5.25A2.25 2.25 0 0 0 3.25 7.5v9A2.25 2.25 0 0 0 5.5 18.75h13A2.25 2.25 0 0 0 20.75 16.5v-9A2.25 2.25 0 0 0 18.5 5.25h-13Zm-.2 2.28a.75.75 0 0 1 1.02-.27L12 10.4l5.68-3.14a.75.75 0 1 1 .72 1.32l-6.04 3.34a.75.75 0 0 1-.72 0L5.57 8.55a.75.75 0 0 1-.27-1.02Z" />
+          </svg>
+        </span>Report Issue
+      </a>
+    </div>
+  </div>
+
+  <div class="shift-filter-bar" role="region" aria-label="Shift data filter">
+    <div class="shift-filter-controls">
+      <form class="shift-filter-form" method="get" action="{{ url_for('test_home') }}">
+        <input type="hidden" name="page" value="{{ current_page }}">
+        <label for="shift_select">Shift View</label>
+        <select id="shift_select" name="shift" onchange="this.form.submit()">
+          {% for shift_item in (available_shifts or []) %}
+          <option value="{{ shift_item }}" {% if selected_shift==shift_item %}selected{% endif %}>{{
+            shift_item }}</option>
+          {% else %}
+          <option value="" selected disabled>No shift data</option>
+          {% endfor %}
+        </select>
+      </form>
+      <div class="shift-filter-note" role="note" aria-label="Data refresh schedule">
+        * Goaling data refreshes around 07:40/19:40 every shift. Please verify after these times for the current shift.
+      </div>
+      {% if shift_mismatch or not selected_shift %}
+      <div class="shift-filter-status{% if shift_mismatch %} is-warning{% endif %}">
+        {% if shift_mismatch %}
+        Data is not refreshed yet: calendar shift is {{ current_shift }}, but latest shift available is {{
+        latest_db_shift
+        }}.
+        {% elif not selected_shift %}
+        No shift data is available.
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if selected_shift and current_shift and selected_shift != current_shift %}
+      <div class="shift-filter-status is-warning">
+        Reminder: you are viewing shift {{ selected_shift }}, not the latest calendar shift ({{ current_shift }}).
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="shift-filter-bar" role="region" aria-label="Shift data navigation">
+    <!-- Navigation -->
+    <div class="nav-tabs">
+      <div class="nav-tabs-links">
+        {% for tab in (tabs or []) %}
+        <a href="{{ url_for('test_home', page=tab, shift=selected_shift) }}" class="tab-link">{{ tab }}</a>
+        {% endfor %}
+      </div>
+      <button class="tab-link copy-tab-btn" onclick="saveAllTestGoalChanges()" title="Save all changes in one batch"
+        aria-label="Save all adjusted goal and reason changes"><span class="btn-icon"
+          aria-hidden="true">&#128190;</span>Save All Changes</button>
+      <button class="tab-link copy-tab-btn" onclick="copyTestTableToClipboard()"
+        title="Copy the visible table rows and columns to your clipboard"
+        aria-label="Copy the visible table rows and columns to your clipboard"><span class="btn-icon"
+          aria-hidden="true">&#128203;</span>Copy Table</button>
+      <a class="tab-link copy-tab-btn" href="{{ url_for('download_wip_goal_reckon_raw') }}"
+        title="Download raw data for validation purpose" aria-label="Download raw validation CSV">
+        <span class="btn-icon" aria-hidden="true">&#128229;</span>Download Raw Data
+      </a>
+    </div>
+  </div>
+
+  <!-- Modal Form (Test Modules) -->
+  <div id="testModalOverlay" onclick="if(event.target==this) closeTestModal()" style="display:none;">
+    <div class="modal-card">
+      <h3>New Test Goal</h3>
+      <div class="modal-body-scroll" onkeypress="if(event.key === 'Enter') submitNewTestGoal()">
+        <label>PRODGROUP3 *</label>
+        <input type="text" id="t_pg3" class="form-input" placeholder="e.g. ADLP282">
+        <label>OPERATION *</label>
+        <input type="text" id="t_oper" class="form-input" placeholder="e.g. 2171">
+        <label>GOAL *</label>
+        <input type="number" id="t_goal" class="form-input" placeholder="Must enter a number > 0">
+        <label>REASON *</label>
+        <textarea id="t_reason" class="form-input textarea-reason"></textarea>
+      </div>
+      <div class="modal-footer-actions">
+        <button class="tab-link modal-action-btn" id="btn-test-modal-submit" onclick="submitNewTestGoal()">Save
+          Goal</button>
+        <button class="tab-link modal-action-btn" onclick="closeTestModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+      <div class="table-container" style="max-height: 70vh;">
+        <table id="testTable">
+          <thead>
+            <tr>
+              <th class="pinned-col pinned-1" data-col="prodgroup3">Prodgroup3</th>
+              <th class="pinned-col pinned-2" data-col="operation">Operation</th>
+              <th class="pinned-col pinned-3" data-col="shift_start_wip">Shift Start WIP</th>
+              <th data-col="mor">MOR</th>
+              <th data-col="tr">TR</th>
+              <th data-col="shift_start_wip_onhold">WIP Onhold</th>
+              <th data-col="link_cell_qty">Link Cell Qty</th>
+              <th data-col="capacity">Capacity</th>
+              <th data-col="goal">Goal</th>
+              <th data-col="output">Output</th>
+              <th data-col="qtg1">QTG1</th>
+              <th data-col="qps1">QPS1</th>
+              <th data-col="manual_adjusted_goal">Manual Goal</th>
+              <th data-col="goal_adjusted_reason">Adjusted Reason</th>
+              <th data-col="miss_goal_comment">Miss Goal Comment</th>
+              <th data-col="commit1">Commit1</th>
+              <th data-col="commit2">Commit2</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if rows and rows|length > 0 %}
+              {% for r in rows %}
+              <tr data-id="{{ r.id }}">
+                <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
+                <td class="pinned-col pinned-2" data-col="operation">{{ r.operation }}</td>
+                <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+                <td class="mor-val" data-col="mor">{{ r.mor or 0 }}</td>
+                <td data-col="tr">{{ r.tr or 0 }}</td>
+                <td data-col="shift_start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
+                <td data-col="link_cell_qty">{{ r.link_cell_qty or 0 }}</td>
+                <td data-col="capacity">{{ r.capacity or 0 }}</td>
+                <td data-col="goal">{{ r.goal or 0 }}</td>
+                <td data-col="output">{{ r.output or 0 }}</td>
+                <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
+                <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+                <td class="cell-pad-4" data-col="manual_adjusted_goal">
+                  <div class="action-group" id="group-goal-{{ r.id }}">
+                    <input type="number" class="table-input goal-input" value="{{ r.manual_adjusted_goal if r.manual_adjusted_goal is not none else '' }}"
+                      data-original="{{ r.manual_adjusted_goal if r.manual_adjusted_goal is not none else '' }}" oninput="handleTestInput(this, 'goal')">
+                    <button class="btn-mini btn-save" onclick="saveTestRow(this, 'goal')">Save</button>
+                    <button class="btn-mini btn-cancel" onclick="cancelTestRow(this, 'goal')">✖</button>
+                  </div>
+                </td>
+                <td class="cell-pad-4" data-col="goal_adjusted_reason">
+                  <input type="text" class="table-input reason-input" value="{{ r.goal_adjusted_reason or '' }}"
+                    data-original="{{ r.goal_adjusted_reason or '' }}" oninput="handleTestInput(this, 'goal')">
+                </td>
+                <td class="cell-pad-4" data-col="miss_goal_comment"
+                    title="Comment by: {{ r.miss_goal_comment_updated_by or 'N/A' }}&#10;At: {{ r.miss_goal_comment_updated_at or 'N/A' }}">
+                  <div class="action-group" id="group-comment-{{ r.id }}">
+                    <textarea class="table-input comment-input comment-textarea" rows="2"
+                      data-original="{{ r.miss_goal_comment or '' }}" oninput="handleTestInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
+                    <button class="btn-mini btn-save" onclick="saveTestRow(this, 'comment')">Save</button>
+                    <button class="btn-mini btn-cancel" onclick="cancelTestRow(this, 'comment')">✖</button>
+                  </div>
+                </td>
+                <td data-col="commit1">{{ r.commit1 or 0 }}</td>
+                <td data-col="commit2">{{ r.commit2 or 0 }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="empty-state-row"><td colspan="20" style="padding: 14px;">No rows for this shift/page.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/test.js') }}"></script>
+</body>
+</html>

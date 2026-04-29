@@ -9,6 +9,8 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import desc, inspect
 
+from test_modules.routes import register_test_routes
+
 app = Flask(__name__)
 
 
@@ -74,6 +76,10 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = _engine_opts
 db = SQLAlchemy(app)
 
 
+# Register isolated areas (kept separate from production assembly modules).
+register_test_routes(app)
+
+
 @app.route('/download/wip-goal-reckon-raw')
 def download_wip_goal_reckon_raw():
     """Download the raw validation CSV used for data checking."""
@@ -137,10 +143,21 @@ OPERATION_GROUPS = {
     'DFLX':     [2004, 2053],
     'EPX':      [1225],
     'CURE':     [970, 1173, 1235, 1266, 1366, 2135],
-    'PXVI':     [1025, 1175, 1245, 1863, 1892, 1895, 2436, 9668],
+    'PXVI':     [1025, 1175, 1245, 1863, 1892, 1895, 2436, 2863, 9668],
     'CTC':      [2150, 2151, 2152, 2161],
     '2D-Xray':  [265],
     'BA':       [2133]
+}
+
+TEST_OPERATION_GROUPS = {
+    # Test Modules tab mapping (operation -> module).
+    # Dict insertion order defines tab order.
+    'LCBI': [7460, 7462, 7464, 7463, 7465, 7652],
+    'V8': [7721, 6881, 7731, 7734, 7571],
+    'HDMx': [6262, 7820],
+    'PHVI': [8831, 8832, 8833, 8834],
+    'OLB': [6379, 7571],
+    'STHI': [6970, 6508, 7297, 7899, 7297, 8748, 8749, 6341, 6342, 7681, 7682],
 }
 
 
@@ -157,7 +174,7 @@ def derive_module_from_operation(operation_value) -> str:
     if not raw:
         return 'Unknown'
 
-    for module_name, ops in OPERATION_GROUPS.items():
+    for module_name, ops in {**OPERATION_GROUPS, **TEST_OPERATION_GROUPS}.items():
         for op in ops:
             if raw == str(op) or raw == f"{op}.0" or raw == f"{op}.00":
                 return module_name
@@ -195,6 +212,138 @@ class Report(db.Model):
     miss_goal_comment = db.Column(db.String(255))
     miss_goal_comment_updated_at = db.Column(db.DateTime)
     miss_goal_comment_updated_by = db.Column(db.String(100))
+
+
+class TestReport(db.Model):
+    """Isolated model for Test Modules (cdat_goaling_test).
+
+    Intentionally separate from the production assembly table/model to reduce risk.
+    """
+
+    __tablename__ = 'cdat_goaling_test'
+    __table_args__ = {'schema': db_schema} if db_schema else {}
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    year = db.Column(db.Integer)
+    shift = db.Column(db.String(10))
+    prodgroup3 = db.Column(db.String(50))
+    operation = db.Column(db.String(50))
+    operation_desc = db.Column(db.String(255))
+
+    mor = db.Column(db.Float)
+    tr = db.Column(db.Float)
+    shift_start_wip = db.Column(db.Float)
+    shift_start_wip_onhold = db.Column(db.Float)
+    link_cell_qty = db.Column(db.Float)
+    capacity = db.Column(db.Float)
+
+    system_suggested_goal = db.Column(db.Float)
+    system_suggested_goal_created_at = db.Column(db.DateTime)
+
+    goal = db.Column(db.Float)
+    output = db.Column(db.Float)
+    qtg1 = db.Column(db.Float)
+    qps1 = db.Column(db.Float)
+
+    # Manual override; keep NULL distinct from 0.
+    manual_adjusted_goal = db.Column(db.Float, nullable=True)
+    goal_adjusted_reason = db.Column(db.String(255))
+    goal_adjusted_at = db.Column(db.DateTime)
+    goal_adjusted_by = db.Column(db.String(100))
+
+    miss_goal_comment = db.Column(db.String(255))
+    miss_goal_comment_updated_at = db.Column(db.DateTime)
+    miss_goal_comment_updated_by = db.Column(db.String(100))
+
+    module = db.Column(db.String(50))
+
+    commit1 = db.Column(db.Float)
+    commit2 = db.Column(db.Float)
+    prebuild1 = db.Column(db.Float)
+
+
+def apply_test_report_updates_in_place(old_report: TestReport, **updates) -> None:
+    """Apply updates directly to the existing test row.
+
+    Test pages do NOT use full version/audit rows; keep edits in-place.
+    """
+
+    for k, v in updates.items():
+        setattr(old_report, k, v)
+
+    # Keep module consistent with operation unless explicitly overridden.
+    if 'module' not in updates:
+        old_report.module = derive_module_from_operation(old_report.operation)
+
+    db.session.commit()
+
+
+def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
+    """Mirror the assembly latest-per-group logic for the test table."""
+    filtered = db.session.query(
+        TestReport.id,
+        TestReport.prodgroup3,
+        TestReport.operation,
+    ).filter(
+        TestReport.shift == latest_shift
+    )
+    filtered = apply_test_operation_group_filter(filtered, page_name)
+
+    latest_ids = filtered.with_entities(
+        db.func.max(TestReport.id).label('id')
+    ).group_by(
+        TestReport.prodgroup3,
+        TestReport.operation,
+    ).subquery()
+
+    return latest_ids
+
+
+def get_recent_test_database_shifts_for_page(page_name, limit=5):
+    latest_id = db.func.max(TestReport.id).label('latest_id')
+    query = db.session.query(TestReport.shift, latest_id).filter(
+        TestReport.shift.isnot(None),
+        db.func.trim(db.cast(TestReport.shift, db.String)) != ''
+    )
+    query = apply_test_operation_group_filter(query, page_name)
+    rows = query.group_by(TestReport.shift).order_by(
+        desc(latest_id)).limit(limit).all()
+    shifts = [row.shift for row in rows if row.shift]
+    return sorted(shifts, reverse=True)
+
+
+def test_report_to_dict(r: TestReport):
+    return {
+        'id': r.id,
+        'year': r.year,
+        'shift': r.shift,
+        'prodgroup3': r.prodgroup3,
+        'operation': r.operation,
+        'operation_desc': r.operation_desc,
+        'module': r.module,
+        'mor': r.mor,
+        'tr': r.tr,
+        'shift_start_wip': r.shift_start_wip,
+        'shift_start_wip_onhold': r.shift_start_wip_onhold,
+        'link_cell_qty': r.link_cell_qty,
+        'capacity': r.capacity,
+        'system_suggested_goal': r.system_suggested_goal,
+        'system_suggested_goal_created_at': r.system_suggested_goal_created_at.strftime('%Y-%m-%d %H:%M:%S') if r.system_suggested_goal_created_at else None,
+        'goal': r.goal,
+        'output': r.output,
+        'qtg1': r.qtg1,
+        'qps1': r.qps1,
+        'manual_adjusted_goal': r.manual_adjusted_goal,
+        'goal_adjusted_reason': r.goal_adjusted_reason,
+        'goal_adjusted_at': r.goal_adjusted_at.strftime('%Y-%m-%d %H:%M:%S') if r.goal_adjusted_at else None,
+        'goal_adjusted_by': r.goal_adjusted_by,
+        'miss_goal_comment': r.miss_goal_comment,
+        'miss_goal_comment_updated_at': r.miss_goal_comment_updated_at.strftime('%Y-%m-%d %H:%M:%S') if r.miss_goal_comment_updated_at else None,
+        'miss_goal_comment_updated_by': r.miss_goal_comment_updated_by,
+        'commit1': r.commit1,
+        'commit2': r.commit2,
+        'prebuild1': r.prebuild1,
+    }
 
 
 def get_current_user():
@@ -456,6 +605,22 @@ def apply_operation_group_filter(query, page_name):
         op_variants.append(f"{op}.00")
 
     trimmed_operation = db.func.trim(db.cast(Report.operation, db.String))
+    return query.filter(trimmed_operation.in_(op_variants))
+
+
+def apply_test_operation_group_filter(query, page_name):
+    """Filter TestReport queries using TEST_OPERATION_GROUPS."""
+    if page_name not in TEST_OPERATION_GROUPS:
+        return query
+
+    target_ops = TEST_OPERATION_GROUPS[page_name]
+    op_variants = []
+    for op in target_ops:
+        op_variants.append(str(op))
+        op_variants.append(f"{op}.0")
+        op_variants.append(f"{op}.00")
+
+    trimmed_operation = db.func.trim(db.cast(TestReport.operation, db.String))
     return query.filter(trimmed_operation.in_(op_variants))
 
 
@@ -796,6 +961,224 @@ def update_comments_batch():
                 miss_goal_comment_updated_by=user
             )
             results.append({'old_id': old_id_int, 'new_id': new_entry.id, 'status': 'success'})
+        except Exception as e:
+            db.session.rollback()
+            results.append({'old_id': old_id_int, 'status': 'error', 'message': str(e)})
+
+    return json_success(results=results)
+
+
+@app.route('/api/test/update-goal', methods=['POST'])
+def test_update_goal():
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(TestReport, data.get('id'))
+
+    if not old:
+        return json_error('Record not found', 404)
+
+    raw_goal = data.get('manual_goal')
+    raw_reason = data.get('reason')
+    reason_val = ('' if raw_reason is None else str(raw_reason)).strip()
+    goal_provided = raw_goal is not None and str(raw_goal).strip() != ''
+    reason_provided = reason_val != ''
+
+    if goal_provided != reason_provided:
+        return json_error('Both Manual Goal and Adjust Reason must be filled', 400)
+
+    try:
+        # Empty => NULL
+        if raw_goal is None or str(raw_goal).strip() == '':
+            new_goal = None
+            calculated_tr = compute_tr_from_goal_and_mor(0, old.mor)
+        else:
+            new_goal = float(raw_goal)
+            calculated_tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
+
+        apply_test_report_updates_in_place(
+            old,
+            manual_adjusted_goal=new_goal,
+            tr=calculated_tr,
+            goal_adjusted_reason=reason_val if reason_val else None,
+            goal_adjusted_at=datetime.now(),
+            goal_adjusted_by=user
+        )
+
+        return json_success(new_id=old.id)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
+@app.route('/api/test/update-comment', methods=['POST'])
+def test_update_comment():
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(TestReport, data.get('id'))
+
+    if not old:
+        return json_error('Record not found', 404)
+
+    try:
+        apply_test_report_updates_in_place(
+            old,
+            miss_goal_comment=data.get('comment'),
+            miss_goal_comment_updated_at=datetime.now(),
+            miss_goal_comment_updated_by=user
+        )
+        return json_success(new_id=old.id)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
+@app.route('/api/test/add-new-goal', methods=['POST'])
+def test_add_new_goal():
+    """Insert a new Test Modules row.
+
+    Test modules do not use versioning, so inserts are plain inserts.
+    """
+    data = get_request_payload()
+    user = get_current_user()
+    try:
+        default_year, default_shift = get_current_year_and_shift_from_calendar()
+
+        prodgroup3 = (data.get('prodgroup3') or '').strip()
+        operation = (data.get('operation') or '').strip()
+        raw_goal = data.get('goal')
+        reason = (data.get('reason') or '').strip()
+
+        if not prodgroup3 or not operation or raw_goal in (None, '') or not reason:
+            return json_error('Please fill in all required fields.', 400)
+
+        goal_val = float(raw_goal)
+        module_val = derive_module_from_operation(operation)
+
+        new_entry = TestReport(
+            year=default_year,
+            shift=default_shift,
+            prodgroup3=prodgroup3,
+            operation=operation,
+            module=module_val,
+            manual_adjusted_goal=goal_val,
+            goal_adjusted_reason=reason,
+            goal_adjusted_at=datetime.now(),
+            goal_adjusted_by=user,
+        )
+        db.session.add(new_entry)
+        db.session.commit()
+        return json_success(new_id=new_entry.id)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
+@app.route('/api/test/update-goals-batch', methods=['POST'])
+def test_update_goals_batch():
+    """Best-effort batch update for test adjusted goal + adjusted reason (in-place)."""
+    payload = get_request_payload()
+    updates = payload.get('updates')
+    user = get_current_user()
+
+    if not isinstance(updates, list):
+        return json_error('updates must be a list', 400)
+
+    results = []
+
+    for item in updates:
+        if not isinstance(item, dict):
+            results.append({'status': 'error', 'message': 'Invalid update item'})
+            continue
+
+        old_id = item.get('id')
+        try:
+            old_id_int = int(old_id)
+        except Exception:
+            results.append({'old_id': old_id, 'status': 'error', 'message': 'Invalid id'})
+            continue
+
+        old = db.session.get(TestReport, old_id_int)
+        if not old:
+            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Record not found'})
+            continue
+
+        raw_goal = item.get('manual_goal')
+        raw_reason = item.get('reason')
+        reason_val = ('' if raw_reason is None else str(raw_reason)).strip()
+        goal_provided = raw_goal is not None and str(raw_goal).strip() != ''
+        reason_provided = reason_val != ''
+
+        if goal_provided != reason_provided:
+            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Both Manual Goal and Adjust Reason must be filled'})
+            continue
+
+        try:
+            if raw_goal is None or str(raw_goal).strip() == '':
+                new_goal = None
+                calculated_tr = compute_tr_from_goal_and_mor(0, old.mor)
+            else:
+                new_goal = float(raw_goal)
+                calculated_tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
+        except Exception:
+            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Invalid manual_goal'})
+            continue
+
+        try:
+            apply_test_report_updates_in_place(
+                old,
+                manual_adjusted_goal=new_goal,
+                tr=calculated_tr,
+                goal_adjusted_reason=reason_val if reason_val else None,
+                goal_adjusted_at=datetime.now(),
+                goal_adjusted_by=user
+            )
+            results.append({'old_id': old_id_int, 'new_id': old.id, 'status': 'success'})
+        except Exception as e:
+            db.session.rollback()
+            results.append({'old_id': old_id_int, 'status': 'error', 'message': str(e)})
+
+    return json_success(results=results)
+
+
+@app.route('/api/test/update-comments-batch', methods=['POST'])
+def test_update_comments_batch():
+    """Best-effort batch update for test miss goal comment (in-place)."""
+    payload = get_request_payload()
+    updates = payload.get('updates')
+    user = get_current_user()
+
+    if not isinstance(updates, list):
+        return json_error('updates must be a list', 400)
+
+    results = []
+
+    for item in updates:
+        if not isinstance(item, dict):
+            results.append({'status': 'error', 'message': 'Invalid update item'})
+            continue
+
+        old_id = item.get('id')
+        try:
+            old_id_int = int(old_id)
+        except Exception:
+            results.append({'old_id': old_id, 'status': 'error', 'message': 'Invalid id'})
+            continue
+
+        old = db.session.get(TestReport, old_id_int)
+        if not old:
+            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Record not found'})
+            continue
+
+        comment_val = item.get('comment')
+
+        try:
+            apply_test_report_updates_in_place(
+                old,
+                miss_goal_comment=comment_val,
+                miss_goal_comment_updated_at=datetime.now(),
+                miss_goal_comment_updated_by=user
+            )
+            results.append({'old_id': old_id_int, 'new_id': old.id, 'status': 'success'})
         except Exception as e:
             db.session.rollback()
             results.append({'old_id': old_id_int, 'status': 'error', 'message': str(e)})
