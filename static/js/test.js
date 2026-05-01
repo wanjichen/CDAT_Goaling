@@ -102,7 +102,7 @@ window.saveAllTestGoalChanges = async function saveAllTestGoalChanges() {
   const rows = getTestDataRows();
   const updates = [];
   const commentUpdates = [];
-  let hasIncomplete = false;
+  
 
   rows.forEach(row => {
     if (row.style.display === 'none') return;
@@ -110,31 +110,19 @@ window.saveAllTestGoalChanges = async function saveAllTestGoalChanges() {
     if (!id) return;
 
     const goalInput = row.querySelector('.goal-input');
-    const reasonInput = row.querySelector('.reason-input');
-    if (!goalInput || !reasonInput) return;
+  if (!goalInput) return;
 
     const goalVal = String(goalInput.value ?? '');
     const goalOrig = String(goalInput.getAttribute('data-original') ?? '');
-    const reasonVal = String(reasonInput.value ?? '');
-    const reasonOrig = String(reasonInput.getAttribute('data-original') ?? '');
 
     const goalDirty = goalVal !== goalOrig;
-    const reasonDirty = reasonVal !== reasonOrig;
-    if (!goalDirty && !reasonDirty) return;
+  if (!goalDirty) return;
 
     const trimmedGoal = goalVal.trim();
-    const trimmedReason = reasonVal.trim();
-    const goalProvided = trimmedGoal !== '';
-    const reasonProvided = trimmedReason !== '';
-    if (goalProvided !== reasonProvided) {
-      hasIncomplete = true;
-      return;
-    }
 
     updates.push({
       id: id,
       manual_goal: trimmedGoal === '' ? null : trimmedGoal,
-      reason: trimmedReason,
     });
 
     // --- Comment updates ---
@@ -148,10 +136,6 @@ window.saveAllTestGoalChanges = async function saveAllTestGoalChanges() {
     }
   });
 
-  if (hasIncomplete) {
-    showToast('Some rows are incomplete: both Manual Goal and Adjust Reason must be filled.', 'error');
-    return;
-  }
   if (updates.length === 0 && commentUpdates.length === 0) {
     showToast('No changes to save.', 'error');
     return;
@@ -183,14 +167,9 @@ window.saveAllTestGoalChanges = async function saveAllTestGoalChanges() {
         const row = document.querySelector(`tr[data-id="${u.id}"]`);
         if (!row) return;
         const goalInput = row.querySelector('.goal-input');
-        const reasonInput = row.querySelector('.reason-input');
         if (goalInput) {
           goalInput.setAttribute('data-original', String(goalInput.value ?? ''));
           setInputDirtyState(goalInput, false);
-        }
-        if (reasonInput) {
-          reasonInput.setAttribute('data-original', String(reasonInput.value ?? ''));
-          setInputDirtyState(reasonInput, false);
         }
         hideActions(document.getElementById(`group-goal-${u.id}`));
       });
@@ -249,10 +228,9 @@ window.submitNewTestGoal = async function submitNewTestGoal() {
   const pg3 = (document.getElementById('t_pg3')?.value || '').trim();
   const oper = (document.getElementById('t_oper')?.value || '').trim();
   const goal = (document.getElementById('t_goal')?.value || '').trim();
-  const reason = (document.getElementById('t_reason')?.value || '').trim();
   const page = getCurrentTestPageFromUrl();
 
-  if (!pg3 || !oper || !goal || !reason) {
+  if (!pg3 || !oper || !goal) {
     showToast('Please fill in all required fields (*)', 'error');
     return;
   }
@@ -262,7 +240,7 @@ window.submitNewTestGoal = async function submitNewTestGoal() {
     const res = await fetch(apiUrl('/api/test/add-new-goal'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prodgroup3: pg3, operation: oper, goal: goal, reason: reason, page: page })
+  body: JSON.stringify({ prodgroup3: pg3, operation: oper, goal: goal, page: page })
     });
     const json = await res.json();
     if (!res.ok || json.status !== 'success') {
@@ -299,6 +277,170 @@ function getTestDataRows() {
   return Array.from(document.querySelectorAll(TEST_DATA_ROW_SELECTOR));
 }
 
+function getTestCellValue(td, toLower = true) {
+  if (!td) return '';
+  const input = td.querySelector('input.table-input, textarea.table-input');
+  let val = input ? String(input.value ?? '').trim() : String(td.textContent ?? '').trim();
+  return toLower ? val.toLowerCase() : val;
+}
+
+function parseTestNumber(raw) {
+  const s = String(raw ?? '').trim();
+  if (!s) return 0;
+  const n = parseFloat(s);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+function setTotalText(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = value === 0 ? '' : String(Number(value.toFixed(3)));
+}
+
+function calculateTestTotals() {
+  const rows = getTestDataRows();
+
+  let totalShiftStartWip = 0;
+  let totalShiftStartWipOnhold = 0;
+  let totalCommit1 = 0;
+  let totalCommit2 = 0;
+  // QPS totals intentionally not displayed.
+  let totalMor = 0;
+  let totalTr = 0;
+  let totalCellQty = 0;
+  let totalCapacity = 0;
+  let totalGoal = 0;
+  let totalOutput = 0;
+
+  rows.forEach(row => {
+    if (row.style.display === 'none') return;
+
+    const getVal = (col) => {
+      const td = row.querySelector(`td[data-col="${col}"]`);
+      if (!td) return 0;
+      return parseTestNumber(getTestCellValue(td, false));
+    };
+
+    totalShiftStartWip += getVal('shift_start_wip');
+    totalShiftStartWipOnhold += getVal('shift_start_wip_onhold');
+    totalCommit1 += getVal('commit1');
+    totalCommit2 += getVal('commit2');
+  // QPS totals intentionally not displayed.
+    totalMor += getVal('mor');
+    totalTr += getVal('tr');
+    totalCellQty += getVal('link_cell_qty');
+    totalCapacity += getVal('capacity');
+
+    // Goal is editable: read from the input if present.
+    const goalTd = row.querySelector('td[data-col="goal"]');
+    if (goalTd) {
+      totalGoal += parseTestNumber(getTestCellValue(goalTd, false));
+    }
+
+    totalOutput += getVal('output');
+  });
+
+  setTotalText('test-total-shift_start_wip', totalShiftStartWip);
+  setTotalText('test-total-shift_start_wip_onhold', totalShiftStartWipOnhold);
+  setTotalText('test-total-commit1', totalCommit1);
+  setTotalText('test-total-commit2', totalCommit2);
+  setTotalText('test-total-mor', totalMor);
+  setTotalText('test-total-tr', totalTr);
+  setTotalText('test-total-link_cell_qty', totalCellQty);
+  setTotalText('test-total-capacity', totalCapacity);
+  setTotalText('test-total-goal', totalGoal);
+  setTotalText('test-total-output', totalOutput);
+}
+
+window.sortTestTable = function sortTestTable(thElement, colName) {
+  const table = document.getElementById('testTable');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll('tr:not(.empty-state-row)'));
+  if (rows.length === 0) return;
+
+  let dir = 'asc';
+  if (thElement.getAttribute('data-sort') === 'asc') dir = 'desc';
+
+  table.querySelectorAll('th.sortable').forEach(el => {
+    el.setAttribute('data-sort', '');
+    const icon = el.querySelector('.sort-icon');
+    if (icon) icon.innerText = '⇕';
+  });
+
+  thElement.setAttribute('data-sort', dir);
+  const icon = thElement.querySelector('.sort-icon');
+  if (icon) icon.innerText = dir === 'asc' ? '⇑' : '⇓';
+
+  const numericCols = [
+    'shift_start_wip',
+    'shift_start_wip_onhold',
+    'commit1',
+    'commit2',
+    'qps1',
+    'qps2',
+    'mor',
+    'tr',
+    'link_cell_qty',
+    'capacity',
+    'goal',
+    'output',
+  ];
+  const isNumeric = numericCols.includes(colName);
+
+  rows.sort((a, b) => {
+    const tdA = a.querySelector(`td[data-col="${colName}"]`);
+    const tdB = b.querySelector(`td[data-col="${colName}"]`);
+
+    let valA = getTestCellValue(tdA);
+    let valB = getTestCellValue(tdB);
+
+    if (isNumeric) {
+      const nA = parseTestNumber(valA);
+      const nB = parseTestNumber(valB);
+      return dir === 'asc' ? (nA - nB) : (nB - nA);
+    }
+
+    return dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+  calculateTestTotals();
+};
+
+window.applyTestFilters = function applyTestFilters() {
+  const table = document.getElementById('testTable');
+  if (!table) return;
+
+  const filterInputs = Array.from(table.querySelectorAll('thead tr.filter-row input.filter-input-field'));
+  const filters = filterInputs
+    .map(inp => ({
+      col: inp.getAttribute('data-filter-col'),
+      val: String(inp.value ?? '').trim().toLowerCase(),
+    }))
+    .filter(f => f.col && f.val !== '');
+
+  const rows = getTestDataRows();
+  rows.forEach(row => {
+    let isMatch = true;
+
+    for (const f of filters) {
+      const td = row.querySelector(`td[data-col="${f.col}"]`);
+      const cellVal = getTestCellValue(td, true);
+      if (!cellVal.includes(f.val)) {
+        isMatch = false;
+        break;
+      }
+    }
+
+    row.style.display = isMatch ? '' : 'none';
+  });
+
+  calculateTestTotals();
+};
+
 // Shift View dropdown uses a GET form submit (same as assembly), so no JS is needed.
 
 window.handleTestInput = function handleTestInput(input, type) {
@@ -312,12 +454,12 @@ window.handleTestInput = function handleTestInput(input, type) {
   if (type === 'goal') {
     actionGroup = document.getElementById(`group-goal-${rowId}`);
     const goalInput = row.querySelector('.goal-input');
-    const reasonInput = row.querySelector('.reason-input');
-
     const isGoalDirty = String(goalInput.value) !== String(goalInput.getAttribute('data-original'));
-    const isReasonDirty = String(reasonInput.value) !== String(reasonInput.getAttribute('data-original'));
-    if (isGoalDirty || isReasonDirty) showActions(actionGroup);
+  if (isGoalDirty) showActions(actionGroup);
     else hideActions(actionGroup);
+
+  // Keep totals live as the user types.
+  calculateTestTotals();
   } else if (type === 'comment') {
     actionGroup = document.getElementById(`group-comment-${rowId}`);
     const commentInput = row.querySelector('.comment-input');
@@ -331,12 +473,10 @@ window.cancelTestRow = function cancelTestRow(btn, type) {
   const row = btn.closest('tr');
   if (type === 'goal') {
     const goalInput = row.querySelector('.goal-input');
-    const reasonInput = row.querySelector('.reason-input');
     goalInput.value = goalInput.getAttribute('data-original') || '';
-    reasonInput.value = reasonInput.getAttribute('data-original') || '';
     setInputDirtyState(goalInput, false);
-    setInputDirtyState(reasonInput, false);
     hideActions(document.getElementById(`group-goal-${row.getAttribute('data-id')}`));
+  calculateTestTotals();
   } else if (type === 'comment') {
     const c = row.querySelector('.comment-input');
     c.value = c.getAttribute('data-original') || '';
@@ -357,18 +497,9 @@ window.saveTestRow = async function saveTestRow(btn, type) {
 
   if (type === 'goal') {
     const rawGoal = row.querySelector('.goal-input').value;
-    const reasonVal = row.querySelector('.reason-input').value.trim();
-
-    if ((rawGoal !== '' && reasonVal === '') || (rawGoal === '' && reasonVal !== '')) {
-      showToast('Both Manual Goal and Adjust Reason must be filled.', 'error');
-      if (rawGoal === '') row.querySelector('.goal-input').focus();
-      else row.querySelector('.reason-input').focus();
-      return;
-    }
 
     // Keep semantics: empty means NULL.
     payload.manual_goal = rawGoal === '' ? null : rawGoal;
-    payload.reason = reasonVal;
   } else if (type === 'comment') {
     payload.comment = row.querySelector('.comment-input').value;
   }
@@ -391,13 +522,11 @@ window.saveTestRow = async function saveTestRow(btn, type) {
 
     if (type === 'goal') {
       const goalInput = row.querySelector('.goal-input');
-      const reasonInput = row.querySelector('.reason-input');
       goalInput.setAttribute('data-original', goalInput.value);
-      reasonInput.setAttribute('data-original', reasonInput.value);
       setInputDirtyState(goalInput, false);
-      setInputDirtyState(reasonInput, false);
       hideActions(document.getElementById(`group-goal-${id}`));
       showToast('Saved manual goal.', 'success');
+  calculateTestTotals();
     } else {
       const c = row.querySelector('.comment-input');
       c.setAttribute('data-original', c.value);
@@ -428,4 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hideActions(document.getElementById(`group-goal-${row.getAttribute('data-id')}`));
     hideActions(document.getElementById(`group-comment-${row.getAttribute('data-id')}`));
   });
+
+  // Initial totals.
+  calculateTestTotals();
 });

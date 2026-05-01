@@ -244,10 +244,10 @@ class TestReport(db.Model):
     output = db.Column(db.Float)
     qtg1 = db.Column(db.Float)
     qps1 = db.Column(db.Float)
+    qps2 = db.Column(db.Float)
 
-    # Manual override; keep NULL distinct from 0.
-    manual_adjusted_goal = db.Column(db.Float, nullable=True)
-    goal_adjusted_reason = db.Column(db.String(255))
+    # NOTE: Test modules use in-place edits directly on `goal`.
+    # The legacy `manual_adjusted_goal` column may not exist in the DB.
     goal_adjusted_at = db.Column(db.DateTime)
     goal_adjusted_by = db.Column(db.String(100))
 
@@ -333,8 +333,7 @@ def test_report_to_dict(r: TestReport):
         'output': r.output,
         'qtg1': r.qtg1,
         'qps1': r.qps1,
-        'manual_adjusted_goal': r.manual_adjusted_goal,
-        'goal_adjusted_reason': r.goal_adjusted_reason,
+    'qps2': r.qps2,
         'goal_adjusted_at': r.goal_adjusted_at.strftime('%Y-%m-%d %H:%M:%S') if r.goal_adjusted_at else None,
         'goal_adjusted_by': r.goal_adjusted_by,
         'miss_goal_comment': r.miss_goal_comment,
@@ -978,13 +977,6 @@ def test_update_goal():
         return json_error('Record not found', 404)
 
     raw_goal = data.get('manual_goal')
-    raw_reason = data.get('reason')
-    reason_val = ('' if raw_reason is None else str(raw_reason)).strip()
-    goal_provided = raw_goal is not None and str(raw_goal).strip() != ''
-    reason_provided = reason_val != ''
-
-    if goal_provided != reason_provided:
-        return json_error('Both Manual Goal and Adjust Reason must be filled', 400)
 
     try:
         # Empty => NULL
@@ -997,9 +989,8 @@ def test_update_goal():
 
         apply_test_report_updates_in_place(
             old,
-            manual_adjusted_goal=new_goal,
+            goal=new_goal,
             tr=calculated_tr,
-            goal_adjusted_reason=reason_val if reason_val else None,
             goal_adjusted_at=datetime.now(),
             goal_adjusted_by=user
         )
@@ -1046,9 +1037,7 @@ def test_add_new_goal():
         prodgroup3 = (data.get('prodgroup3') or '').strip()
         operation = (data.get('operation') or '').strip()
         raw_goal = data.get('goal')
-        reason = (data.get('reason') or '').strip()
-
-        if not prodgroup3 or not operation or raw_goal in (None, '') or not reason:
+        if not prodgroup3 or not operation or raw_goal in (None, ''):
             return json_error('Please fill in all required fields.', 400)
 
         goal_val = float(raw_goal)
@@ -1060,8 +1049,7 @@ def test_add_new_goal():
             prodgroup3=prodgroup3,
             operation=operation,
             module=module_val,
-            manual_adjusted_goal=goal_val,
-            goal_adjusted_reason=reason,
+            goal=goal_val,
             goal_adjusted_at=datetime.now(),
             goal_adjusted_by=user,
         )
@@ -1075,7 +1063,10 @@ def test_add_new_goal():
 
 @app.route('/api/test/update-goals-batch', methods=['POST'])
 def test_update_goals_batch():
-    """Best-effort batch update for test adjusted goal + adjusted reason (in-place)."""
+    """Best-effort batch update for test goal (in-place).
+
+    Test table doesn't have manual_adjusted_goal or goal_adjusted_reason.
+    """
     payload = get_request_payload()
     updates = payload.get('updates')
     user = get_current_user()
@@ -1103,14 +1094,6 @@ def test_update_goals_batch():
             continue
 
         raw_goal = item.get('manual_goal')
-        raw_reason = item.get('reason')
-        reason_val = ('' if raw_reason is None else str(raw_reason)).strip()
-        goal_provided = raw_goal is not None and str(raw_goal).strip() != ''
-        reason_provided = reason_val != ''
-
-        if goal_provided != reason_provided:
-            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Both Manual Goal and Adjust Reason must be filled'})
-            continue
 
         try:
             if raw_goal is None or str(raw_goal).strip() == '':
@@ -1120,15 +1103,14 @@ def test_update_goals_batch():
                 new_goal = float(raw_goal)
                 calculated_tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
         except Exception:
-            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Invalid manual_goal'})
+            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Invalid goal'})
             continue
 
         try:
             apply_test_report_updates_in_place(
                 old,
-                manual_adjusted_goal=new_goal,
+                goal=new_goal,
                 tr=calculated_tr,
-                goal_adjusted_reason=reason_val if reason_val else None,
                 goal_adjusted_at=datetime.now(),
                 goal_adjusted_by=user
             )

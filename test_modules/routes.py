@@ -37,10 +37,18 @@ def register_test_routes(app) -> None:
         available_shifts = get_recent_test_database_shifts_for_page(page_name, limit=5)
         latest_db_shift = available_shifts[0] if available_shifts else None
 
+        # Default to the current calendar shift if it exists in the DB for this page.
+        # Otherwise, fall back to the latest shift present in the DB.
+        default_shift = None
+        if current_shift and current_shift in available_shifts:
+            default_shift = current_shift
+        else:
+            default_shift = latest_db_shift
+
         if requested_shift and requested_shift in available_shifts:
             selected_shift = requested_shift
         else:
-            selected_shift = latest_db_shift
+            selected_shift = default_shift
 
         if not selected_shift:
             # No data in DB for this page yet.
@@ -68,6 +76,8 @@ def register_test_routes(app) -> None:
             return json_error(str(e))
 
         row_dicts = [test_report_to_dict(r) for r in rows]
+
+        # Mismatch: the calendar says a different shift than the one the user is viewing.
         shift_mismatch = bool(selected_shift and current_shift and selected_shift != current_shift)
 
         return render_template(

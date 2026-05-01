@@ -35,3 +35,14 @@
   border-color: #1d4ed8;
   color: #fff;
 }
+
+/* --- Alternating row colors (zebra striping) --- */
+/* Match the Assembly page striping for consistency. */
+#testTable tbody tr:nth-child(even) td {
+  background-color: #e9edf5;
+}
+
+/* Ensure pinned columns match the row stripe color (they have their own solid background). */
+#testTable tbody tr:nth-child(even) td.pinned-col {
+  background-color: #e9edf5 !important;
+}
