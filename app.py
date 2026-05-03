@@ -215,13 +215,15 @@ class Report(db.Model):
 
 
 class TestReport(db.Model):
-    """Isolated model for Test Modules (cdat_goaling_test).
+    """Model for Test Modules.
 
-    Intentionally separate from the production assembly table/model to reduce risk.
+    Now reads/writes from the shared production table `cdat_goaling`.
+    Test rows are separated by `module` (e.g., HDMx/LCBI/etc.).
     """
 
-    __tablename__ = 'cdat_goaling_test'
-    __table_args__ = {'schema': db_schema} if db_schema else {}
+    __tablename__ = 'cdat_goaling'
+    # This table is also mapped by Report; extend the existing mapping.
+    __table_args__ = ({'schema': db_schema, 'extend_existing': True} if db_schema else {'extend_existing': True})
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     year = db.Column(db.Integer)
@@ -230,21 +232,26 @@ class TestReport(db.Model):
     operation = db.Column(db.String(50))
     operation_desc = db.Column(db.String(255))
 
+    # Shared base columns
+    module = db.Column(db.String(50))
+    qtg1 = db.Column(db.Float)
+    qps1 = db.Column(db.Float)
     mor = db.Column(db.Float)
     tr = db.Column(db.Float)
+    output = db.Column(db.Float)
     shift_start_wip = db.Column(db.Float)
-    shift_start_wip_onhold = db.Column(db.Float)
-    link_cell_qty = db.Column(db.Float)
-    capacity = db.Column(db.Float)
-
     system_suggested_goal = db.Column(db.Float)
     system_suggested_goal_created_at = db.Column(db.DateTime)
 
+    # Test-only columns (now added to cdat_goaling)
+    shift_start_wip_onhold = db.Column(db.Float)
+    link_cell_qty = db.Column(db.Float)
+    capacity = db.Column(db.Float)
     goal = db.Column(db.Float)
-    output = db.Column(db.Float)
-    qtg1 = db.Column(db.Float)
-    qps1 = db.Column(db.Float)
+    commit1 = db.Column(db.Float)
+    commit2 = db.Column(db.Float)
     qps2 = db.Column(db.Float)
+    prebuild1 = db.Column(db.Float)
 
     # NOTE: Test modules use in-place edits directly on `goal`.
     # The legacy `manual_adjusted_goal` column may not exist in the DB.
@@ -254,12 +261,6 @@ class TestReport(db.Model):
     miss_goal_comment = db.Column(db.String(255))
     miss_goal_comment_updated_at = db.Column(db.DateTime)
     miss_goal_comment_updated_by = db.Column(db.String(100))
-
-    module = db.Column(db.String(50))
-
-    commit1 = db.Column(db.Float)
-    commit2 = db.Column(db.Float)
-    prebuild1 = db.Column(db.Float)
 
 
 def apply_test_report_updates_in_place(old_report: TestReport, **updates) -> None:
@@ -609,8 +610,15 @@ def apply_operation_group_filter(query, page_name):
 
 def apply_test_operation_group_filter(query, page_name):
     """Filter TestReport queries using TEST_OPERATION_GROUPS."""
+    # When Test reads from the shared cdat_goaling table, modules are the primary partition.
+    # Keep an operation filter as a fallback if mappings exist, but always constrain by module.
+    q = query
+
+    if page_name:
+        q = q.filter(TestReport.module == page_name)
+
     if page_name not in TEST_OPERATION_GROUPS:
-        return query
+        return q
 
     target_ops = TEST_OPERATION_GROUPS[page_name]
     op_variants = []
@@ -620,14 +628,16 @@ def apply_test_operation_group_filter(query, page_name):
         op_variants.append(f"{op}.00")
 
     trimmed_operation = db.func.trim(db.cast(TestReport.operation, db.String))
-    return query.filter(trimmed_operation.in_(op_variants))
+    return q.filter(trimmed_operation.in_(op_variants))
 
 
 def compute_tr_from_goal_and_mor(goal_value, mor_value):
     mor = mor_value if (mor_value and mor_value != 0) else 0
     if mor == 0:
         return 0.0
-    return round(goal_value / mor, 3)
+    # TR formula: TR = Goal / MOR
+    # Display/precision requirement: keep 1 decimal.
+    return round(goal_value / mor, 1)
 
 
 def persist_report_version(old_report, **updates):
@@ -979,13 +989,14 @@ def test_update_goal():
     raw_goal = data.get('manual_goal')
 
     try:
-        # Empty => NULL
+        # Test modules: TR is always derived from the `goal` column.
+        # If the user clears the goal, treat it as 0.
         if raw_goal is None or str(raw_goal).strip() == '':
-            new_goal = None
-            calculated_tr = compute_tr_from_goal_and_mor(0, old.mor)
+            new_goal = 0.0
         else:
             new_goal = float(raw_goal)
-            calculated_tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
+
+        calculated_tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
 
         apply_test_report_updates_in_place(
             old,
@@ -995,7 +1006,7 @@ def test_update_goal():
             goal_adjusted_by=user
         )
 
-        return json_success(new_id=old.id)
+        return json_success(new_id=old.id, tr=calculated_tr, goal=new_goal)
     except Exception as e:
         db.session.rollback()
         return json_error(str(e))
@@ -1023,6 +1034,55 @@ def test_update_comment():
         return json_error(str(e))
 
 
+@app.route('/api/test/update-cellqty', methods=['POST'])
+def test_update_cellqty():
+    """Update Cell Qty (link_cell_qty) in-place and recompute capacity.
+
+    Formula: capacity = mor * cell_qty / 30
+    """
+    data = get_request_payload()
+    old = db.session.get(TestReport, data.get('id'))
+
+    if not old:
+        return json_error('Record not found', 404)
+
+    raw_qty = data.get('cell_qty')
+    try:
+        if raw_qty is None or str(raw_qty).strip() == '':
+            qty_val = None
+        else:
+            raw_s = str(raw_qty).strip()
+            # Require an integer (digits only). Client sends string.
+            if not raw_s.isdigit():
+                return json_error('Cell Qty must be an integer', 400)
+            qty_val = int(raw_s)
+            if qty_val < 0:
+                return json_error('Cell Qty must be >= 0', 400)
+
+        mor_val = float(old.mor or 0)
+        # Always follow the agreed formula:
+        # capacity = mor * cell_qty / 30
+        # When cell_qty is NULL/empty, capacity is also set to NULL.
+        capacity_val = None
+        if qty_val is not None:
+            capacity_val = round(mor_val * float(qty_val) / 30.0, 1)
+
+        apply_test_report_updates_in_place(
+            old,
+            link_cell_qty=qty_val,
+            capacity=capacity_val,
+        )
+
+        return json_success(
+            new_id=old.id,
+            link_cell_qty=qty_val,
+            capacity=capacity_val,
+        )
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
 @app.route('/api/test/add-new-goal', methods=['POST'])
 def test_add_new_goal():
     """Insert a new Test Modules row.
@@ -1037,11 +1097,26 @@ def test_add_new_goal():
         prodgroup3 = (data.get('prodgroup3') or '').strip()
         operation = (data.get('operation') or '').strip()
         raw_goal = data.get('goal')
-        if not prodgroup3 or not operation or raw_goal in (None, ''):
+        raw_cell_qty = data.get('cell_qty')
+
+        if (not prodgroup3) or (not operation) or (raw_goal in (None, '')) or (raw_cell_qty is None) or (str(raw_cell_qty).strip() == ''):
             return json_error('Please fill in all required fields.', 400)
 
         goal_val = float(raw_goal)
+
+        raw_s = str(raw_cell_qty).strip()
+        if not raw_s.isdigit():
+            return json_error('Cell Qty must be an integer >= 0', 400)
+        cell_qty_val = int(raw_s)
+        if cell_qty_val < 0:
+            return json_error('Cell Qty must be >= 0', 400)
+
         module_val = derive_module_from_operation(operation)
+
+        # On insert, MOR may be NULL; treat as 0.
+        mor_val = 0.0
+        capacity_val = round(mor_val * float(cell_qty_val) / 30.0, 1) if cell_qty_val is not None else None
+        calculated_tr = compute_tr_from_goal_and_mor(goal_val, mor_val)
 
         new_entry = TestReport(
             year=default_year,
@@ -1050,6 +1125,9 @@ def test_add_new_goal():
             operation=operation,
             module=module_val,
             goal=goal_val,
+            tr=calculated_tr,
+            link_cell_qty=cell_qty_val,
+            capacity=capacity_val,
             goal_adjusted_at=datetime.now(),
             goal_adjusted_by=user,
         )

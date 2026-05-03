@@ -3,6 +3,40 @@
 
 const TEST_DATA_ROW_SELECTOR = '#testTable tbody tr:not(.empty-state-row)';
 
+// --- Autosave (in-place) helpers ---
+// Debounce per-row+field so typing doesn't spam the server.
+const _testAutoSaveTimers = new Map();
+
+function _testAutoSaveKey(rowId, type) {
+  return `${rowId}|${type}`;
+}
+
+function scheduleTestAutoSave(row, type, delayMs = 650) {
+  if (!row) return;
+  const rowId = row.getAttribute('data-id');
+  if (!rowId) return;
+
+  const key = _testAutoSaveKey(rowId, type);
+  if (_testAutoSaveTimers.has(key)) {
+    clearTimeout(_testAutoSaveTimers.get(key));
+  }
+
+  _testAutoSaveTimers.set(key, setTimeout(async () => {
+    const input = (type === 'goal')
+      ? row.querySelector('.goal-input')
+      : (type === 'comment')
+        ? row.querySelector('.comment-input')
+        : row.querySelector('.cellqty-input');
+    if (!input) return;
+
+    const current = String(input.value ?? '');
+    const original = String(input.getAttribute('data-original') ?? '');
+    if (current === original) return;
+
+    await saveTestRowInternal(row, type, { silent: true });
+  }, delayMs));
+}
+
 function getAppBasePath() {
   const match = window.location.pathname.match(/^(.*)\/(index\.html|test\.html)$/i);
   if (match && match[1]) return match[1];
@@ -98,127 +132,16 @@ window.copyTestTableToClipboard = async function copyTestTableToClipboard() {
   }
 };
 
-window.saveAllTestGoalChanges = async function saveAllTestGoalChanges() {
-  const rows = getTestDataRows();
-  const updates = [];
-  const commentUpdates = [];
-  
-
-  rows.forEach(row => {
-    if (row.style.display === 'none') return;
-    const id = row.getAttribute('data-id');
-    if (!id) return;
-
-    const goalInput = row.querySelector('.goal-input');
-  if (!goalInput) return;
-
-    const goalVal = String(goalInput.value ?? '');
-    const goalOrig = String(goalInput.getAttribute('data-original') ?? '');
-
-    const goalDirty = goalVal !== goalOrig;
-  if (!goalDirty) return;
-
-    const trimmedGoal = goalVal.trim();
-
-    updates.push({
-      id: id,
-      manual_goal: trimmedGoal === '' ? null : trimmedGoal,
-    });
-
-    // --- Comment updates ---
-    const commentInput = row.querySelector('.comment-input');
-    if (commentInput) {
-      const commentVal = String(commentInput.value ?? '');
-      const commentOrig = String(commentInput.getAttribute('data-original') ?? '');
-      if (commentVal !== commentOrig) {
-        commentUpdates.push({ id: id, comment: commentVal });
-      }
-    }
-  });
-
-  if (updates.length === 0 && commentUpdates.length === 0) {
-    showToast('No changes to save.', 'error');
-    return;
-  }
-
-  const btn = document.querySelector('button[onclick="saveAllTestGoalChanges()"]');
-  const originalText = btn ? btn.innerText : '';
-  if (btn) { btn.innerText = '...'; btn.disabled = true; }
-
-  try {
-    let goalOk = 0, goalErr = 0, commentOk = 0, commentErr = 0;
-
-    if (updates.length > 0) {
-      const res = await fetch(apiUrl('/api/test/update-goals-batch'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates })
-      });
-      const json = await res.json();
-      if (!res.ok || json.status !== 'success') {
-        throw new Error(json.message || `HTTP ${res.status}`);
-      }
-      const results = Array.isArray(json.results) ? json.results : [];
-      goalOk = results.filter(r => r && r.status === 'success').length;
-      goalErr = results.filter(r => r && r.status !== 'success').length;
-
-      // Mark originals clean.
-      updates.forEach(u => {
-        const row = document.querySelector(`tr[data-id="${u.id}"]`);
-        if (!row) return;
-        const goalInput = row.querySelector('.goal-input');
-        if (goalInput) {
-          goalInput.setAttribute('data-original', String(goalInput.value ?? ''));
-          setInputDirtyState(goalInput, false);
-        }
-        hideActions(document.getElementById(`group-goal-${u.id}`));
-      });
-    }
-
-    if (commentUpdates.length > 0) {
-      const res = await fetch(apiUrl('/api/test/update-comments-batch'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates: commentUpdates })
-      });
-      const json = await res.json();
-      if (!res.ok || json.status !== 'success') {
-        throw new Error(json.message || `HTTP ${res.status}`);
-      }
-      const results = Array.isArray(json.results) ? json.results : [];
-      commentOk = results.filter(r => r && r.status === 'success').length;
-      commentErr = results.filter(r => r && r.status !== 'success').length;
-
-      commentUpdates.forEach(u => {
-        const row = document.querySelector(`tr[data-id="${u.id}"]`);
-        const input = row ? row.querySelector('.comment-input') : null;
-        if (input) {
-          input.setAttribute('data-original', String(input.value ?? ''));
-          setInputDirtyState(input, false);
-        }
-        hideActions(document.getElementById(`group-comment-${u.id}`));
-      });
-    }
-
-    const totalErr = goalErr + commentErr;
-    const msg = `Saved goals: ${goalOk}${goalErr ? ` (${goalErr} failed)` : ''}. Saved comments: ${commentOk}${commentErr ? ` (${commentErr} failed)` : ''}.`;
-    if (totalErr > 0) showToast(msg, 'error');
-    else showToast(msg, 'success');
-  } catch (e) {
-    showToast(String(e.message || e), 'error');
-  } finally {
-    if (btn) { btn.innerText = originalText; btn.disabled = false; }
-  }
-};
+// Save-all batch editing is intentionally removed: edits auto-save in-place now.
 
 window.openTestModal = function openTestModal() {
   const overlay = document.getElementById('testModalOverlay');
-  if (overlay) overlay.style.display = 'flex';
+  if (overlay) overlay.classList.add('active');
 };
 
 window.closeTestModal = function closeTestModal() {
   const overlay = document.getElementById('testModalOverlay');
-  if (overlay) overlay.style.display = 'none';
+  if (overlay) overlay.classList.remove('active');
 };
 
 window.submitNewTestGoal = async function submitNewTestGoal() {
@@ -228,10 +151,17 @@ window.submitNewTestGoal = async function submitNewTestGoal() {
   const pg3 = (document.getElementById('t_pg3')?.value || '').trim();
   const oper = (document.getElementById('t_oper')?.value || '').trim();
   const goal = (document.getElementById('t_goal')?.value || '').trim();
+  const cellQtyRaw = (document.getElementById('t_cellqty')?.value || '').trim();
   const page = getCurrentTestPageFromUrl();
 
-  if (!pg3 || !oper || !goal) {
+  if (!pg3 || !oper || !goal || cellQtyRaw === '') {
     showToast('Please fill in all required fields (*)', 'error');
+    return;
+  }
+
+  // integer-only (>= 0)
+  if (!/^\d+$/.test(cellQtyRaw)) {
+    showToast('Cell Qty must be an integer >= 0', 'error');
     return;
   }
 
@@ -240,7 +170,7 @@ window.submitNewTestGoal = async function submitNewTestGoal() {
     const res = await fetch(apiUrl('/api/test/add-new-goal'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ prodgroup3: pg3, operation: oper, goal: goal, page: page })
+  body: JSON.stringify({ prodgroup3: pg3, operation: oper, goal: goal, cell_qty: cellQtyRaw, page: page })
     });
     const json = await res.json();
     if (!res.ok || json.status !== 'success') {
@@ -327,7 +257,7 @@ function calculateTestTotals() {
     totalCommit2 += getVal('commit2');
   // QPS totals intentionally not displayed.
     totalMor += getVal('mor');
-    totalTr += getVal('tr');
+  totalTr += getVal('tr');
     totalCellQty += getVal('link_cell_qty');
     totalCapacity += getVal('capacity');
 
@@ -408,6 +338,12 @@ window.sortTestTable = function sortTestTable(thElement, colName) {
 
   rows.forEach(r => tbody.appendChild(r));
   calculateTestTotals();
+  // Columns can reflow slightly after DOM operations; keep pinned offsets correct.
+  const tableEl = document.getElementById('testTable');
+  if (tableEl) {
+    const evt = new Event('resize');
+    window.dispatchEvent(evt);
+  }
 };
 
 window.applyTestFilters = function applyTestFilters() {
@@ -439,6 +375,9 @@ window.applyTestFilters = function applyTestFilters() {
   });
 
   calculateTestTotals();
+  // Filtering can change scrollbar presence and widths.
+  const evt = new Event('resize');
+  window.dispatchEvent(evt);
 };
 
 // Shift View dropdown uses a GET form submit (same as assembly), so no JS is needed.
@@ -446,6 +385,14 @@ window.applyTestFilters = function applyTestFilters() {
 window.handleTestInput = function handleTestInput(input, type) {
   const row = input.closest('tr');
   const rowId = row.getAttribute('data-id');
+  // Enforce integer-only for Cell Qty at the UI level.
+  if (type === 'cellqty') {
+    const raw = String(input.value ?? '');
+    // Keep only digits (no decimals or negatives). Empty is allowed (means NULL).
+    const sanitized = raw.replace(/[^0-9]/g, '');
+    if (sanitized !== raw) input.value = sanitized;
+  }
+
   const val = input.value;
   const original = input.getAttribute('data-original');
   setInputDirtyState(input, String(val) !== String(original));
@@ -460,12 +407,24 @@ window.handleTestInput = function handleTestInput(input, type) {
 
   // Keep totals live as the user types.
   calculateTestTotals();
+  scheduleTestAutoSave(row, 'goal');
   } else if (type === 'comment') {
     actionGroup = document.getElementById(`group-comment-${rowId}`);
     const commentInput = row.querySelector('.comment-input');
     const isDirty = String(commentInput.value) !== String(commentInput.getAttribute('data-original'));
     if (isDirty) showActions(actionGroup);
     else hideActions(actionGroup);
+
+  scheduleTestAutoSave(row, 'comment', 900);
+  } else if (type === 'cellqty') {
+    actionGroup = document.getElementById(`group-cellqty-${rowId}`);
+    const qtyInput = row.querySelector('.cellqty-input');
+    const isDirty = String(qtyInput.value) !== String(qtyInput.getAttribute('data-original'));
+    if (isDirty) showActions(actionGroup);
+    else hideActions(actionGroup);
+
+    calculateTestTotals();
+  scheduleTestAutoSave(row, 'cellqty');
   }
 };
 
@@ -482,15 +441,23 @@ window.cancelTestRow = function cancelTestRow(btn, type) {
     c.value = c.getAttribute('data-original') || '';
     setInputDirtyState(c, false);
     hideActions(document.getElementById(`group-comment-${row.getAttribute('data-id')}`));
+  } else if (type === 'cellqty') {
+    const qty = row.querySelector('.cellqty-input');
+    qty.value = qty.getAttribute('data-original') || '';
+    setInputDirtyState(qty, false);
+    hideActions(document.getElementById(`group-cellqty-${row.getAttribute('data-id')}`));
+    calculateTestTotals();
   }
 };
 
-window.saveTestRow = async function saveTestRow(btn, type) {
-  const row = btn.closest('tr');
+async function saveTestRowInternal(row, type, options = {}) {
+  const { silent = false } = options;
   const id = row.getAttribute('data-id');
 
   const url = (type === 'goal')
     ? apiUrl('/api/test/update-goal')
+    : (type === 'cellqty')
+      ? apiUrl('/api/test/update-cellqty')
     : apiUrl('/api/test/update-comment');
 
   const payload = { id: id };
@@ -500,12 +467,14 @@ window.saveTestRow = async function saveTestRow(btn, type) {
 
     // Keep semantics: empty means NULL.
     payload.manual_goal = rawGoal === '' ? null : rawGoal;
+  } else if (type === 'cellqty') {
+    const rawQty = String(row.querySelector('.cellqty-input').value ?? '').trim();
+    payload.cell_qty = rawQty === '' ? null : rawQty;
   } else if (type === 'comment') {
     payload.comment = row.querySelector('.comment-input').value;
   }
 
   try {
-    btn.disabled = true;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -522,26 +491,109 @@ window.saveTestRow = async function saveTestRow(btn, type) {
 
     if (type === 'goal') {
       const goalInput = row.querySelector('.goal-input');
+      // Sync from server (supports fallback-to-original behavior when input is blank).
+      if (data && typeof data.goal !== 'undefined') {
+        goalInput.value = (data.goal === null || data.goal === undefined) ? '' : String(data.goal);
+      }
       goalInput.setAttribute('data-original', goalInput.value);
       setInputDirtyState(goalInput, false);
       hideActions(document.getElementById(`group-goal-${id}`));
-      showToast('Saved manual goal.', 'success');
+
+      // Update TR cell from server response.
+      const trTd = row.querySelector('td[data-col="tr"]');
+      if (trTd && data && typeof data.tr !== 'undefined') {
+        const n = Number(data.tr);
+        trTd.textContent = Number.isFinite(n) ? n.toFixed(1) : String(data.tr ?? '');
+      }
+
+  if (!silent) showToast('Saved.', 'success');
   calculateTestTotals();
+    } else if (type === 'cellqty') {
+      const qtyInput = row.querySelector('.cellqty-input');
+      // Sync from server in case the backend coerces/normalizes the value.
+      if (data && typeof data.link_cell_qty !== 'undefined') {
+        qtyInput.value = (data.link_cell_qty === null || data.link_cell_qty === undefined) ? '' : String(data.link_cell_qty);
+      }
+      qtyInput.setAttribute('data-original', String(qtyInput.value ?? ''));
+      setInputDirtyState(qtyInput, false);
+      hideActions(document.getElementById(`group-cellqty-${id}`));
+
+      // Update capacity cell from server response.
+      const capTd = row.querySelector('td[data-col="capacity"]');
+      if (capTd && data && typeof data.capacity !== 'undefined') {
+        if (data.capacity === null || data.capacity === undefined || data.capacity === '') {
+          capTd.textContent = '';
+        } else {
+          const n = Number(data.capacity);
+          capTd.textContent = Number.isFinite(n) ? n.toFixed(1) : String(data.capacity);
+        }
+      }
+
+  if (!silent) showToast('Saved.', 'success');
+      calculateTestTotals();
     } else {
       const c = row.querySelector('.comment-input');
       c.setAttribute('data-original', c.value);
       setInputDirtyState(c, false);
       hideActions(document.getElementById(`group-comment-${id}`));
-      showToast('Saved comment.', 'success');
+      if (!silent) showToast('Saved.', 'success');
     }
   } catch (e) {
     showToast(String(e.message || e), 'error');
+  }
+}
+
+window.saveTestRow = async function saveTestRow(btn, type) {
+  const row = btn.closest('tr');
+  try {
+    btn.disabled = true;
+    await saveTestRowInternal(row, type, { silent: false });
   } finally {
     btn.disabled = false;
   }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+  function updateTestPinnedOffsets() {
+    const table = document.getElementById('testTable');
+    if (!table) return;
+
+    const headerRow = table.querySelector('thead tr:first-child');
+    if (!headerRow) return;
+
+    const getWidth = (colName) => {
+      const th = headerRow.querySelector(`th[data-col="${colName}"]`);
+      if (!th) return 0;
+      if (th.style.display === 'none') return 0;
+      return th.offsetWidth || 0;
+    };
+
+    const w1 = getWidth('prodgroup3');
+    const w2 = getWidth('operation');
+
+    const left1 = 0;
+    const left2 = left1 + w1;
+
+    table.style.setProperty('--test-pinned-left-1', `${left1}px`);
+    table.style.setProperty('--test-pinned-left-2', `${left2}px`);
+  table.style.setProperty('--test-pinned-left-3', `${left2}px`);
+
+  // (No pinned-total-width var needed; keep behavior aligned with Assembly.)
+
+    updateTestPinnedLastDivider(table);
+  }
+
+  function updateTestPinnedLastDivider(table) {
+    if (!table) return;
+
+    table.querySelectorAll('.pinned-last').forEach(el => el.classList.remove('pinned-last'));
+
+    // Test table pins only first two columns. Divider should always be after Operation (pinned-2).
+    table.querySelectorAll('.pinned-col.pinned-2').forEach(el => {
+      el.classList.add('pinned-last');
+    });
+  }
+
   // Highlight active tab in the nav-tabs (same behavior as assembly).
   const currentPage = getCurrentTestPageFromUrl();
   const links = document.querySelectorAll('.nav-tabs a.tab-link[href]');
@@ -556,8 +608,17 @@ document.addEventListener('DOMContentLoaded', () => {
   getTestDataRows().forEach(row => {
     hideActions(document.getElementById(`group-goal-${row.getAttribute('data-id')}`));
     hideActions(document.getElementById(`group-comment-${row.getAttribute('data-id')}`));
+  hideActions(document.getElementById(`group-cellqty-${row.getAttribute('data-id')}`));
   });
 
   // Initial totals.
   calculateTestTotals();
+
+  // Defer so table-layout: fixed / fonts settle before measuring.
+  setTimeout(updateTestPinnedOffsets, 0);
+  setTimeout(updateTestPinnedOffsets, 200);
+
+  window.addEventListener('resize', () => {
+  window.requestAnimationFrame(updateTestPinnedOffsets);
+  });
 });

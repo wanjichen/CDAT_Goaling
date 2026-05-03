@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from flask import render_template, request
 
 
@@ -15,6 +17,7 @@ def register_test_routes(app) -> None:
         from app import (
             TestReport,
             db,
+            get_current_user,
             get_current_shift_from_calendar,
             get_latest_test_report_ids_for_shift_and_page,
             get_recent_test_database_shifts_for_page,
@@ -23,8 +26,11 @@ def register_test_routes(app) -> None:
             json_error,
         )
 
-        # For now, only show tabs that currently have data populated.
-        # (Requested: hide LCBI, V8, PHVI, OLB, STHI.)
+        current_user = get_current_user()
+        current_date = date.today().isoformat()
+
+    # Test pages are partitioned by module.
+        # Only expose enabled modules as tabs.
         tabs = ['HDMx']
 
         page_name = (request.args.get('page') or (tabs[0] if tabs else '')).strip()
@@ -60,6 +66,8 @@ def register_test_routes(app) -> None:
                 available_shifts=available_shifts,
                 selected_shift=None,
                 current_shift=current_shift,
+                current_user=current_user,
+                current_date=current_date,
                 latest_db_shift=None,
                 shift_mismatch=False,
             )
@@ -88,6 +96,8 @@ def register_test_routes(app) -> None:
             available_shifts=available_shifts,
             selected_shift=selected_shift,
             current_shift=current_shift,
+            current_user=current_user,
+            current_date=current_date,
             latest_db_shift=latest_db_shift,
             shift_mismatch=shift_mismatch,
         )

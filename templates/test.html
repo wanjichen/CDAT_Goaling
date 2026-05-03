@@ -106,9 +106,6 @@
         <a href="{{ url_for('test_home', page=tab, shift=selected_shift) }}" class="tab-link">{{ tab }}</a>
         {% endfor %}
       </div>
-      <button class="tab-link copy-tab-btn" onclick="saveAllTestGoalChanges()" title="Save all changes in one batch"
-        aria-label="Save all adjusted goal and reason changes"><span class="btn-icon"
-          aria-hidden="true">&#128190;</span>Save All Changes</button>
       <button class="tab-link copy-tab-btn" onclick="copyTestTableToClipboard()"
         title="Copy the visible table rows and columns to your clipboard"
         aria-label="Copy the visible table rows and columns to your clipboard"><span class="btn-icon"
@@ -121,7 +118,7 @@
   </div>
 
   <!-- Modal Form (Test Modules) -->
-  <div id="testModalOverlay" onclick="if(event.target==this) closeTestModal()" style="display:none;">
+  <div id="testModalOverlay" onclick="if(event.target==this) closeTestModal()">
     <div class="modal-card">
       <h3>New Test Goal</h3>
       <div class="modal-body-scroll" onkeypress="if(event.key === 'Enter') submitNewTestGoal()">
@@ -131,6 +128,8 @@
         <input type="text" id="t_oper" class="form-input" placeholder="e.g. 2171">
         <label>GOAL *</label>
         <input type="number" id="t_goal" class="form-input" placeholder="Must enter a number > 0">
+  <label>CELL QTY *</label>
+  <input type="number" id="t_cellqty" class="form-input" placeholder="Must enter an integer >= 0" step="1" min="0" inputmode="numeric" pattern="\d*">
       </div>
       <div class="modal-footer-actions">
         <button class="tab-link modal-action-btn" id="btn-test-modal-submit" onclick="submitNewTestGoal()">Save
@@ -147,8 +146,8 @@
             <tr>
               <th class="pinned-col pinned-1 sortable" data-col="prodgroup3" onclick="sortTestTable(this, 'prodgroup3')">Prodgroup3 <span class="sort-icon">⇕</span></th>
               <th class="pinned-col pinned-2 sortable" data-col="operation" onclick="sortTestTable(this, 'operation')">Operation <span class="sort-icon">⇕</span></th>
-              <th class="pinned-col pinned-3 sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Shift Start WIP <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="shift_start_wip_onhold" onclick="sortTestTable(this, 'shift_start_wip_onhold')">Shift Start WIP OnHold <span class="sort-icon">⇕</span></th>
+              <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Shift Start WIP <span class="sort-icon">⇕</span></th>
+                <th class="sortable header-wrap" data-col="shift_start_wip_onhold" onclick="sortTestTable(this, 'shift_start_wip_onhold')">ShiftStart WIP<br>Onhold <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')">Commit1 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')">Commit2 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span class="sort-icon">⇕</span></th>
@@ -157,7 +156,7 @@
               <th class="sortable" data-col="tr" onclick="sortTestTable(this, 'tr')">TR <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Cell Qty <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span class="sort-icon">⇕</span></th>
+              <th class="sortable highlight-col" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="output" onclick="sortTestTable(this, 'output')">Output <span class="sort-icon">⇕</span></th>
               <th data-col="miss_goal_comment">Miss Goal Comment</th>
             </tr>
@@ -166,7 +165,7 @@
             <tr class="filter-row">
               <th class="pinned-col pinned-1" data-col="prodgroup3"><input type="text" class="filter-input-field" data-filter-col="prodgroup3" oninput="applyTestFilters()"></th>
               <th class="pinned-col pinned-2" data-col="operation"><input type="text" class="filter-input-field" data-filter-col="operation" oninput="applyTestFilters()"></th>
-              <th class="pinned-col pinned-3" data-col="shift_start_wip"><input type="text" class="filter-input-field" data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
+              <th data-col="shift_start_wip"><input type="text" class="filter-input-field" data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
               <th data-col="shift_start_wip_onhold"><input type="text" class="filter-input-field" data-filter-col="shift_start_wip_onhold" oninput="applyTestFilters()"></th>
               <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1" oninput="applyTestFilters()"></th>
               <th data-col="commit2"><input type="text" class="filter-input-field" data-filter-col="commit2" oninput="applyTestFilters()"></th>
@@ -176,7 +175,7 @@
               <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr" oninput="applyTestFilters()"></th>
               <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty" oninput="applyTestFilters()"></th>
               <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity" oninput="applyTestFilters()"></th>
-              <th data-col="goal"><input type="text" class="filter-input-field" data-filter-col="goal" oninput="applyTestFilters()"></th>
+              <th class="highlight-col" data-col="goal"><input type="text" class="filter-input-field" data-filter-col="goal" oninput="applyTestFilters()"></th>
               <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output" oninput="applyTestFilters()"></th>
               <th data-col="miss_goal_comment"><input type="text" class="filter-input-field" data-filter-col="miss_goal_comment" oninput="applyTestFilters()"></th>
             </tr>
@@ -187,22 +186,25 @@
               <tr data-id="{{ r.id }}">
                 <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
                 <td class="pinned-col pinned-2" data-col="operation">{{ r.operation }}</td>
-                <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+                <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
                 <td data-col="shift_start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
                 <td data-col="commit1">{{ r.commit1 or 0 }}</td>
                 <td data-col="commit2">{{ r.commit2 or 0 }}</td>
                 <td data-col="qps1">{{ r.qps1 or 0 }}</td>
                 <td data-col="qps2">{{ r.qps2 or 0 }}</td>
                 <td class="mor-val" data-col="mor">{{ r.mor or 0 }}</td>
-                <td data-col="tr">{{ r.tr or 0 }}</td>
-                <td data-col="link_cell_qty">{{ r.link_cell_qty or 0 }}</td>
-                <td data-col="capacity">{{ r.capacity or 0 }}</td>
-                <td class="cell-pad-4" data-col="goal">
+                <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
+                <td class="cell-pad-4" data-col="link_cell_qty">
+                  <div class="action-group" id="group-cellqty-{{ r.id }}">
+                    <input type="number" step="1" min="0" inputmode="numeric" pattern="\d*" class="table-input cellqty-input" value="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}"
+                      data-original="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}" oninput="handleTestInput(this, 'cellqty')">
+                  </div>
+                </td>
+                <td data-col="capacity">{% if r.capacity is none %}0.0{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}</td>
+                <td class="cell-pad-4 highlight-col" data-col="goal">
                   <div class="action-group" id="group-goal-{{ r.id }}">
                     <input type="number" class="table-input goal-input" value="{{ r.goal if r.goal is not none else '' }}"
                       data-original="{{ r.goal if r.goal is not none else '' }}" oninput="handleTestInput(this, 'goal')">
-                    <button class="btn-mini btn-save" onclick="saveTestRow(this, 'goal')">Save</button>
-                    <button class="btn-mini btn-cancel" onclick="cancelTestRow(this, 'goal')">✖</button>
                   </div>
                 </td>
                 <td data-col="output">{{ r.output or 0 }}</td>
@@ -211,8 +213,6 @@
                   <div class="action-group" id="group-comment-{{ r.id }}">
                     <textarea class="table-input comment-input comment-textarea" rows="2"
                       data-original="{{ r.miss_goal_comment or '' }}" oninput="handleTestInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
-                    <button class="btn-mini btn-save" onclick="saveTestRow(this, 'comment')">Save</button>
-                    <button class="btn-mini btn-cancel" onclick="cancelTestRow(this, 'comment')">✖</button>
                   </div>
                 </td>
               </tr>
@@ -225,7 +225,7 @@
             <tr class="total-row">
               <td class="pinned-col pinned-1" data-col="prodgroup3"><strong>Total</strong></td>
               <td class="pinned-col pinned-2" data-col="operation"></td>
-              <td class="pinned-col pinned-3" data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
+              <td data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
               <td data-col="shift_start_wip_onhold" id="test-total-shift_start_wip_onhold"></td>
               <td data-col="commit1" id="test-total-commit1"></td>
               <td data-col="commit2" id="test-total-commit2"></td>
@@ -235,7 +235,7 @@
               <td data-col="tr" id="test-total-tr"></td>
               <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
               <td data-col="capacity" id="test-total-capacity"></td>
-              <td data-col="goal" id="test-total-goal"></td>
+              <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
               <td data-col="output" id="test-total-output"></td>
               <td data-col="miss_goal_comment"></td>
             </tr>

@@ -1,5 +1,136 @@
 /* Test Modules page styles (isolated from production assembly pages). */
 
+/* Match Assembly table container behavior so sticky columns work reliably. */
+.table-container {
+  background: var(--bg-surface, #ffffff);
+  border-radius: 6px;
+  overflow: auto;
+  flex: 1;
+  border: 1px solid var(--border-color, #cbd5e1);
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Pinned (sticky) left columns for the test table --- */
+#testTable {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1400px;
+}
+
+/* No extra layout hacks needed; match Assembly sticky behavior. */
+
+#testTable th.pinned-col,
+#testTable td.pinned-col {
+  position: sticky !important;
+  left: 0;
+  z-index: 2;
+  background-clip: padding-box;
+  /* Ensure the pinned cell always paints on top and doesn't visually blend with neighbors. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Avoid global overflow clipping (can blank sticky text in Chromium). */
+#testTable th,
+#testTable td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Pinned columns should behave like Assembly: keep content clipped to the cell. */
+
+/* Guard: ensure Operation text is always visible (Chromium can render sticky + fixed layout oddly). */
+#testTable th[data-col="operation"],
+#testTable td[data-col="operation"] {
+  color: #0f172a;
+  min-width: 110px;
+}
+
+#testTable td.pinned-col.pinned-2,
+#testTable th.pinned-col.pinned-2 {
+  background-color: var(--bg-surface, #ffffff) !important;
+}
+
+/* Ensure pinned headers have opaque backgrounds so underlying cells don't show through. */
+#testTable thead th.pinned-col {
+  background: linear-gradient(180deg, var(--table-head-bg, #f8fafc) 0%, var(--table-head-bg-strong, #edf2f7) 100%) !important;
+}
+
+#testTable thead tr.filter-row th.pinned-col {
+  background: var(--table-head-bg, #f8fafc) !important;
+}
+
+/* Stacking order for pinned columns: later pinned columns above earlier ones. */
+#testTable td.pinned-col.pinned-1 { z-index: 12; }
+#testTable td.pinned-col.pinned-2 { z-index: 13; }
+
+/* Pinned cells must always be opaque so the scrollable cells don't visually overlap. */
+#testTable td.pinned-col {
+  background-color: var(--bg-surface, #ffffff) !important;
+}
+
+/* Keep hover background on pinned data cells too. */
+#testTable tbody tr:hover td.pinned-col {
+  background-color: var(--table-hover-bg, #e8f0ff) !important;
+}
+
+#testTable td.pinned-col {
+  background: var(--bg-surface, #ffffff);
+}
+
+/* Sticky headers */
+#testTable thead th {
+  position: sticky;
+  top: 0;
+}
+
+/* Sticky filter row sits right under the header row */
+#testTable thead tr.filter-row th {
+  position: sticky;
+  top: 44px;
+}
+
+/* Header pinned cells above body pinned cells */
+#testTable thead th.pinned-col {
+  z-index: 60;
+}
+
+#testTable thead tr.filter-row th.pinned-col {
+  z-index: 55;
+}
+
+/* Offsets are set dynamically in JS based on rendered widths */
+#testTable .pinned-col.pinned-1 { left: var(--test-pinned-left-1, 0px); }
+#testTable .pinned-col.pinned-2 { left: var(--test-pinned-left-2, 0px); }
+
+/* Divider after the last pinned column (matches Assembly look) */
+#testTable th.pinned-last,
+#testTable td.pinned-last {
+  box-shadow:
+    1px 0 0 rgba(148, 163, 184, 0.95),
+    6px 0 10px rgba(15, 23, 42, 0.10);
+  position: relative;
+}
+
+#testTable td.pinned-last::after,
+#testTable th.pinned-last::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -14px;
+  width: 14px;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0));
+}
+
+/* Ensure the divider overlay never obscures the pinned-last text. */
+#testTable th.pinned-last,
+#testTable td.pinned-last {
+  padding-right: 16px;
+}
+
 .test-page {
   padding: 12px 20px;
 }
@@ -36,6 +167,138 @@
   color: #fff;
 }
 
+/* --- Modal drawer (match Assembly look/behavior) --- */
+#testModalOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 2000;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#testModalOverlay.active {
+  display: flex;
+  opacity: 1;
+}
+
+#testModalOverlay .modal-card {
+  background: var(--bg-surface, #ffffff);
+  width: 420px;
+  height: 100%;
+  padding: 32px;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-sizing: border-box;
+}
+
+#testModalOverlay.active .modal-card {
+  transform: translateX(0);
+}
+
+/* Test edits are auto-saved; hide per-row Save/Cancel buttons. */
+#testTable .action-group .btn-mini {
+  display: none !important;
+}
+
+/* --- Hinting: Cell Qty drives Capacity --- */
+/* Subtle background tint to group the two columns together. */
+#testTable td[data-col="link_cell_qty"] {
+  background-color: rgba(37, 99, 235, 0.06);
+}
+
+#testTable td[data-col="capacity"] {
+  background-color: rgba(14, 165, 233, 0.06);
+}
+
+/* Keep zebra striping visible but still slightly tinted for these columns. */
+#testTable tbody tr:nth-child(even) td[data-col="link_cell_qty"],
+#testTable tbody tr:nth-child(even) td[data-col="capacity"] {
+  background-color: rgba(37, 99, 235, 0.09) !important;
+}
+
+/* Do NOT tint header/filter row cells; keep sticky header/filter fully opaque and stable while scrolling. */
+#testTable thead th[data-col="link_cell_qty"],
+#testTable thead th[data-col="capacity"],
+#testTable thead th[data-col="goal"] {
+  background: var(--table-head-bg, #f8fafc) !important;
+}
+
+/* Ensure the sticky header + filter row always paint above body cells (including tinted columns). */
+#testTable thead th {
+  z-index: 40;
+  background: linear-gradient(180deg, var(--table-head-bg, #f8fafc) 0%, var(--table-head-bg-strong, #edf2f7) 100%) !important;
+}
+
+#testTable thead tr.filter-row th {
+  z-index: 35;
+  background: var(--table-head-bg, #f8fafc) !important;
+}
+
+/* Make the Cell Qty input feel actionable. */
+#testTable input.cellqty-input {
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+#testTable input.cellqty-input:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.95);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+/* Capacity is computed: keep it readable but not emphasized. */
+#testTable td[data-col="capacity"] {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+/* Emphasize Goal values (primary editable field). */
+#testTable td[data-col="goal"] {
+  font-weight: 700;
+}
+
+/* Keep Capacity header text clean (no extra appended text). */
+
+/* --- Goal column cues (editable) --- */
+/* Keep the highlight-col styling (from index.css) but add an extra editable cue on Test. */
+#testTable input.goal-input {
+  border: 1px solid rgba(29, 78, 216, 0.55);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+#testTable input.goal-input:focus {
+  outline: none;
+  border-color: rgba(29, 78, 216, 0.95);
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18);
+}
+
+/* Miss Goal Comment: subtle editable cue (textarea). */
+#testTable textarea.comment-input {
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+#testTable textarea.comment-input:focus {
+  outline: none;
+  border-color: rgba(100, 116, 139, 0.9);
+  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.12);
+}
+
+/* Keep Goal header text clean (no extra appended text). */
+
 /* --- Alternating row colors (zebra striping) --- */
 /* Match the Assembly page striping for consistency. */
 #testTable tbody tr:nth-child(even) td {
@@ -46,3 +309,84 @@
 #testTable tbody tr:nth-child(even) td.pinned-col {
   background-color: #e9edf5 !important;
 }
+
+/* --- Tighten Test table column widths (scoped) --- */
+#testTable {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#testTable th,
+#testTable td {
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Allow 2-line headers where explicitly enabled. */
+#testTable thead th.header-wrap {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.05;
+}
+
+/* Let comment cells wrap */
+#testTable td[data-col="miss_goal_comment"] {
+  white-space: normal;
+}
+
+/* Inputs should fit the cell */
+#testTable input.table-input,
+#testTable textarea.table-input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  padding: 3px 4px;
+}
+
+/* Column width hints */
+#testTable th[data-col="prodgroup3"],
+#testTable td[data-col="prodgroup3"] { width: 130px; }
+
+#testTable th[data-col="operation"],
+#testTable td[data-col="operation"] { width: 130px; }
+
+#testTable th[data-col="shift_start_wip"],
+#testTable td[data-col="shift_start_wip"] { width: 155px; }
+
+#testTable th[data-col="shift_start_wip_onhold"],
+#testTable td[data-col="shift_start_wip_onhold"] { width: 195px; }
+
+#testTable th[data-col="commit1"],
+#testTable td[data-col="commit1"],
+#testTable th[data-col="commit2"],
+#testTable td[data-col="commit2"] { width: 110px; }
+
+#testTable th[data-col="qps1"],
+#testTable td[data-col="qps1"],
+#testTable th[data-col="qps2"],
+#testTable td[data-col="qps2"],
+#testTable th[data-col="mor"],
+#testTable td[data-col="mor"],
+#testTable th[data-col="tr"],
+#testTable td[data-col="tr"] { width: 80px; }
+
+#testTable th[data-col="link_cell_qty"],
+#testTable td[data-col="link_cell_qty"] { width: 95px; }
+
+#testTable th[data-col="capacity"],
+#testTable td[data-col="capacity"] { width: 125px; }
+
+#testTable th[data-col="goal"],
+#testTable td[data-col="goal"] { width: 115px; }
+
+#testTable th[data-col="output"],
+#testTable td[data-col="output"] { width: 105px; }
+
+#testTable th[data-col="miss_goal_comment"],
+#testTable td[data-col="miss_goal_comment"] { width: 220px; }
