@@ -18,6 +18,16 @@
   min-width: 1400px;
 }
 
+/*
+  Sticky layout contract:
+  - Header row height must match the offset used by the sticky filter row.
+  - Keeping this explicit prevents the filter row from covering row 1 while scrolling.
+*/
+:root {
+  --test-header-height: 44px;
+  --test-filter-height: 34px;
+}
+
 /* No extra layout hacks needed; match Assembly sticky behavior. */
 
 #testTable th.pinned-col,
@@ -85,10 +95,19 @@
   top: 0;
 }
 
+/* Keep header row height stable so filter-row offset stays correct. */
+#testTable thead tr:first-child th {
+  height: var(--test-header-height, 44px);
+  vertical-align: middle;
+}
+
 /* Sticky filter row sits right under the header row */
 #testTable thead tr.filter-row th {
   position: sticky;
-  top: 44px;
+  /* Use the real header height. If the header wraps or font differs, 44px can overlap row 1. */
+  top: var(--test-header-height, 44px);
+  height: var(--test-filter-height, 34px);
+  vertical-align: middle;
 }
 
 /* Header pinned cells above body pinned cells */
@@ -210,28 +229,20 @@
   display: none !important;
 }
 
-/* --- Hinting: Cell Qty drives Capacity --- */
-/* Subtle background tint to group the two columns together. */
-#testTable td[data-col="link_cell_qty"] {
-  background-color: rgba(37, 99, 235, 0.06);
-}
+/* --- (reverted) No special column background tinting for Cell Qty / Capacity / Goal --- */
 
-#testTable td[data-col="capacity"] {
-  background-color: rgba(14, 165, 233, 0.06);
-}
+/*
+  Cell Qty is a driver input.
+  Make it obvious that editing Cell Qty impacts Capacity + Goal.
+  We ONLY hint in header/filter rows (not sticky body shading) to avoid paint/overlap issues.
+*/
+/* (reverted) no special header/filter styling on Cell Qty; keep it identical to other columns */
 
-/* Keep zebra striping visible but still slightly tinted for these columns. */
-#testTable tbody tr:nth-child(even) td[data-col="link_cell_qty"],
-#testTable tbody tr:nth-child(even) td[data-col="capacity"] {
-  background-color: rgba(37, 99, 235, 0.09) !important;
-}
+/* (reverted) zebra striping is handled globally */
 
-/* Do NOT tint header/filter row cells; keep sticky header/filter fully opaque and stable while scrolling. */
-#testTable thead th[data-col="link_cell_qty"],
-#testTable thead th[data-col="capacity"],
-#testTable thead th[data-col="goal"] {
-  background: var(--table-head-bg, #f8fafc) !important;
-}
+/* (reverted) header backgrounds are handled globally */
+
+/* (reverted) no per-column z-index overrides */
 
 /* Ensure the sticky header + filter row always paint above body cells (including tinted columns). */
 #testTable thead th {
@@ -360,7 +371,7 @@
 #testTable td[data-col="shift_start_wip"] { width: 155px; }
 
 #testTable th[data-col="shift_start_wip_onhold"],
-#testTable td[data-col="shift_start_wip_onhold"] { width: 195px; }
+#testTable td[data-col="shift_start_wip_onhold"] { width: 155px; }
 
 #testTable th[data-col="commit1"],
 #testTable td[data-col="commit1"],

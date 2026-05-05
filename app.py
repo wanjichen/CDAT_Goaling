@@ -1036,9 +1036,12 @@ def test_update_comment():
 
 @app.route('/api/test/update-cellqty', methods=['POST'])
 def test_update_cellqty():
-    """Update Cell Qty (link_cell_qty) in-place and recompute capacity.
+    """Update Cell Qty (link_cell_qty) in-place.
 
-    Formula: capacity = mor * cell_qty / 30
+    Test behavior:
+      - capacity = mor * cell_qty / 30
+      - goal     = mor * cell_qty / 30
+      - tr       = goal / mor
     """
     data = get_request_payload()
     old = db.session.get(TestReport, data.get('id'))
@@ -1060,23 +1063,29 @@ def test_update_cellqty():
                 return json_error('Cell Qty must be >= 0', 400)
 
         mor_val = float(old.mor or 0)
-        # Always follow the agreed formula:
-        # capacity = mor * cell_qty / 30
-        # When cell_qty is NULL/empty, capacity is also set to NULL.
         capacity_val = None
+        goal_val = None
+        tr_val = None
+
         if qty_val is not None:
             capacity_val = round(mor_val * float(qty_val) / 30.0, 1)
+            goal_val = capacity_val
+            tr_val = compute_tr_from_goal_and_mor(goal_val, mor_val)
 
         apply_test_report_updates_in_place(
             old,
             link_cell_qty=qty_val,
             capacity=capacity_val,
+            goal=goal_val,
+            tr=tr_val,
         )
 
         return json_success(
             new_id=old.id,
             link_cell_qty=qty_val,
             capacity=capacity_val,
+            goal=goal_val,
+            tr=tr_val,
         )
     except Exception as e:
         db.session.rollback()

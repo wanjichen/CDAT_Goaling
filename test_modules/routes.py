@@ -12,6 +12,7 @@ def register_test_routes(app) -> None:
     """
 
     @app.route('/test.html')
+    @app.route('/test')
     def test_home():
         # Import from app.py at call time to avoid circular imports.
         from app import (

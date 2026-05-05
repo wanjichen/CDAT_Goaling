@@ -147,7 +147,7 @@
               <th class="pinned-col pinned-1 sortable" data-col="prodgroup3" onclick="sortTestTable(this, 'prodgroup3')">Prodgroup3 <span class="sort-icon">⇕</span></th>
               <th class="pinned-col pinned-2 sortable" data-col="operation" onclick="sortTestTable(this, 'operation')">Operation <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Shift Start WIP <span class="sort-icon">⇕</span></th>
-                <th class="sortable header-wrap" data-col="shift_start_wip_onhold" onclick="sortTestTable(this, 'shift_start_wip_onhold')">ShiftStart WIP<br>Onhold <span class="sort-icon">⇕</span></th>
+              <th class="sortable header-wrap" data-col="shift_start_wip_onhold" onclick="sortTestTable(this, 'shift_start_wip_onhold')">Shift Start WIP Onhold <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')">Commit1 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')">Commit2 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span class="sort-icon">⇕</span></th>
@@ -196,8 +196,8 @@
                 <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
                 <td class="cell-pad-4" data-col="link_cell_qty">
                   <div class="action-group" id="group-cellqty-{{ r.id }}">
-                    <input type="number" step="1" min="0" inputmode="numeric" pattern="\d*" class="table-input cellqty-input" value="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}"
-                      data-original="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}" oninput="handleTestInput(this, 'cellqty')">
+                    <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off" class="table-input cellqty-input" value="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}"
+                      data-original="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}" oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
                   </div>
                 </td>
                 <td data-col="capacity">{% if r.capacity is none %}0.0{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}</td>
@@ -231,7 +231,7 @@
               <td data-col="commit2" id="test-total-commit2"></td>
               <td data-col="qps1"></td>
               <td data-col="qps2"></td>
-              <td data-col="mor" id="test-total-mor"></td>
+              <td data-col="mor"></td>
               <td data-col="tr" id="test-total-tr"></td>
               <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
               <td data-col="capacity" id="test-total-capacity"></td>

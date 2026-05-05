@@ -274,7 +274,7 @@ function calculateTestTotals() {
   setTotalText('test-total-shift_start_wip_onhold', totalShiftStartWipOnhold);
   setTotalText('test-total-commit1', totalCommit1);
   setTotalText('test-total-commit2', totalCommit2);
-  setTotalText('test-total-mor', totalMor);
+  // No MOR total in footer.
   setTotalText('test-total-tr', totalTr);
   setTotalText('test-total-link_cell_qty', totalCellQty);
   setTotalText('test-total-capacity', totalCapacity);
@@ -518,6 +518,22 @@ async function saveTestRowInternal(row, type, options = {}) {
       setInputDirtyState(qtyInput, false);
       hideActions(document.getElementById(`group-cellqty-${id}`));
 
+      // Cell Qty also drives Goal immediately (Goal remains editable; user can overwrite afterwards).
+      const goalInput = row.querySelector('.goal-input');
+      if (goalInput && data && typeof data.goal !== 'undefined') {
+        goalInput.value = (data.goal === null || data.goal === undefined) ? '' : String(data.goal);
+        goalInput.setAttribute('data-original', goalInput.value);
+        setInputDirtyState(goalInput, false);
+        hideActions(document.getElementById(`group-goal-${id}`));
+      }
+
+      // Update TR cell from server response.
+      const trTd = row.querySelector('td[data-col="tr"]');
+      if (trTd && data && typeof data.tr !== 'undefined') {
+        const n = Number(data.tr);
+        trTd.textContent = Number.isFinite(n) ? n.toFixed(1) : String(data.tr ?? '');
+      }
+
       // Update capacity cell from server response.
       const capTd = row.querySelector('td[data-col="capacity"]');
       if (capTd && data && typeof data.capacity !== 'undefined') {
@@ -554,6 +570,15 @@ window.saveTestRow = async function saveTestRow(btn, type) {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Cell Qty: enforce integer-only even while typing.
+  // Some browsers allow '.', 'e', '+', '-' temporarily on <input type="number">.
+  document.querySelectorAll('#testTable input.cellqty-input').forEach((el) => {
+    el.addEventListener('keydown', (ev) => {
+      const blocked = ['.', ',', 'e', 'E', '+', '-'];
+      if (blocked.includes(ev.key)) ev.preventDefault();
+    });
+  });
+
   function updateTestPinnedOffsets() {
     const table = document.getElementById('testTable');
     if (!table) return;
