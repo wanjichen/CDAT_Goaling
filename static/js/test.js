@@ -38,11 +38,14 @@ function scheduleTestAutoSave(row, type, delayMs = 650) {
 }
 
 function getAppBasePath() {
-  const match = window.location.pathname.match(/^(.*)\/(index\.html|test\.html)$/i);
+  const match = window.location.pathname.match(/^(.*)\/(index\.html|test\.html|test)$/i);
   if (match && match[1]) return match[1];
   // Also handle /CDAT_Goaling/test.html?...
   const idx = window.location.pathname.toLowerCase().lastIndexOf('/test.html');
   if (idx > 0) return window.location.pathname.substring(0, idx);
+  // Also handle /CDAT_Goaling/test?...
+  const idx2 = window.location.pathname.toLowerCase().lastIndexOf('/test');
+  if (idx2 > 0) return window.location.pathname.substring(0, idx2);
   return '';
 }
 
@@ -481,9 +484,21 @@ async function saveTestRowInternal(row, type, options = {}) {
       body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
-    if (!res.ok || data.status !== 'success') {
-      throw new Error(data.message || `HTTP ${res.status}`);
+    // Backend should always return JSON, but if IIS/proxy returns HTML (500/502/etc)
+    // res.json() throws "Unexpected end of JSON input". Read text first and parse safely.
+    const raw = await res.text();
+    let data;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok || !data || data.status !== 'success') {
+      const msg = (data && data.message)
+        ? data.message
+        : (raw ? raw.slice(0, 240) : `HTTP ${res.status}`);
+      throw new Error(msg);
     }
 
     const newId = data.new_id;

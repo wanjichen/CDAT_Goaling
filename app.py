@@ -3,15 +3,31 @@ import csv
 import os
 import re
 import time
+import logging
 from threading import Lock
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import desc, inspect
+from sqlalchemy import desc, inspect, text
 
 from test_modules.routes import register_test_routes
 
 app = Flask(__name__)
+
+# --- IIS / wfastcgi logging ---
+# Ensure unhandled exceptions end up in the WSGI_LOG file (web.config sets it).
+try:
+    _wsgi_log_path = os.getenv('WSGI_LOG')
+    if _wsgi_log_path:
+        _handler = logging.FileHandler(_wsgi_log_path)
+        _handler.setLevel(logging.INFO)
+        _handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
+        # Attach to both Flask app logger and root logger.
+        app.logger.addHandler(_handler)
+        logging.getLogger().addHandler(_handler)
+except Exception:
+    # Never fail app import due to logging config.
+    pass
 
 
 class PrefixMiddleware:
@@ -49,12 +65,15 @@ db_user = os.getenv("GOALING_DB_USER", "atmoperationdatastor_rw")
 db_password = urllib.parse.quote_plus(
     os.getenv("GOALING_DB_PASSWORD", "")
 )
-db_host = os.getenv("GOALING_DB_HOST", "postgres5109-lb-pg-in.iglb.intel.com")
-db_port = os.getenv("GOALING_DB_PORT", "5433")
+db_host = os.getenv("GOALING_DB_HOST", "zy0mp6zl4jrhc0bqfrjx.iglb.intel.com")
+db_port = os.getenv("GOALING_DB_PORT", "5432")
 db_name = os.getenv("GOALING_DB_NAME", "atmoperationdatastore")
 db_schema = os.getenv("GOALING_DB_SCHEMA", "cdat_mfg")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    "?sslmode=require"
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # cache static assets for 1 hour
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 3600
@@ -78,6 +97,35 @@ db = SQLAlchemy(app)
 
 # Register isolated areas (kept separate from production assembly modules).
 register_test_routes(app)
+
+
+# --- Temporary diagnostics (non-secret) ---
+# Helps debug IIS 500s after DB host/schema changes.
+@app.get('/api/_db_probe')
+def _db_probe():
+    try:
+        one = db.session.execute(text('select 1')).scalar()
+        search_path = db.session.execute(text('show search_path')).scalar()
+        current_schema = db.session.execute(text('select current_schema()')).scalar()
+
+        reg = db.session.execute(
+            text('select to_regclass(:t)'),
+            {'t': f'{db_schema}.cdat_goaling' if db_schema else 'cdat_goaling'}
+        ).scalar()
+
+        return json_success(
+            select1=one,
+            db_host=db_host,
+            db_port=db_port,
+            db_name=db_name,
+            db_schema=db_schema,
+            search_path=search_path,
+            current_schema=current_schema,
+            table_regclass=str(reg),
+        )
+    except Exception as e:
+        app.logger.exception('DB probe failed')
+        return json_error(f'{type(e).__name__}: {e}', 500)
 
 
 @app.route('/download/wip-goal-reckon-raw')
