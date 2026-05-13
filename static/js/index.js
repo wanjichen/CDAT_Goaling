@@ -467,7 +467,7 @@ function sortTable(thElement, colName) {
     thElement.setAttribute('data-sort', dir);
     thElement.querySelector('.sort-icon').innerText = dir === 'asc' ? '⇑' : '⇓';
 
-    const numericCols = ['shift_start_wip', 'qtg1', 'qps1', 'mor', 'tr', 'output', 'system_goal', 'manual_goal'];
+    const numericCols = ['shift_start_wip', 'qtg1', 'qps1', 'stg1', 'qtg2', 'qps2', 'stg2', 'mor', 'tr', 'output', 'system_goal', 'manual_goal'];
     const isNumeric = numericCols.includes(colName);
 
     rows.sort((a, b) => {

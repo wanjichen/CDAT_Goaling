@@ -179,6 +179,18 @@
                         <th class="sortable w-25" data-col="qps1" onclick="sortTable(this, 'qps1')">QPS1
                             <span class="sort-icon">⇕</span>
                         </th>
+                        <th class="sortable w-25" data-col="stg1" onclick="sortTable(this, 'stg1')">STG1
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable w-25" data-col="qtg2" onclick="sortTable(this, 'qtg2')">QTG2
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable w-25" data-col="qps2" onclick="sortTable(this, 'qps2')">QPS2
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable w-25" data-col="stg2" onclick="sortTable(this, 'stg2')">STG2
+                            <span class="sort-icon">⇕</span>
+                        </th>
                         <th class="sortable w-25" data-col="mor" onclick="sortTable(this, 'mor')">MOR
                             <span class="sort-icon">⇕</span>
                         </th>
@@ -219,6 +231,14 @@
                                 oninput="applyFilters()"></th>
                         <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
                                 oninput="applyFilters()"></th>
+            <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
+                oninput="applyFilters()"></th>
+            <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2"
+                oninput="applyFilters()"></th>
+                        <th data-col="qps2"><input type="text" class="filter-input-field" data-filter-col="qps2"
+                oninput="applyFilters()"></th>
+            <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2"
+                oninput="applyFilters()"></th>
                         <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
                                 oninput="applyFilters()"></th>
                         <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
@@ -260,6 +280,10 @@
                         </td>
                         <td data-col="qtg1">{{ (r.qtg1 | round(3)) if r.qtg1 else '' }}</td>
                         <td data-col="qps1">{{ (r.qps1 | round(3)) if r.qps1 else '' }}</td>
+                        <td data-col="stg1">{{ (r.stg1 | round(3)) if r.stg1 else '' }}</td>
+                        <td data-col="qtg2">{{ (r.qtg2 | round(3)) if r.qtg2 else '' }}</td>
+                        <td data-col="qps2">{{ (r.qps2 | round(3)) if r.qps2 else '' }}</td>
+                        <td data-col="stg2">{{ (r.stg2 | round(3)) if r.stg2 else '' }}</td>
                         <td class="mor-val" data-col="mor">{{ (r.mor | round(3)) if r.mor else '' }}</td>
                         <td class="tr-val" data-col="tr">{{ (r.tr | round(3)) if r.tr else '' }}</td>
                         <td data-col="output">{{ (r.output | round(3)) if r.output else '' }}</td>
@@ -318,6 +342,10 @@
                         <td class="pinned-col pinned-4 pinned-last" data-col="entity"></td>
                         <td data-col="qtg1"></td>
                         <td data-col="qps1"></td>
+                        <td data-col="stg1"></td>
+                        <td data-col="qtg2"></td>
+                        <td data-col="qps2"></td>
+                        <td data-col="stg2"></td>
                         <td data-col="mor"></td>
                         <td id="total-tr" data-col="tr">0</td>
                         <td id="total-output" data-col="output">0</td>

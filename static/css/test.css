@@ -16,6 +16,7 @@
   border-collapse: separate;
   border-spacing: 0;
   min-width: 1400px;
+  table-layout: fixed;
 }
 
 /*
@@ -57,6 +58,21 @@
   min-width: 110px;
 }
 
+/* Match width behavior to existing QPS columns so headers/values feel consistent. */
+#testTable th[data-col="qps1"],
+#testTable td[data-col="qps1"],
+#testTable th[data-col="qps2"],
+#testTable td[data-col="qps2"],
+#testTable th[data-col="stg1"],
+#testTable td[data-col="stg1"],
+#testTable th[data-col="qtg2"],
+#testTable td[data-col="qtg2"],
+#testTable th[data-col="stg2"],
+#testTable td[data-col="stg2"] {
+  min-width: 90px;
+  width: 90px;
+}
+
 #testTable td.pinned-col.pinned-2,
 #testTable th.pinned-col.pinned-2 {
   background-color: var(--bg-surface, #ffffff) !important;
@@ -91,7 +107,9 @@
 
 /* Sticky headers */
 #testTable thead th {
-  position: sticky;
+  /* index.css contains a global `th { position: static; }` which can override this on some loads.
+    Force sticky positioning for the test table so all header cells remain visible. */
+  position: sticky !important;
   top: 0;
 }
 
@@ -103,7 +121,8 @@
 
 /* Sticky filter row sits right under the header row */
 #testTable thead tr.filter-row th {
-  position: sticky;
+  /* Force sticky for filter row as well (same override reason as above). */
+  position: sticky !important;
   /* Use the real header height. If the header wraps or font differs, 44px can overlap row 1. */
   top: var(--test-header-height, 44px);
   height: var(--test-filter-height, 34px);

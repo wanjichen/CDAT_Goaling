@@ -128,6 +128,75 @@ def _db_probe():
         return json_error(f'{type(e).__name__}: {e}', 500)
 
 
+@app.get('/api/_debug/test_columns')
+def _debug_test_columns():
+    """Debug helper: confirm the running app sees new ORM columns and can read values.
+
+    Safe read-only endpoint.
+    """
+    try:
+        module = (request.args.get('module') or '').strip()
+        shift = (request.args.get('shift') or '').strip()
+
+        q = db.session.query(TestReport)
+        if module:
+            q = q.filter(TestReport.module == module)
+        if shift:
+            q = q.filter(TestReport.shift == shift)
+
+        sample = q.order_by(desc(TestReport.id)).limit(1).all()
+        r = sample[0] if sample else None
+
+        attrs = ['stg1', 'qtg2', 'qps2', 'stg2']
+        return json_success(
+            filters={'module': module or None, 'shift': shift or None},
+            has_attrs={a: hasattr(TestReport, a) for a in attrs},
+            sample=(
+                {
+                    'id': r.id,
+                    'shift': r.shift,
+                    'module': getattr(r, 'module', None),
+                    'prodgroup3': getattr(r, 'prodgroup3', None),
+                    'operation': getattr(r, 'operation', None),
+                    'stg1': getattr(r, 'stg1', None),
+                    'qtg2': getattr(r, 'qtg2', None),
+                    'qps2': getattr(r, 'qps2', None),
+                    'stg2': getattr(r, 'stg2', None),
+                }
+                if r else None
+            ),
+        )
+    except Exception as e:
+        app.logger.exception('Debug endpoint failed')
+        return json_error(f'{type(e).__name__}: {e}', 500)
+
+
+@app.get('/api/_debug/test_row_dict')
+def _debug_test_row_dict():
+    """Debug helper: return one row as passed to templates/test.html (dict shape).
+
+    This uses the same conversion function test_report_to_dict().
+    """
+    try:
+        module = (request.args.get('module') or '').strip()
+        shift = (request.args.get('shift') or '').strip()
+
+        q = db.session.query(TestReport)
+        if module:
+            q = q.filter(TestReport.module == module)
+        if shift:
+            q = q.filter(TestReport.shift == shift)
+
+        r = q.order_by(desc(TestReport.id)).first()
+        return json_success(
+            filters={'module': module or None, 'shift': shift or None},
+            dict=(test_report_to_dict(r) if r else None),
+        )
+    except Exception as e:
+        app.logger.exception('Debug dict endpoint failed')
+        return json_error(f'{type(e).__name__}: {e}', 500)
+
+
 @app.route('/download/wip-goal-reckon-raw')
 def download_wip_goal_reckon_raw():
     """Download the raw validation CSV used for data checking."""
@@ -242,6 +311,10 @@ class Report(db.Model):
     module = db.Column(db.String(50))
     qtg1 = db.Column(db.Float, default=0.0)
     qps1 = db.Column(db.Float, default=0.0)
+    stg1 = db.Column(db.Float, default=0.0)
+    qtg2 = db.Column(db.Float, default=0.0)
+    qps2 = db.Column(db.Float, default=0.0)
+    stg2 = db.Column(db.Float, default=0.0)
     entity = db.Column(db.String(50))
     mor = db.Column(db.Float, default=0.0)
     tr = db.Column(db.Float, default=0.0)
@@ -284,6 +357,8 @@ class TestReport(db.Model):
     module = db.Column(db.String(50))
     qtg1 = db.Column(db.Float)
     qps1 = db.Column(db.Float)
+    stg1 = db.Column(db.Float)
+    qtg2 = db.Column(db.Float)
     mor = db.Column(db.Float)
     tr = db.Column(db.Float)
     output = db.Column(db.Float)
@@ -299,6 +374,7 @@ class TestReport(db.Model):
     commit1 = db.Column(db.Float)
     commit2 = db.Column(db.Float)
     qps2 = db.Column(db.Float)
+    stg2 = db.Column(db.Float)
     prebuild1 = db.Column(db.Float)
 
     # NOTE: Test modules use in-place edits directly on `goal`.
@@ -382,7 +458,10 @@ def test_report_to_dict(r: TestReport):
         'output': r.output,
         'qtg1': r.qtg1,
         'qps1': r.qps1,
+    'stg1': r.stg1,
+    'qtg2': r.qtg2,
     'qps2': r.qps2,
+    'stg2': r.stg2,
         'goal_adjusted_at': r.goal_adjusted_at.strftime('%Y-%m-%d %H:%M:%S') if r.goal_adjusted_at else None,
         'goal_adjusted_by': r.goal_adjusted_by,
         'miss_goal_comment': r.miss_goal_comment,

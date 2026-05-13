@@ -150,8 +150,12 @@
               <th class="sortable header-wrap" data-col="shift_start_wip_onhold" onclick="sortTestTable(this, 'shift_start_wip_onhold')">Shift Start WIP Onhold <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')">Commit1 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')">Commit2 <span class="sort-icon">⇕</span></th>
+              <th class="sortable" data-col="qtg1" onclick="sortTestTable(this, 'qtg1')">QTG1 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span class="sort-icon">⇕</span></th>
+              <th class="sortable" data-col="stg1" onclick="sortTestTable(this, 'stg1')">STG1 <span class="sort-icon">⇕</span></th>
+              <th class="sortable" data-col="qtg2" onclick="sortTestTable(this, 'qtg2')">QTG2 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="qps2" onclick="sortTestTable(this, 'qps2')">QPS2 <span class="sort-icon">⇕</span></th>
+              <th class="sortable" data-col="stg2" onclick="sortTestTable(this, 'stg2')">STG2 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="mor" onclick="sortTestTable(this, 'mor')">MOR <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="tr" onclick="sortTestTable(this, 'tr')">TR <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Cell Qty <span class="sort-icon">⇕</span></th>
@@ -169,8 +173,12 @@
               <th data-col="shift_start_wip_onhold"><input type="text" class="filter-input-field" data-filter-col="shift_start_wip_onhold" oninput="applyTestFilters()"></th>
               <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1" oninput="applyTestFilters()"></th>
               <th data-col="commit2"><input type="text" class="filter-input-field" data-filter-col="commit2" oninput="applyTestFilters()"></th>
+              <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1" oninput="applyTestFilters()"></th>
               <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1" oninput="applyTestFilters()"></th>
+              <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1" oninput="applyTestFilters()"></th>
+              <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2" oninput="applyTestFilters()"></th>
               <th data-col="qps2"><input type="text" class="filter-input-field" data-filter-col="qps2" oninput="applyTestFilters()"></th>
+              <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2" oninput="applyTestFilters()"></th>
               <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor" oninput="applyTestFilters()"></th>
               <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr" oninput="applyTestFilters()"></th>
               <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty" oninput="applyTestFilters()"></th>
@@ -190,8 +198,12 @@
                 <td data-col="shift_start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
                 <td data-col="commit1">{{ r.commit1 or 0 }}</td>
                 <td data-col="commit2">{{ r.commit2 or 0 }}</td>
+                <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
                 <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+                <td data-col="stg1">{{ r.stg1 or 0 }}</td>
+                <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
                 <td data-col="qps2">{{ r.qps2 or 0 }}</td>
+                <td data-col="stg2">{{ r.stg2 or 0 }}</td>
                 <td class="mor-val" data-col="mor">{{ r.mor or 0 }}</td>
                 <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
                 <td class="cell-pad-4" data-col="link_cell_qty">
@@ -229,8 +241,12 @@
               <td data-col="shift_start_wip_onhold" id="test-total-shift_start_wip_onhold"></td>
               <td data-col="commit1" id="test-total-commit1"></td>
               <td data-col="commit2" id="test-total-commit2"></td>
+              <td data-col="qtg1"></td>
               <td data-col="qps1"></td>
+              <td data-col="stg1"></td>
+              <td data-col="qtg2"></td>
               <td data-col="qps2"></td>
+              <td data-col="stg2"></td>
               <td data-col="mor"></td>
               <td data-col="tr" id="test-total-tr"></td>
               <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
