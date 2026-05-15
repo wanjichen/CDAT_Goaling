@@ -20,6 +20,18 @@
 }
 
 /*
+  IMPORTANT:
+  index.css has a global `table { width: 100%; min-width: 1920px; table-layout: fixed; }`.
+  On the Test page this can cause some columns (like QTG1) to get squeezed/missed.
+  Force the test table to size to its content, and rely on the container's overflow scroll.
+*/
+#testTable {
+  width: max-content;
+  min-width: max-content;
+  table-layout: auto;
+}
+
+/*
   Sticky layout contract:
   - Header row height must match the offset used by the sticky filter row.
   - Keeping this explicit prevents the filter row from covering row 1 while scrolling.
@@ -269,6 +281,12 @@
   justify-content: flex-start;
 }
 
+/* Ensure Shift/User/Last refresh use the same font-size (index.css may override via other rules). */
+.header-meta-banner .meta-chip,
+.header-meta-banner .meta-chip .value {
+  font-size: 14px;
+}
+
 .header-meta-banner .meta-chip+.meta-chip {
   margin-left: 8px;
   padding-left: 0;
@@ -479,6 +497,20 @@
   background-color: #e9edf5 !important;
 }
 
+/* Footer (Total row) should scroll with the table.
+   But the pinned footer cells must stay above (paint on top of) other footer cells when horizontally scrolling. */
+#testTable tfoot td {
+  position: static;
+}
+
+#testTable tfoot td.pinned-col {
+  position: sticky !important;
+  left: 0;
+  z-index: 20;
+  background: #f8f9fa !important;
+  background-clip: padding-box;
+}
+
 /* --- Tighten Test table column widths (scoped) --- */
 #testTable {
   width: 100%;
@@ -506,6 +538,58 @@
 /* Let comment cells wrap */
 #testTable td[data-col="miss_goal_comment"] {
   white-space: normal;
+}
+
+/* --- Progress (Output / Goal) column --- */
+#testTable th[data-col="progress"],
+#testTable td[data-col="progress"] {
+  width: 140px;
+  min-width: 140px;
+}
+
+#testTable td.progress-cell {
+  padding: 2px 6px;
+}
+
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.35);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.progress-fill.is-ok {
+  background: linear-gradient(90deg, #16a34a, #86efac);
+}
+
+.progress-fill.is-warn {
+  background: linear-gradient(90deg, #d97706, #fcd34d);
+}
+
+.progress-fill.is-bad {
+  background: linear-gradient(90deg, #dc2626, #fca5a5);
+}
+
+.progress-label {
+  flex: 0 0 auto;
+  min-width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #334155;
 }
 
 /* Inputs should fit the cell */

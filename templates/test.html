@@ -164,6 +164,7 @@
               <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span class="sort-icon">⇕</span></th>
               <th class="sortable highlight-col" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="output" onclick="sortTestTable(this, 'output')">Output <span class="sort-icon">⇕</span></th>
+              <th class="sortable" data-col="progress" onclick="sortTestTable(this, 'progress')" title="Output / Goal">Progress <span class="sort-icon">⇕</span></th>
               <th data-col="miss_goal_comment">Miss Goal Comment</th>
             </tr>
 
@@ -187,6 +188,7 @@
               <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity" oninput="applyTestFilters()"></th>
               <th class="highlight-col" data-col="goal"><input type="text" class="filter-input-field" data-filter-col="goal" oninput="applyTestFilters()"></th>
               <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output" oninput="applyTestFilters()"></th>
+              <th data-col="progress"></th>
               <th data-col="miss_goal_comment"><input type="text" class="filter-input-field" data-filter-col="miss_goal_comment" oninput="applyTestFilters()"></th>
             </tr>
           </thead>
@@ -222,6 +224,7 @@
                   </div>
                 </td>
                 <td data-col="output">{{ r.output or 0 }}</td>
+                <td data-col="progress" class="progress-cell"></td>
                 <td class="cell-pad-4" data-col="miss_goal_comment"
                     title="Comment by: {{ r.miss_goal_comment_updated_by or 'N/A' }}&#10;At: {{ r.miss_goal_comment_updated_at or 'N/A' }}">
                   <div class="action-group" id="group-comment-{{ r.id }}">
@@ -239,7 +242,7 @@
             <tr class="total-row">
               <td class="pinned-col pinned-1" data-col="prodgroup3"><strong>Total</strong></td>
               <td class="pinned-col pinned-2" data-col="operation"></td>
-              <td data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
+              <td class="pinned-col pinned-3" data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
               <td data-col="shift_start_wip_onhold" id="test-total-shift_start_wip_onhold"></td>
               <td data-col="commit1" id="test-total-commit1"></td>
               <td data-col="commit2" id="test-total-commit2"></td>
@@ -255,6 +258,7 @@
               <td data-col="capacity" id="test-total-capacity"></td>
               <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
               <td data-col="output" id="test-total-output"></td>
+              <td data-col="progress" id="test-total-progress" class="progress-cell"></td>
               <td data-col="miss_goal_comment"></td>
             </tr>
           </tfoot>

@@ -224,6 +224,96 @@ function parseTestNumber(raw) {
   return Number.isNaN(n) ? 0 : n;
 }
 
+function clamp(n, min, max) {
+  return Math.min(max, Math.max(min, n));
+}
+
+function formatPercent(pct) {
+  if (!Number.isFinite(pct)) return '';
+  return `${Math.round(pct)}%`;
+}
+
+function ensureProgressCell(td) {
+  if (!td) return null;
+  if (td.querySelector('.progress-wrap')) return td;
+
+  td.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'progress-wrap';
+
+  const track = document.createElement('div');
+  track.className = 'progress-track';
+
+  const fill = document.createElement('div');
+  fill.className = 'progress-fill';
+  track.appendChild(fill);
+
+  const label = document.createElement('span');
+  label.className = 'progress-label';
+  label.textContent = '';
+
+  wrap.appendChild(track);
+  wrap.appendChild(label);
+  td.appendChild(wrap);
+  return td;
+}
+
+function setProgress(td, outputVal, goalVal) {
+  if (!td) return;
+  ensureProgressCell(td);
+
+  const fill = td.querySelector('.progress-fill');
+  const label = td.querySelector('.progress-label');
+  if (!fill || !label) return;
+
+  const outN = parseTestNumber(outputVal);
+  const goalN = parseTestNumber(goalVal);
+
+  let pct = 0;
+  if (goalN > 0) pct = (outN / goalN) * 100;
+
+  const pctClamped = clamp(pct, 0, 200);
+  fill.style.width = `${clamp(pctClamped, 0, 100)}%`;
+
+  fill.classList.remove('is-ok', 'is-warn', 'is-bad');
+  if (goalN <= 0 && outN <= 0) {
+    // nothing
+  } else if (pct >= 100) {
+    fill.classList.add('is-ok');
+  } else if (pct >= 70) {
+    fill.classList.add('is-warn');
+  } else {
+    fill.classList.add('is-bad');
+  }
+
+  label.textContent = goalN > 0 ? formatPercent(pct) : '';
+  td.title = goalN > 0 ? `${outN} / ${goalN} (${pct.toFixed(1)}%)` : `${outN} / ${goalN}`;
+}
+
+function updateTestProgressBars() {
+  // Per-row progress
+  getTestDataRows().forEach(row => {
+    const tdProgress = row.querySelector('td[data-col="progress"]');
+    if (!tdProgress) return;
+
+    const tdOut = row.querySelector('td[data-col="output"]');
+    const outVal = getTestCellValue(tdOut, false);
+
+    const tdGoal = row.querySelector('td[data-col="goal"]');
+    const goalVal = getTestCellValue(tdGoal, false);
+
+    setProgress(tdProgress, outVal, goalVal);
+  });
+
+  // Footer total progress
+  const footerProgress = document.getElementById('test-total-progress');
+  const footerOut = document.getElementById('test-total-output');
+  const footerGoal = document.getElementById('test-total-goal');
+  if (footerProgress && footerOut && footerGoal) {
+    setProgress(footerProgress, footerOut.textContent, footerGoal.textContent);
+  }
+}
+
 function setTotalText(id, value) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -283,6 +373,8 @@ function calculateTestTotals() {
   setTotalText('test-total-capacity', totalCapacity);
   setTotalText('test-total-goal', totalGoal);
   setTotalText('test-total-output', totalOutput);
+
+  updateTestProgressBars();
 }
 
 window.sortTestTable = function sortTestTable(thElement, colName) {
@@ -324,10 +416,24 @@ window.sortTestTable = function sortTestTable(thElement, colName) {
     'capacity',
     'goal',
     'output',
+    'progress',
   ];
   const isNumeric = numericCols.includes(colName);
 
   rows.sort((a, b) => {
+    // Progress is computed: output/goal percentage.
+    if (colName === 'progress') {
+      const outA = parseTestNumber(getTestCellValue(a.querySelector('td[data-col="output"]'), false));
+      const goalA = parseTestNumber(getTestCellValue(a.querySelector('td[data-col="goal"]'), false));
+      const outB = parseTestNumber(getTestCellValue(b.querySelector('td[data-col="output"]'), false));
+      const goalB = parseTestNumber(getTestCellValue(b.querySelector('td[data-col="goal"]'), false));
+
+      const pctA = goalA > 0 ? (outA / goalA) : -1;
+      const pctB = goalB > 0 ? (outB / goalB) : -1;
+
+      return dir === 'asc' ? (pctA - pctB) : (pctB - pctA);
+    }
+
     const tdA = a.querySelector(`td[data-col="${colName}"]`);
     const tdB = b.querySelector(`td[data-col="${colName}"]`);
 
