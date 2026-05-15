@@ -16,16 +16,7 @@
     <div class="header-left">
       <h2><a class="header-home-link" href="{{ url_for('index') }}">CDAT MFG Goaling Report</a></h2>
       <div class="header-meta-banner">
-        <span class="meta-chip">
-          <span class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
-              <path
-                d="M6 2.75a.75.75 0 0 1 .75.75V5h10.5V3.5a.75.75 0 0 1 1.5 0V5h.25A2.75 2.75 0 0 1 21.75 7.75v11.5A2.75 2.75 0 0 1 19 22H5a2.75 2.75 0 0 1-2.75-2.75V7.75A2.75 2.75 0 0 1 5 5h.25V3.5A.75.75 0 0 1 6 2.75Zm13.75 7.5H3.75v9a1.25 1.25 0 0 0 1.25 1.25h14a1.25 1.25 0 0 0 1.25-1.25v-9ZM5 6.5a1.25 1.25 0 0 0-1.25 1.25v1h16v-1A1.25 1.25 0 0 0 19 6.5H5Z" />
-            </svg>
-          </span>
-          <span class="value">{{ current_date }}</span>
-        </span>
-        <span class="meta-chip">
+  <span class="meta-chip">
           <span class="icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
               <path
@@ -42,6 +33,17 @@
             </svg>
           </span>
           <span class="value">{{ current_user or 'N/A' }}</span>
+        </span>
+
+        <span class="meta-chip">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+              <path
+                d="M12 1.75a10.25 10.25 0 1 0 10.25 10.25A10.262 10.262 0 0 0 12 1.75Zm0 19a8.75 8.75 0 1 1 8.75-8.75A8.76 8.76 0 0 1 12 20.75Zm.75-13.5a.75.75 0 0 0-1.5 0v5a.75.75 0 0 0 .33.62l3.5 2.33a.75.75 0 1 0 .84-1.24l-3.17-2.11Z" />
+            </svg>
+          </span>
+      <span class="value"
+        title="{% if last_refresh_source and last_refresh_source != 'unavailable' %}Source: {{ last_refresh_source }}{% else %}Source: N/A{% endif %}">Last refresh: {{ last_refresh_at.strftime('%Y-%m-%d %H:%M:%S') if last_refresh_at else 'N/A' }}</span>
         </span>
       </div>
     </div>
@@ -146,8 +148,8 @@
             <tr>
               <th class="pinned-col pinned-1 sortable" data-col="prodgroup3" onclick="sortTestTable(this, 'prodgroup3')">Prodgroup3 <span class="sort-icon">⇕</span></th>
               <th class="pinned-col pinned-2 sortable" data-col="operation" onclick="sortTestTable(this, 'operation')">Operation <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Shift Start WIP <span class="sort-icon">⇕</span></th>
-              <th class="sortable header-wrap" data-col="shift_start_wip_onhold" onclick="sortTestTable(this, 'shift_start_wip_onhold')">Shift Start WIP Onhold <span class="sort-icon">⇕</span></th>
+              <th class="pinned-col pinned-3 sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Shift Start WIP <span class="sort-icon">⇕</span></th>
+              <th class="sortable" data-col="shift_start_wip_onhold" onclick="sortTestTable(this, 'shift_start_wip_onhold')">Start WIP Onhold <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')">Commit1 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')">Commit2 <span class="sort-icon">⇕</span></th>
               <th class="sortable" data-col="qtg1" onclick="sortTestTable(this, 'qtg1')">QTG1 <span class="sort-icon">⇕</span></th>
@@ -169,7 +171,7 @@
             <tr class="filter-row">
               <th class="pinned-col pinned-1" data-col="prodgroup3"><input type="text" class="filter-input-field" data-filter-col="prodgroup3" oninput="applyTestFilters()"></th>
               <th class="pinned-col pinned-2" data-col="operation"><input type="text" class="filter-input-field" data-filter-col="operation" oninput="applyTestFilters()"></th>
-              <th data-col="shift_start_wip"><input type="text" class="filter-input-field" data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
+              <th class="pinned-col pinned-3" data-col="shift_start_wip"><input type="text" class="filter-input-field" data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
               <th data-col="shift_start_wip_onhold"><input type="text" class="filter-input-field" data-filter-col="shift_start_wip_onhold" oninput="applyTestFilters()"></th>
               <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1" oninput="applyTestFilters()"></th>
               <th data-col="commit2"><input type="text" class="filter-input-field" data-filter-col="commit2" oninput="applyTestFilters()"></th>
@@ -194,7 +196,7 @@
               <tr data-id="{{ r.id }}">
                 <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
                 <td class="pinned-col pinned-2" data-col="operation">{{ r.operation }}</td>
-                <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+                <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
                 <td data-col="shift_start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
                 <td data-col="commit1">{{ r.commit1 or 0 }}</td>
                 <td data-col="commit2">{{ r.commit2 or 0 }}</td>

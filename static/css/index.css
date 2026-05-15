@@ -151,6 +151,73 @@ body {
             min-width: 0;
         }
 
+        /* Auto-fit header on smaller laptop widths: allow meta chips/buttons to wrap instead of squeezing. */
+    @media (max-width: 1400px) {
+            .header {
+                flex-wrap: wrap;
+                row-gap: 6px;
+            }
+
+            .header-left {
+                flex: 1 1 720px;
+                flex-wrap: nowrap;
+                align-items: center;
+                row-gap: 0;
+            }
+
+            .header-meta-banner {
+                /* Keep meta next to the title as a 2-row block (instead of pushing to a new line). */
+                flex-basis: auto;
+                /* Use a simple 2x2 grid so the wrap is predictable and aligned. */
+                display: grid;
+                grid-template-columns: max-content max-content;
+                grid-auto-rows: minmax(18px, auto);
+                column-gap: 14px;
+                row-gap: 2px;
+                align-content: start;
+                justify-content: start;
+                max-width: none;
+            }
+
+            /* Keep report title on one line. */
+            .header-left h2 {
+                white-space: nowrap;
+            }
+
+            .meta-chip {
+                font-size: 13px;
+            }
+
+            /* Remove the vertical separator styling for grid layout. */
+            .meta-chip+.meta-chip {
+                margin-left: 0;
+                padding-left: 0;
+            }
+
+            .meta-chip+.meta-chip::before {
+                display: none;
+            }
+
+            .meta-chip+.meta-chip {
+                margin-left: 0;
+                padding-left: 0;
+            }
+
+            .meta-chip+.meta-chip::before {
+                display: none;
+            }
+
+            .header-actions {
+                flex: 0 0 auto;
+                margin-left: auto;
+            }
+
+            .meta-chip+.meta-chip {
+                margin-left: 8px;
+                padding-left: 10px;
+            }
+        }
+
         .meta-chip {
             display: inline-flex;
             align-items: center;

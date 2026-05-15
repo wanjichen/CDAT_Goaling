@@ -612,15 +612,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return th.offsetWidth || 0;
     };
 
-    const w1 = getWidth('prodgroup3');
-    const w2 = getWidth('operation');
+  const w1 = getWidth('prodgroup3');
+  const w2 = getWidth('operation');
+  const w3 = getWidth('shift_start_wip');
 
-    const left1 = 0;
-    const left2 = left1 + w1;
+  const left1 = 0;
+  const left2 = left1 + w1;
+  const left3 = left2 + w2;
 
     table.style.setProperty('--test-pinned-left-1', `${left1}px`);
     table.style.setProperty('--test-pinned-left-2', `${left2}px`);
-  table.style.setProperty('--test-pinned-left-3', `${left2}px`);
+  table.style.setProperty('--test-pinned-left-3', `${left3}px`);
 
   // (No pinned-total-width var needed; keep behavior aligned with Assembly.)
 
@@ -632,8 +634,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     table.querySelectorAll('.pinned-last').forEach(el => el.classList.remove('pinned-last'));
 
-    // Test table pins only first two columns. Divider should always be after Operation (pinned-2).
-    table.querySelectorAll('.pinned-col.pinned-2').forEach(el => {
+  // Test table pins first three columns. Divider should always be after Shift Start WIP (pinned-3).
+  table.querySelectorAll('.pinned-col.pinned-3').forEach(el => {
       el.classList.add('pinned-last');
     });
   }

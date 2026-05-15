@@ -25,8 +25,8 @@
   - Keeping this explicit prevents the filter row from covering row 1 while scrolling.
 */
 :root {
-  --test-header-height: 44px;
-  --test-filter-height: 34px;
+  --test-header-height: 36px;
+  --test-filter-height: 30px;
 }
 
 /* No extra layout hacks needed; match Assembly sticky behavior. */
@@ -49,13 +49,99 @@
   text-overflow: ellipsis;
 }
 
-/* Pinned columns should behave like Assembly: keep content clipped to the cell. */
+/* --- Compact Test table sizing (no header wrapping) --- */
+#testTable {
+  font-size: 11px;
+}
 
+#testTable th,
+#testTable td {
+  padding: 2px 4px;
+  white-space: nowrap;
+}
+
+#testTable thead tr:first-child th {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+#testTable thead tr.filter-row th {
+  padding: 2px 4px;
+}
+
+#testTable tbody td,
+#testTable tfoot td {
+  height: 24px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+#testTable .table-input {
+  padding: 1px 3px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+#testTable textarea.table-input {
+  min-height: 20px;
+}
+
+#testTable .sort-icon {
+  margin-left: 3px;
+  min-width: 12px;
+  height: 12px;
+  line-height: 12px;
+}
+
+/* Make filter inputs as compact as possible. */
+#testTable thead tr.filter-row input.filter-input-field {
+  padding: 1px 2px;
+  font-size: 11px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+  display: block;
+  margin: 0;
+}
+
+/* Pinned columns should behave like Assembly: keep content clipped to the cell. */
 /* Guard: ensure Operation text is always visible (Chromium can render sticky + fixed layout oddly). */
 #testTable th[data-col="operation"],
 #testTable td[data-col="operation"] {
-  color: #0f172a;
+  padding: 1px 2px;
   min-width: 110px;
+}
+
+/* Keep long header labels readable (avoid wrapping after recent column width changes). */
+#testTable th[data-col="shift_start_wip_onhold"],
+#testTable td[data-col="shift_start_wip_onhold"] {
+  min-width: 240px;
+  width: 240px;
+}
+
+#testTable th[data-col="shift_start_wip_onhold"] {
+  white-space: nowrap;
+}
+
+/* Keep header label + sort icon on one row without changing table cell display semantics. */
+#testTable th[data-col="shift_start_wip_onhold"] {
+  line-height: 1;
+}
+
+#testTable th[data-col="shift_start_wip_onhold"] .sort-icon {
+  margin-left: 6px;
+}
+
+#testTable th[data-col="shift_start_wip_onhold"] .sort-icon {
+  display: inline-block;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Force the whole header cell to keep a single line including the icon. */
+#testTable th[data-col="shift_start_wip_onhold"] {
+  overflow: visible;
 }
 
 /* Match width behavior to existing QPS columns so headers/values feel consistent. */
@@ -90,6 +176,7 @@
 /* Stacking order for pinned columns: later pinned columns above earlier ones. */
 #testTable td.pinned-col.pinned-1 { z-index: 12; }
 #testTable td.pinned-col.pinned-2 { z-index: 13; }
+#testTable td.pinned-col.pinned-3 { z-index: 14; }
 
 /* Pinned cells must always be opaque so the scrollable cells don't visually overlap. */
 #testTable td.pinned-col {
@@ -141,6 +228,7 @@
 /* Offsets are set dynamically in JS based on rendered widths */
 #testTable .pinned-col.pinned-1 { left: var(--test-pinned-left-1, 0px); }
 #testTable .pinned-col.pinned-2 { left: var(--test-pinned-left-2, 0px); }
+#testTable .pinned-col.pinned-3 { left: var(--test-pinned-left-3, 0px); }
 
 /* Divider after the last pinned column (matches Assembly look) */
 #testTable th.pinned-last,
@@ -172,6 +260,57 @@
 .test-page {
   padding: 12px 20px;
 }
+
+/* Header meta layout: Shift + Username on line 1, Last refresh on line 2. */
+.header-meta-banner {
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 2px;
+  justify-content: flex-start;
+}
+
+.header-meta-banner .meta-chip+.meta-chip {
+  margin-left: 8px;
+  padding-left: 0;
+}
+
+.header-meta-banner .meta-chip+.meta-chip::before {
+  display: none;
+}
+
+/* Header meta values should not be bold on Test page. */
+.header-meta-banner .meta-chip .value {
+  font-weight: 400;
+}
+
+.header-meta-banner .meta-chip,
+.header-meta-banner .meta-chip .value {
+  white-space: nowrap;
+}
+
+/* Order chips within the banner. */
+.header-meta-banner .meta-chip:nth-child(1) { order: 1; } /* Shift */
+.header-meta-banner .meta-chip:nth-child(2) { order: 2; } /* User */
+.header-meta-banner .meta-chip:nth-child(3) { order: 3; flex-basis: 100%; } /* Last refresh -> new line */
+
+/* When the last refresh chip starts a new line, it should not inherit left spacing. */
+.header-meta-banner .meta-chip:nth-child(3) {
+  margin-left: 0 !important;
+}
+
+/* Allow chips to shrink within the header and truncate long values instead of wrapping. */
+.header-meta-banner .meta-chip {
+  min-width: 0;
+}
+
+.header-meta-banner .meta-chip .value {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
 
 .test-tabs {
   display: flex;

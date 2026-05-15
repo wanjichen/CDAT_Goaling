@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
+from pathlib import Path
 
 from flask import render_template, request
 
@@ -84,6 +85,37 @@ def register_test_routes(app) -> None:
         except Exception as e:
             return json_error(str(e))
 
+        # Last refresh contract:
+        # - If the calendar shift matches the latest shift in DB, use the local log file mtime.
+        #   (This reflects when the upstream output/source last refreshed.)
+        # - Otherwise fall back to the DB timestamp on the latest row for this module+shift.
+        last_refresh_at = None
+        last_refresh_source = None
+        if current_shift and latest_db_shift and current_shift == latest_db_shift:
+            try:
+                log_path = Path(__file__).resolve().parents[1] / 'data' / 'WIP_LOT_STATUS_test.log2'
+                if log_path.exists():
+                    last_refresh_at = datetime.fromtimestamp(log_path.stat().st_mtime)
+                    last_refresh_source = 'log'
+            except Exception:
+                last_refresh_at = None
+                last_refresh_source = None
+
+        if not last_refresh_at:
+            # DB fallback: latest row timestamp for this module + shift.
+            last_refresh_id = db.session.query(db.func.max(TestReport.id)).filter(
+                TestReport.shift == selected_shift,
+                TestReport.module == page_name,
+            ).scalar()
+            if last_refresh_id:
+                last_refresh_row = db.session.query(TestReport).filter(TestReport.id == last_refresh_id).first()
+                if last_refresh_row and getattr(last_refresh_row, 'system_suggested_goal_created_at', None):
+                    last_refresh_at = last_refresh_row.system_suggested_goal_created_at
+                    last_refresh_source = 'db'
+
+        if not last_refresh_at:
+            last_refresh_source = 'unavailable'
+
         row_dicts = [test_report_to_dict(r) for r in rows]
 
         # Mismatch: the calendar says a different shift than the one the user is viewing.
@@ -101,4 +133,6 @@ def register_test_routes(app) -> None:
             current_date=current_date,
             latest_db_shift=latest_db_shift,
             shift_mismatch=shift_mismatch,
+            last_refresh_at=last_refresh_at,
+            last_refresh_source=last_refresh_source,
         )
