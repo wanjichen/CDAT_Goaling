@@ -273,11 +273,11 @@
   padding: 12px 20px;
 }
 
-/* Header meta layout: Shift + Username on line 1, Last refresh on line 2. */
+/* Header meta layout: keep meta chips inline next to the title (no forced second line). */
 .header-meta-banner {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  row-gap: 2px;
+  row-gap: 0;
   justify-content: flex-start;
 }
 
@@ -309,12 +309,7 @@
 /* Order chips within the banner. */
 .header-meta-banner .meta-chip:nth-child(1) { order: 1; } /* Shift */
 .header-meta-banner .meta-chip:nth-child(2) { order: 2; } /* User */
-.header-meta-banner .meta-chip:nth-child(3) { order: 3; flex-basis: 100%; } /* Last refresh -> new line */
-
-/* When the last refresh chip starts a new line, it should not inherit left spacing. */
-.header-meta-banner .meta-chip:nth-child(3) {
-  margin-left: 0 !important;
-}
+.header-meta-banner .meta-chip:nth-child(3) { order: 3; } /* Last refresh */
 
 /* Allow chips to shrink within the header and truncate long values instead of wrapping. */
 .header-meta-banner .meta-chip {

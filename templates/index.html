@@ -20,15 +20,6 @@
                     <span class="icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
                             <path
-                                d="M6 2.75a.75.75 0 0 1 .75.75V5h10.5V3.5a.75.75 0 0 1 1.5 0V5h.25A2.75 2.75 0 0 1 21.75 7.75v11.5A2.75 2.75 0 0 1 19 22H5a2.75 2.75 0 0 1-2.75-2.75V7.75A2.75 2.75 0 0 1 5 5h.25V3.5A.75.75 0 0 1 6 2.75Zm13.75 7.5H3.75v9a1.25 1.25 0 0 0 1.25 1.25h14a1.25 1.25 0 0 0 1.25-1.25v-9ZM5 6.5a1.25 1.25 0 0 0-1.25 1.25v1h16v-1A1.25 1.25 0 0 0 19 6.5H5Z" />
-                        </svg>
-                    </span>
-                    <span class="value">{{ current_date }}</span>
-                </span>
-                <span class="meta-chip">
-                    <span class="icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
-                            <path
                                 d="M12 1.75a10.25 10.25 0 1 0 10.25 10.25A10.262 10.262 0 0 0 12 1.75Zm0 19a8.75 8.75 0 1 1 8.75-8.75A8.76 8.76 0 0 1 12 20.75Zm.75-13.5a.75.75 0 0 0-1.5 0v5a.75.75 0 0 0 .33.62l3.5 2.33a.75.75 0 1 0 .84-1.24l-3.17-2.11Z" />
                         </svg>
                     </span>
@@ -42,6 +33,19 @@
                         </svg>
                     </span>
                     <span class="value">{{ current_user or 'N/A' }}</span>
+                </span>
+
+                <span class="meta-chip">
+                    <span class="icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 1.75a10.25 10.25 0 1 0 10.25 10.25A10.262 10.262 0 0 0 12 1.75Zm0 19a8.75 8.75 0 1 1 8.75-8.75A8.76 8.76 0 0 1 12 20.75Zm.75-13.5a.75.75 0 0 0-1.5 0v5a.75.75 0 0 0 .33.62l3.5 2.33a.75.75 0 1 0 .84-1.24l-3.17-2.11Z" />
+                        </svg>
+                    </span>
+                    <span class="value"
+                        title="{% if last_refresh_source and last_refresh_source != 'unavailable' %}Source: {{ last_refresh_source }}{% else %}Source: N/A{% endif %}">Last
+                        refresh: {{ last_refresh_at.strftime('%Y-%m-%d %H:%M:%S') if last_refresh_at else 'N/A'
+                        }}</span>
                 </span>
 
             </div>
@@ -95,7 +99,8 @@
 
             {% if selected_shift and current_shift and selected_shift != current_shift %}
             <div class="shift-filter-status is-warning">
-                Reminder: you are viewing shift {{ selected_shift }}, not the latest calendar shift ({{ current_shift }}).
+                Reminder: you are viewing shift {{ selected_shift }}, not the latest calendar shift ({{ current_shift
+                }}).
             </div>
             {% endif %}
         </div>
@@ -115,8 +120,7 @@
                 <a href="{{ url_for('index', page='2D-Xray', shift=selected_shift) }}" class="tab-link">2D-Xray</a>
                 <a href="{{ url_for('index', page='BA', shift=selected_shift) }}" class="tab-link">BA</a>
             </div>
-            <button class="tab-link copy-tab-btn" onclick="saveAllGoalChanges()"
-                title="Save all changes in one batch"
+            <button class="tab-link copy-tab-btn" onclick="saveAllGoalChanges()" title="Save all changes in one batch"
                 aria-label="Save all adjusted goal and reason changes"><span class="btn-icon"
                     aria-hidden="true">&#128190;</span>Save All Changes</button>
             <button class="tab-link copy-tab-btn" onclick="copyTableToClipboard()"
@@ -171,7 +175,8 @@
                         <th class="col-3 sortable pinned-col pinned-3" data-col="shift_start_wip"
                             onclick="sortTable(this, 'shift_start_wip')">Shift Start WIP <span
                                 class="sort-icon">⇕</span></th>
-                        <th class="sortable w-25 pinned-col pinned-4 pinned-last" data-col="entity" onclick="sortTable(this, 'entity')">
+                        <th class="sortable w-25 pinned-col pinned-4 pinned-last" data-col="entity"
+                            onclick="sortTable(this, 'entity')">
                             Entity <span class="sort-icon">⇕</span></th>
                         <th class="sortable w-25" data-col="qtg1" onclick="sortTable(this, 'qtg1')">QTG1
                             <span class="sort-icon">⇕</span>
@@ -196,9 +201,13 @@
                         </th>
                         <th class="sortable w-25" data-col="tr" onclick="sortTable(this, 'tr')">TR <span
                                 class="sort-icon">⇕</span></th>
-                        <th class="sortable w-25" data-col="output" onclick="sortTable(this, 'output')"
-                            {% if current_page == 'TACS23' %}title="2171&2174 outputs also include 2176&2177 rework locations"{% endif %}>
+                        <th class="sortable w-25" data-col="output" onclick="sortTable(this, 'output')" {% if
+                            current_page=='TACS23' %}title="2171&2174 outputs also include 2176&2177 rework locations"
+                            {% endif %}>
                             Output <span class="sort-icon">⇕</span></th>
+                        <th class="sortable w-25" data-col="progress" onclick="sortTable(this, 'progress')"
+                            title="Output / Goal">
+                            Progress <span class="sort-icon">⇕</span></th>
                         <th class="sortable highlight-col w-30" data-col="system_goal"
                             onclick="sortTable(this, 'system_goal')">Goal <span class="sort-icon">⇕</span></th>
                         <th class="sortable w-45" data-col="subcell_info" onclick="sortTable(this, 'subcell_info')">
@@ -218,33 +227,34 @@
 
                     <!-- Filter Row -->
                     <tr class="filter-row">
-                        <th class="col-1 pinned-col pinned-1" data-col="prodgroup3"><input type="text" class="filter-input-field"
-                                data-filter-col="prodgroup3" oninput="applyFilters()"></th>
-                        <th class="col-2 pinned-col pinned-2" data-col="operation"><input type="text" class="filter-input-field"
-                                data-filter-col="operation" oninput="applyFilters()"></th>
+                        <th class="col-1 pinned-col pinned-1" data-col="prodgroup3"><input type="text"
+                                class="filter-input-field" data-filter-col="prodgroup3" oninput="applyFilters()"></th>
+                        <th class="col-2 pinned-col pinned-2" data-col="operation"><input type="text"
+                                class="filter-input-field" data-filter-col="operation" oninput="applyFilters()"></th>
                         <th class="col-3 pinned-col pinned-3" data-col="shift_start_wip"><input type="text"
                                 class="filter-input-field" data-filter-col="shift_start_wip" oninput="applyFilters()">
                         </th>
-                        <th class="pinned-col pinned-4 pinned-last" data-col="entity"><input type="text" class="filter-input-field" data-filter-col="entity"
-                                oninput="applyFilters()"></th>
+                        <th class="pinned-col pinned-4 pinned-last" data-col="entity"><input type="text"
+                                class="filter-input-field" data-filter-col="entity" oninput="applyFilters()"></th>
                         <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1"
                                 oninput="applyFilters()"></th>
                         <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
                                 oninput="applyFilters()"></th>
-            <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
-                oninput="applyFilters()"></th>
-            <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2"
-                oninput="applyFilters()"></th>
+                        <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
+                                oninput="applyFilters()"></th>
+                        <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2"
+                                oninput="applyFilters()"></th>
                         <th data-col="qps2"><input type="text" class="filter-input-field" data-filter-col="qps2"
-                oninput="applyFilters()"></th>
-            <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2"
-                oninput="applyFilters()"></th>
+                                oninput="applyFilters()"></th>
+                        <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2"
+                                oninput="applyFilters()"></th>
                         <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
                                 oninput="applyFilters()"></th>
                         <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
                                 oninput="applyFilters()"></th>
                         <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output"
                                 oninput="applyFilters()"></th>
+                        <th data-col="progress"></th>
                         <th class="highlight-col" data-col="system_goal"><input type="text" class="filter-input-field"
                                 data-filter-col="system_goal" oninput="applyFilters()"></th>
                         <th data-col="subcell_info"><input type="text" class="filter-input-field"
@@ -261,18 +271,18 @@
                     {% for r in reports %}
                     <tr data-id="{{ r.id }}">
                         <td class="col-1 pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 or '' }}</td>
-                        <td class="col-2 pinned-col pinned-2" data-col="operation">{{ ((r.operation|string)[:-2]) if (r.operation
+                        <td class="col-2 pinned-col pinned-2" data-col="operation">{{ ((r.operation|string)[:-2]) if
+                            (r.operation
                             is not none and (r.operation|string).endswith('.0')) else (r.operation if r.operation is not
                             none else '') }}</td>
-                        <td class="col-3 pinned-col pinned-3" data-col="shift_start_wip">{{ (r.shift_start_wip | round(3)) if
+                        <td class="col-3 pinned-col pinned-3" data-col="shift_start_wip">{{ (r.shift_start_wip |
+                            round(3)) if
                             r.shift_start_wip else '' }}</td>
                         <td class="cell-pad-4 pinned-col pinned-4 pinned-last" data-col="entity">
                             {% if current_page in ['EPX', 'TCB', 'HBC-JDC', 'DIA', 'BA'] %}
                             <input type="text" class="table-input entity-input" placeholder=""
-                                value="{{ r.entity or '' }}"
-                                data-original="{{ r.entity or '' }}"
-                                onfocus="entityStartEdit(this)"
-                                onkeydown="entityHandleKeydown(event, this)"
+                                value="{{ r.entity or '' }}" data-original="{{ r.entity or '' }}"
+                                onfocus="entityStartEdit(this)" onkeydown="entityHandleKeydown(event, this)"
                                 onblur="entityCommitEdit(this)">
                             {% else %}
                             {{ r.entity or '' }}
@@ -287,6 +297,7 @@
                         <td class="mor-val" data-col="mor">{{ (r.mor | round(3)) if r.mor else '' }}</td>
                         <td class="tr-val" data-col="tr">{{ (r.tr | round(3)) if r.tr else '' }}</td>
                         <td data-col="output">{{ (r.output | round(3)) if r.output else '' }}</td>
+                        <td data-col="progress" class="progress-cell"></td>
                         <td class="highlight-col" data-col="system_goal">{{
                             (r.system_suggested_goal | round(3)) if r.system_suggested_goal else '' }}</td>
 
@@ -316,8 +327,7 @@
                         <td class="cell-pad-4" data-col="miss_comment"
                             title="Comment by: {{ r.miss_goal_comment_updated_by or 'N/A' }}&#10;At: {{ r.miss_goal_comment_updated_at.strftime('%Y-%m-%d %H:%M:%S') if r.miss_goal_comment_updated_at else 'N/A' }}">
                             <div class="action-group" id="group-comment-{{ r.id }}">
-                                <textarea class="table-input comment-input comment-textarea"
-                                    rows="2"
+                                <textarea class="table-input comment-input comment-textarea" rows="2"
                                     data-original="{{ r.miss_goal_comment or '' }}"
                                     oninput="handleInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
                                 <button class="btn-mini btn-save" onclick="saveRow(this, 'comment')">Save</button>
@@ -338,7 +348,8 @@
                     <tr>
                         <td class="col-1 align-center pinned-col pinned-1">Total</td>
                         <td class="col-2 pinned-col pinned-2"></td>
-                        <td id="total-shift_start_wip" class="col-3 pinned-col pinned-3" data-col="shift_start_wip">0</td>
+                        <td id="total-shift_start_wip" class="col-3 pinned-col pinned-3" data-col="shift_start_wip">0
+                        </td>
                         <td class="pinned-col pinned-4 pinned-last" data-col="entity"></td>
                         <td data-col="qtg1"></td>
                         <td data-col="qps1"></td>
@@ -349,6 +360,7 @@
                         <td data-col="mor"></td>
                         <td id="total-tr" data-col="tr">0</td>
                         <td id="total-output" data-col="output">0</td>
+                        <td id="total-progress" data-col="progress" class="progress-cell"></td>
                         <td id="total-system_goal" class="highlight-col" data-col="system_goal">0</td>
                         <td data-col="subcell_info"></td>
 

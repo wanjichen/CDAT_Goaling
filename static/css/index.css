@@ -124,10 +124,17 @@ body {
             gap: 10px;
             flex-wrap: nowrap;
             min-width: 0;
+            justify-content: flex-start;
+        }
+
+        /* Ensure title doesn't wrap even when meta chips take extra space. */
+        .header-left h2 {
+            margin: 0;
+            white-space: nowrap;
         }
 
         .header h2 {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
             letter-spacing: 0.2px;
             color: #ffffff;
@@ -148,7 +155,13 @@ body {
             gap: 0;
             flex-wrap: nowrap;
             align-items: center;
+            justify-content: flex-start;
             min-width: 0;
+        }
+
+        /* Keep each chip on one line. */
+        .header-meta-banner .meta-chip {
+            white-space: nowrap;
         }
 
         /* Laptop widths: keep date/shift/user on ONE line.
@@ -182,7 +195,7 @@ body {
 
             .header-meta-banner {
                 display: flex;
-                flex-wrap: nowrap;
+                flex-wrap: wrap;
                 align-items: center;
                 gap: 0;
                 min-width: 0;
@@ -261,7 +274,7 @@ body {
         }
 
         .meta-chip .value {
-            font-weight: 600;
+            font-weight: 400;
             opacity: 0.98;
         }
 
@@ -794,6 +807,7 @@ body {
             letter-spacing: 0.15px;
             border-bottom: 1px solid var(--table-head-border);
             box-shadow: inset 0 -1px 0 rgba(198, 210, 225, 0.45);
+            white-space: nowrap;
         }
 
         /* Sort & Filter Styles */
@@ -906,6 +920,57 @@ body {
             border-left: 1px solid var(--table-highlight-border) !important;
             border-right: 1px solid var(--table-highlight-border) !important;
         }
+
+    /* --- Progress column (Output / Goal) --- */
+    /* Let Progress follow the same sizing as other w-25 columns (like Output). */
+    #mainTable th[data-col="progress"],
+    #mainTable td[data-col="progress"] {
+        width: 25px;
+        min-width: 25px;
+        max-width: 25px;
+    }
+
+    #mainTable td.progress-cell {
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    #mainTable .progress-wrap {
+        display: flex;
+        align-items: center;
+    gap: 4px;
+        min-width: 0;
+    }
+
+    #mainTable .progress-track {
+        flex: 1 1 auto;
+    height: 6px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.45);
+        overflow: hidden;
+        box-shadow: inset 0 0 0 1px rgba(100, 116, 139, 0.30);
+    }
+
+    #mainTable .progress-fill {
+        height: 100%;
+        width: 0%;
+        background: rgba(239, 68, 68, 0.85);
+        border-radius: 999px;
+        transition: width 0.2s ease;
+    }
+
+    #mainTable .progress-fill.is-ok { background: rgba(34, 197, 94, 0.90); }
+    #mainTable .progress-fill.is-warn { background: rgba(245, 158, 11, 0.92); }
+    #mainTable .progress-fill.is-bad { background: rgba(239, 68, 68, 0.88); }
+
+    #mainTable .progress-label {
+        flex: 0 0 auto;
+    font-size: 10px;
+        font-weight: 650;
+        color: var(--pane-text, #0f172a);
+    min-width: 0;
+        text-align: right;
+    }
 
         th.highlight-col {
             background: linear-gradient(180deg, var(--table-highlight-bg) 0%, var(--table-highlight-head-bg) 100%) !important;

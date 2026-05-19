@@ -282,6 +282,117 @@ function calculateTotals() {
     document.getElementById('total-output').textContent = totalOutput === 0 ? '' : parseFloat(totalOutput.toFixed(3));
     document.getElementById('total-system_goal').textContent = totalSystem === 0 ? '' : parseFloat(totalSystem.toFixed(3));
     document.getElementById('total-manual_goal').textContent = totalManual === 0 ? '' : parseFloat(totalManual.toFixed(3));
+
+    updateMainProgressBars();
+}
+
+// --- Progress column (Output / Goal) ---
+function clamp(n, min, max) {
+    return Math.min(max, Math.max(min, n));
+}
+
+function formatPercent(pct) {
+    if (!Number.isFinite(pct)) return '';
+    return `${Math.round(pct)}%`;
+}
+
+function parseNumber(raw) {
+    const s = String(raw ?? '').trim();
+    if (!s) return 0;
+    const n = parseFloat(s);
+    return Number.isNaN(n) ? 0 : n;
+}
+
+function ensureProgressCell(td) {
+    if (!td) return null;
+    if (td.querySelector('.progress-wrap')) return td;
+
+    td.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'progress-wrap';
+
+    const track = document.createElement('div');
+    track.className = 'progress-track';
+    const fill = document.createElement('div');
+    fill.className = 'progress-fill';
+    track.appendChild(fill);
+
+    const label = document.createElement('span');
+    label.className = 'progress-label';
+    label.textContent = '';
+
+    wrap.appendChild(track);
+    wrap.appendChild(label);
+    td.appendChild(wrap);
+    return td;
+}
+
+function setProgress(td, outputVal, goalVal) {
+    if (!td) return;
+    ensureProgressCell(td);
+
+    const fill = td.querySelector('.progress-fill');
+    const label = td.querySelector('.progress-label');
+    if (!fill || !label) return;
+
+    const outN = parseNumber(outputVal);
+    const goalN = parseNumber(goalVal);
+
+    let pct = 0;
+    if (goalN > 0) pct = (outN / goalN) * 100;
+
+    const pctClamped = clamp(pct, 0, 200);
+    fill.style.width = `${clamp(pctClamped, 0, 100)}%`;
+
+    fill.classList.remove('is-ok', 'is-warn', 'is-bad');
+    if (goalN <= 0 && outN <= 0) {
+        // nothing
+    } else if (pct >= 100) {
+        fill.classList.add('is-ok');
+    } else if (pct >= 70) {
+        fill.classList.add('is-warn');
+    } else {
+        fill.classList.add('is-bad');
+    }
+
+    label.textContent = goalN > 0 ? formatPercent(pct) : '';
+    td.title = goalN > 0 ? `${outN} / ${goalN} (${pct.toFixed(1)}%)` : `${outN} / ${goalN}`;
+}
+
+function getAdjustedGoalTextForRow(row) {
+    if (!row) return '';
+    const adjustedTd = row.querySelector('td[data-col="manual_goal"]');
+    const adjustedInput = adjustedTd ? adjustedTd.querySelector('input') : null;
+    const adjustedRaw = adjustedInput ? adjustedInput.value : (adjustedTd ? adjustedTd.textContent : '');
+    const adjustedNum = parseFloat(String(adjustedRaw ?? '').trim());
+    if (Number.isFinite(adjustedNum)) return String(adjustedNum);
+
+    const goalTd = row.querySelector('td[data-col="system_goal"]');
+    return goalTd ? goalTd.textContent : '';
+}
+
+function updateMainProgressBars() {
+    const table = document.getElementById('mainTable');
+    if (!table) return;
+
+    // Per-row progress
+    getDataRows().forEach(row => {
+        const tdProgress = row.querySelector('td[data-col="progress"]');
+        if (!tdProgress) return;
+
+        const tdOut = row.querySelector('td[data-col="output"]');
+        const outVal = getCellValue(tdOut, false);
+        const goalVal = getAdjustedGoalTextForRow(row);
+        setProgress(tdProgress, outVal, goalVal);
+    });
+
+    // Footer total progress
+    const footerProgress = document.getElementById('total-progress');
+    const footerOut = document.getElementById('total-output');
+    const footerGoal = document.getElementById('total-manual_goal');
+    if (footerProgress && footerOut && footerGoal) {
+        setProgress(footerProgress, footerOut.textContent, footerGoal.textContent);
+    }
 }
 
 // --- Helper: Get cell value (handles standard text and input fields) ---
@@ -467,15 +578,28 @@ function sortTable(thElement, colName) {
     thElement.setAttribute('data-sort', dir);
     thElement.querySelector('.sort-icon').innerText = dir === 'asc' ? '⇑' : '⇓';
 
-    const numericCols = ['shift_start_wip', 'qtg1', 'qps1', 'stg1', 'qtg2', 'qps2', 'stg2', 'mor', 'tr', 'output', 'system_goal', 'manual_goal'];
+    const numericCols = ['shift_start_wip', 'qtg1', 'qps1', 'stg1', 'qtg2', 'qps2', 'stg2', 'mor', 'tr', 'output', 'system_goal', 'manual_goal', 'progress'];
     const isNumeric = numericCols.includes(colName);
 
     rows.sort((a, b) => {
         const tdA = a.querySelector(`td[data-col="${colName}"]`);
         const tdB = b.querySelector(`td[data-col="${colName}"]`);
 
-        let valA = getCellValue(tdA);
-        let valB = getCellValue(tdB);
+    // Progress is computed: output / effective goal.
+    if (colName === 'progress') {
+        const outA = getCellValue(a.querySelector('td[data-col="output"]'), false);
+        const outB = getCellValue(b.querySelector('td[data-col="output"]'), false);
+        const goalA = getAdjustedGoalTextForRow(a);
+        const goalB = getAdjustedGoalTextForRow(b);
+        const goalAN = parseNumber(goalA);
+        const goalBN = parseNumber(goalB);
+        const pctA = goalAN > 0 ? (parseNumber(outA) / goalAN) * 100 : -1;
+        const pctB = goalBN > 0 ? (parseNumber(outB) / goalBN) * 100 : -1;
+        return dir === 'asc' ? pctA - pctB : pctB - pctA;
+    }
+
+    let valA = getCellValue(tdA);
+    let valB = getCellValue(tdB);
 
         if (isNumeric) {
             valA = parseFloat(valA) || 0;

@@ -4,6 +4,7 @@ import os
 import re
 import time
 import logging
+from pathlib import Path
 from threading import Lock
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file
@@ -21,7 +22,8 @@ try:
     if _wsgi_log_path:
         _handler = logging.FileHandler(_wsgi_log_path)
         _handler.setLevel(logging.INFO)
-        _handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
+        _handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s %(name)s: %(message)s'))
         # Attach to both Flask app logger and root logger.
         app.logger.addHandler(_handler)
         logging.getLogger().addHandler(_handler)
@@ -106,7 +108,8 @@ def _db_probe():
     try:
         one = db.session.execute(text('select 1')).scalar()
         search_path = db.session.execute(text('show search_path')).scalar()
-        current_schema = db.session.execute(text('select current_schema()')).scalar()
+        current_schema = db.session.execute(
+            text('select current_schema()')).scalar()
 
         reg = db.session.execute(
             text('select to_regclass(:t)'),
@@ -211,7 +214,7 @@ def download_wip_goal_reckon_raw():
     return send_file(
         csv_path,
         as_attachment=True,
-    download_name=download_filename,
+        download_name=download_filename,
         mimetype='text/csv',
         conditional=False,
         max_age=0,
@@ -344,7 +347,8 @@ class TestReport(db.Model):
 
     __tablename__ = 'cdat_goaling'
     # This table is also mapped by Report; extend the existing mapping.
-    __table_args__ = ({'schema': db_schema, 'extend_existing': True} if db_schema else {'extend_existing': True})
+    __table_args__ = ({'schema': db_schema, 'extend_existing': True}
+                      if db_schema else {'extend_existing': True})
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     year = db.Column(db.Integer)
@@ -458,10 +462,10 @@ def test_report_to_dict(r: TestReport):
         'output': r.output,
         'qtg1': r.qtg1,
         'qps1': r.qps1,
-    'stg1': r.stg1,
-    'qtg2': r.qtg2,
-    'qps2': r.qps2,
-    'stg2': r.stg2,
+        'stg1': r.stg1,
+        'qtg2': r.qtg2,
+        'qps2': r.qps2,
+        'stg2': r.stg2,
         'goal_adjusted_at': r.goal_adjusted_at.strftime('%Y-%m-%d %H:%M:%S') if r.goal_adjusted_at else None,
         'goal_adjusted_by': r.goal_adjusted_by,
         'miss_goal_comment': r.miss_goal_comment,
@@ -572,7 +576,7 @@ def report_to_dict(r: Report):
         "shift": r.shift,
         "prodgroup3": r.prodgroup3,
         "operation": r.operation,
-    "module": r.module,
+        "module": r.module,
         "entity": r.entity,
         "qtg1": r.qtg1,
         "qps1": r.qps1,
@@ -828,6 +832,43 @@ def index(page_name='TCB'):
         ).order_by(desc(Report.id)).all()
     current_date = datetime.now().strftime('%Y-%m-%d')
 
+    # Last refresh contract (mirrors test.html):
+    # - If the calendar shift matches the latest shift in DB, use the local log file mtime.
+    #   (This reflects when the upstream output/source last refreshed.)
+    # - Otherwise fall back to the DB timestamp on the latest row for this module+shift.
+    last_refresh_at = None
+    last_refresh_source = None
+    if current_shift and latest_db_shift and current_shift == latest_db_shift:
+        try:
+            log_path = Path(app.root_path) / 'data' / 'GoalingRefreshWIP.log2'
+            if log_path.exists():
+                last_refresh_at = datetime.fromtimestamp(
+                    log_path.stat().st_mtime)
+                last_refresh_source = 'log'
+        except Exception:
+            last_refresh_at = None
+            last_refresh_source = None
+
+    if not last_refresh_at and selected_shift:
+        try:
+            last_refresh_id = db.session.query(db.func.max(Report.id)).filter(
+                Report.shift == selected_shift,
+                Report.module == page_name,
+            ).scalar()
+            if last_refresh_id:
+                last_refresh_row = db.session.query(Report).filter(
+                    Report.id == last_refresh_id).first()
+                if last_refresh_row and getattr(last_refresh_row, 'system_suggested_goal_created_at', None):
+                    last_refresh_at = last_refresh_row.system_suggested_goal_created_at
+                    last_refresh_source = 'db'
+        except Exception:
+            # Never fail page render due to refresh timestamp lookup.
+            last_refresh_at = None
+            last_refresh_source = None
+
+    if not last_refresh_at:
+        last_refresh_source = 'unavailable'
+
     return render_template(
         'index.html',
         reports=reports,
@@ -838,7 +879,9 @@ def index(page_name='TCB'):
         selected_shift=selected_shift,
         shift_mismatch=shift_mismatch,
         current_date=current_date,
-        current_page=page_name
+        current_page=page_name,
+        last_refresh_at=last_refresh_at,
+        last_refresh_source=last_refresh_source,
     )
 
 
@@ -1046,7 +1089,8 @@ def update_entity():
         return json_error("Record not found", 404)
 
     try:
-        raw_entity = '' if data.get('entity') is None else str(data.get('entity'))
+        raw_entity = '' if data.get(
+            'entity') is None else str(data.get('entity'))
         entity_val = raw_entity.strip()
         entity_val = entity_val if entity_val else None
 
@@ -1073,22 +1117,26 @@ def update_comments_batch():
 
     for item in updates:
         if not isinstance(item, dict):
-            results.append({'status': 'error', 'message': 'Invalid update item'})
+            results.append(
+                {'status': 'error', 'message': 'Invalid update item'})
             continue
 
         old_id = item.get('id')
         try:
             old_id_int = int(old_id)
         except Exception:
-            results.append({'old_id': old_id, 'status': 'error', 'message': 'Invalid id'})
+            results.append(
+                {'old_id': old_id, 'status': 'error', 'message': 'Invalid id'})
             continue
 
         old = db.session.get(Report, old_id_int)
         if not old:
-            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Record not found'})
+            results.append(
+                {'old_id': old_id_int, 'status': 'error', 'message': 'Record not found'})
             continue
 
-        comment_val = '' if item.get('comment') is None else str(item.get('comment'))
+        comment_val = '' if item.get(
+            'comment') is None else str(item.get('comment'))
         try:
             new_entry = persist_report_version(
                 old,
@@ -1096,10 +1144,12 @@ def update_comments_batch():
                 miss_goal_comment_updated_at=datetime.now(),
                 miss_goal_comment_updated_by=user
             )
-            results.append({'old_id': old_id_int, 'new_id': new_entry.id, 'status': 'success'})
+            results.append(
+                {'old_id': old_id_int, 'new_id': new_entry.id, 'status': 'success'})
         except Exception as e:
             db.session.rollback()
-            results.append({'old_id': old_id_int, 'status': 'error', 'message': str(e)})
+            results.append(
+                {'old_id': old_id_int, 'status': 'error', 'message': str(e)})
 
     return json_success(results=results)
 
@@ -1251,7 +1301,8 @@ def test_add_new_goal():
 
         # On insert, MOR may be NULL; treat as 0.
         mor_val = 0.0
-        capacity_val = round(mor_val * float(cell_qty_val) / 30.0, 1) if cell_qty_val is not None else None
+        capacity_val = round(mor_val * float(cell_qty_val) /
+                             30.0, 1) if cell_qty_val is not None else None
         calculated_tr = compute_tr_from_goal_and_mor(goal_val, mor_val)
 
         new_entry = TestReport(
@@ -1292,19 +1343,22 @@ def test_update_goals_batch():
 
     for item in updates:
         if not isinstance(item, dict):
-            results.append({'status': 'error', 'message': 'Invalid update item'})
+            results.append(
+                {'status': 'error', 'message': 'Invalid update item'})
             continue
 
         old_id = item.get('id')
         try:
             old_id_int = int(old_id)
         except Exception:
-            results.append({'old_id': old_id, 'status': 'error', 'message': 'Invalid id'})
+            results.append(
+                {'old_id': old_id, 'status': 'error', 'message': 'Invalid id'})
             continue
 
         old = db.session.get(TestReport, old_id_int)
         if not old:
-            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Record not found'})
+            results.append(
+                {'old_id': old_id_int, 'status': 'error', 'message': 'Record not found'})
             continue
 
         raw_goal = item.get('manual_goal')
@@ -1317,7 +1371,8 @@ def test_update_goals_batch():
                 new_goal = float(raw_goal)
                 calculated_tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
         except Exception:
-            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Invalid goal'})
+            results.append(
+                {'old_id': old_id_int, 'status': 'error', 'message': 'Invalid goal'})
             continue
 
         try:
@@ -1328,10 +1383,12 @@ def test_update_goals_batch():
                 goal_adjusted_at=datetime.now(),
                 goal_adjusted_by=user
             )
-            results.append({'old_id': old_id_int, 'new_id': old.id, 'status': 'success'})
+            results.append(
+                {'old_id': old_id_int, 'new_id': old.id, 'status': 'success'})
         except Exception as e:
             db.session.rollback()
-            results.append({'old_id': old_id_int, 'status': 'error', 'message': str(e)})
+            results.append(
+                {'old_id': old_id_int, 'status': 'error', 'message': str(e)})
 
     return json_success(results=results)
 
@@ -1350,19 +1407,22 @@ def test_update_comments_batch():
 
     for item in updates:
         if not isinstance(item, dict):
-            results.append({'status': 'error', 'message': 'Invalid update item'})
+            results.append(
+                {'status': 'error', 'message': 'Invalid update item'})
             continue
 
         old_id = item.get('id')
         try:
             old_id_int = int(old_id)
         except Exception:
-            results.append({'old_id': old_id, 'status': 'error', 'message': 'Invalid id'})
+            results.append(
+                {'old_id': old_id, 'status': 'error', 'message': 'Invalid id'})
             continue
 
         old = db.session.get(TestReport, old_id_int)
         if not old:
-            results.append({'old_id': old_id_int, 'status': 'error', 'message': 'Record not found'})
+            results.append(
+                {'old_id': old_id_int, 'status': 'error', 'message': 'Record not found'})
             continue
 
         comment_val = item.get('comment')
@@ -1374,12 +1434,15 @@ def test_update_comments_batch():
                 miss_goal_comment_updated_at=datetime.now(),
                 miss_goal_comment_updated_by=user
             )
-            results.append({'old_id': old_id_int, 'new_id': old.id, 'status': 'success'})
+            results.append(
+                {'old_id': old_id_int, 'new_id': old.id, 'status': 'success'})
         except Exception as e:
             db.session.rollback()
-            results.append({'old_id': old_id_int, 'status': 'error', 'message': str(e)})
+            results.append(
+                {'old_id': old_id_int, 'status': 'error', 'message': str(e)})
 
     return json_success(results=results)
+
 
 if __name__ == '__main__':
     app.run(

@@ -35,14 +35,16 @@ def register_test_routes(app) -> None:
         # Only expose enabled modules as tabs.
         tabs = ['HDMx']
 
-        page_name = (request.args.get('page') or (tabs[0] if tabs else '')).strip()
+        page_name = (request.args.get('page') or (
+            tabs[0] if tabs else '')).strip()
         if page_name not in tabs:
             page_name = tabs[0] if tabs else page_name
 
         requested_shift = (request.args.get('shift') or '').strip()
 
         current_shift = get_current_shift_from_calendar()
-        available_shifts = get_recent_test_database_shifts_for_page(page_name, limit=5)
+        available_shifts = get_recent_test_database_shifts_for_page(
+            page_name, limit=5)
         latest_db_shift = available_shifts[0] if available_shifts else None
 
         # Default to the current calendar shift if it exists in the DB for this page.
@@ -75,7 +77,8 @@ def register_test_routes(app) -> None:
             )
 
         try:
-            latest_ids = get_latest_test_report_ids_for_shift_and_page(selected_shift, page_name)
+            latest_ids = get_latest_test_report_ids_for_shift_and_page(
+                selected_shift, page_name)
             rows = (
                 db.session.query(TestReport)
                 .filter(TestReport.id.in_(latest_ids))
@@ -93,9 +96,11 @@ def register_test_routes(app) -> None:
         last_refresh_source = None
         if current_shift and latest_db_shift and current_shift == latest_db_shift:
             try:
-                log_path = Path(__file__).resolve().parents[1] / 'data' / 'WIP_LOT_STATUS_test.log2'
+                log_path = Path(__file__).resolve(
+                ).parents[1] / 'data' / 'GoalingRefreshWIP.log2'
                 if log_path.exists():
-                    last_refresh_at = datetime.fromtimestamp(log_path.stat().st_mtime)
+                    last_refresh_at = datetime.fromtimestamp(
+                        log_path.stat().st_mtime)
                     last_refresh_source = 'log'
             except Exception:
                 last_refresh_at = None
@@ -108,7 +113,8 @@ def register_test_routes(app) -> None:
                 TestReport.module == page_name,
             ).scalar()
             if last_refresh_id:
-                last_refresh_row = db.session.query(TestReport).filter(TestReport.id == last_refresh_id).first()
+                last_refresh_row = db.session.query(TestReport).filter(
+                    TestReport.id == last_refresh_id).first()
                 if last_refresh_row and getattr(last_refresh_row, 'system_suggested_goal_created_at', None):
                     last_refresh_at = last_refresh_row.system_suggested_goal_created_at
                     last_refresh_source = 'db'
@@ -119,7 +125,8 @@ def register_test_routes(app) -> None:
         row_dicts = [test_report_to_dict(r) for r in rows]
 
         # Mismatch: the calendar says a different shift than the one the user is viewing.
-        shift_mismatch = bool(selected_shift and current_shift and selected_shift != current_shift)
+        shift_mismatch = bool(
+            selected_shift and current_shift and selected_shift != current_shift)
 
         return render_template(
             'test.html',
