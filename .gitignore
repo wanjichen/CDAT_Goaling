@@ -6,6 +6,7 @@ __pycache__/
 # Logs
 logs/
 *.log
+*.log2
 
 # Local runtime/temp
 *.tmp
@@ -22,3 +23,7 @@ env/
 *.sqlite3
 instance/
 .vscode/
+
+# Local data artifacts (generated / environment-specific)
+data/calendar.csv
+data/wip_goal_reckon_raw.csv
