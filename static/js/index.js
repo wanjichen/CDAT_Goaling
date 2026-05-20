@@ -39,6 +39,131 @@ function setInputDirtyState(input, isDirty) {
     input.classList.toggle('input-dirty', isDirty);
 }
 
+// --- Toasts (lightweight) ---
+function showToast(message, type = 'info', timeoutMs = 2800) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = message;
+    container.appendChild(el);
+
+    setTimeout(() => {
+        el.classList.add('toast-hide');
+        setTimeout(() => el.remove(), 250);
+    }, timeoutMs);
+}
+
+async function safeReadJsonResponse(res) {
+    // IIS/proxy can return HTML on errors; don't explode on res.json().
+    const raw = await res.text();
+    if (!raw) return { raw: '', json: null };
+    try {
+        return { raw, json: JSON.parse(raw) };
+    } catch {
+        return { raw, json: null };
+    }
+}
+
+// --- In-place editing (no version history) ---
+// Mirror the Test page behavior: debounce saves and update the existing row.
+const _indexAutoSaveTimers = new Map();
+
+function _indexAutoSaveKey(rowId, type) {
+    return `${rowId}|${type}`;
+}
+
+function scheduleIndexAutoSave(row, type, delayMs = 650) {
+    if (!row) return;
+    const rowId = row.getAttribute('data-id');
+    if (!rowId) return;
+
+    const key = _indexAutoSaveKey(rowId, type);
+    if (_indexAutoSaveTimers.has(key)) {
+        clearTimeout(_indexAutoSaveTimers.get(key));
+    }
+
+    _indexAutoSaveTimers.set(key, setTimeout(async () => {
+        await saveIndexRowInPlace(row, type, { silent: true });
+    }, delayMs));
+}
+
+async function saveIndexRowInPlace(row, type, { silent = false } = {}) {
+    if (!row) return;
+    const id = row.getAttribute('data-id');
+    if (!id) return;
+
+    let url = '';
+    let payload = { id: id };
+
+    if (type === 'goal') {
+        const rawGoal = row.querySelector('.goal-input')?.value ?? '';
+        const reasonVal = (row.querySelector('.reason-input')?.value ?? '').trim();
+
+        if ((rawGoal !== '' && reasonVal === '') || (rawGoal === '' && reasonVal !== '')) {
+            if (!silent) showToast('Both Manual Goal and Adjust Reason must be filled.', 'error');
+            return;
+        }
+
+        url = apiUrl('/api/update-goal-inplace');
+        payload.manual_goal = rawGoal === '' ? 0 : rawGoal;
+        payload.reason = reasonVal;
+    } else if (type === 'comment') {
+        url = apiUrl('/api/update-comment-inplace');
+        payload.comment = row.querySelector('.comment-input')?.value ?? '';
+    } else {
+        return;
+    }
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+            if (!silent) showToast('Server Error: ' + (data.message || 'Unknown'), 'error');
+            return;
+        }
+
+        if (!silent) showToast('Saved successfully', 'success');
+
+        // Mark inputs clean.
+        if (type === 'goal') {
+            const goalInput = row.querySelector('.goal-input');
+            const reasonInput = row.querySelector('.reason-input');
+            if (goalInput) {
+                goalInput.setAttribute('data-original', String(goalInput.value ?? ''));
+                goalInput.classList.remove('input-dirty');
+            }
+            if (reasonInput) {
+                reasonInput.setAttribute('data-original', String(reasonInput.value ?? ''));
+                reasonInput.classList.remove('input-dirty');
+            }
+
+            // Update TR cell from server response.
+            const trTd = row.querySelector('td[data-col="tr"]');
+            if (trTd && data && typeof data.tr !== 'undefined') {
+                const n = Number(data.tr);
+                trTd.textContent = Number.isFinite(n) ? n.toFixed(1) : String(data.tr ?? '');
+            }
+        } else if (type === 'comment') {
+            const commentInput = row.querySelector('.comment-input');
+            if (commentInput) {
+                commentInput.setAttribute('data-original', String(commentInput.value ?? ''));
+                commentInput.classList.remove('input-dirty');
+            }
+        }
+
+        // Keep totals/progress current.
+        calculateTotals();
+    } catch (e) {
+        if (!silent) showToast('Network error, please try again.', 'error');
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     // --- Highlight Active Tab ---
     const currentPage = getCurrentPageFromUrl();
@@ -341,19 +466,20 @@ function setProgress(td, outputVal, goalVal) {
     let pct = 0;
     if (goalN > 0) pct = (outN / goalN) * 100;
 
-    const pctClamped = clamp(pct, 0, 200);
-    fill.style.width = `${clamp(pctClamped, 0, 100)}%`;
+    const pctClamped = (window.ProgressScale && window.ProgressScale.clamp)
+        ? window.ProgressScale.clamp(pct, 0, 200)
+        : clamp(pct, 0, 200);
+
+    const pctForWidth = (window.ProgressScale && window.ProgressScale.clamp)
+        ? window.ProgressScale.clamp(pctClamped, 0, 100)
+        : clamp(pctClamped, 0, 100);
+    fill.style.width = `${pctForWidth}%`;
 
     fill.classList.remove('is-ok', 'is-warn', 'is-bad');
-    if (goalN <= 0 && outN <= 0) {
-        // nothing
-    } else if (pct >= 100) {
-        fill.classList.add('is-ok');
-    } else if (pct >= 70) {
-        fill.classList.add('is-warn');
-    } else {
-        fill.classList.add('is-bad');
-    }
+    const cls = (window.ProgressScale && window.ProgressScale.classifyProgress)
+        ? window.ProgressScale.classifyProgress(pct, outN, goalN)
+        : (goalN <= 0 && outN <= 0 ? '' : (pct >= 100 ? 'is-ok' : (pct >= 70 ? 'is-warn' : 'is-bad')));
+    if (cls) fill.classList.add(cls);
 
     label.textContent = goalN > 0 ? formatPercent(pct) : '';
     td.title = goalN > 0 ? `${outN} / ${goalN} (${pct.toFixed(1)}%)` : `${outN} / ${goalN}`;
@@ -631,19 +757,18 @@ function handleInput(input, type) {
         const isGoalDirty = String(goalInput.value) !== String(goalInput.getAttribute('data-original'));
         const isReasonDirty = String(reasonInput.value) !== String(reasonInput.getAttribute('data-original'));
 
-        if (isGoalDirty || isReasonDirty) showActions(actionGroup);
-        else hideActions(actionGroup);
+    // No Save/Cancel UX: save in-place (debounced) like test.html.
+    if (isGoalDirty || isReasonDirty) scheduleIndexAutoSave(row, 'goal');
 
         const goalVal = parseFloat(goalInput.value) || 0;
         const mor = parseFloat(row.querySelector('.mor-val').innerText) || 0;
         row.querySelector('.tr-val').innerText = calculateTrFromGoalAndMor(goalVal, mor);
 
         // Recalculate totals dynamically as the user types
-        calculateTotals();
+    calculateTotals();
     } else if (type === 'comment') {
         actionGroup = document.getElementById(`group-comment-${rowId}`);
-        if (String(val) !== String(original)) showActions(actionGroup);
-        else hideActions(actionGroup);
+    if (String(val) !== String(original)) scheduleIndexAutoSave(row, 'comment');
     } else if (type === 'entity') {
         actionGroup = document.getElementById(`group-entity-${rowId}`);
         if (String(val).trim() !== String(original).trim()) showActions(actionGroup);
@@ -759,169 +884,32 @@ async function saveRow(btn, type) {
     const row = btn.closest('tr');
     const id = row.getAttribute('data-id');
 
-    const url = (type === 'goal')
-        ? apiUrl('/api/update-goal')
-        : (type === 'comment')
-            ? apiUrl('/api/update-comment')
-            : apiUrl('/api/update-entity');
-    let payload = { id: id };
-
-    if (type === 'goal') {
-        const rawGoal = row.querySelector('.goal-input').value;
-        const reasonVal = row.querySelector('.reason-input').value.trim();
-
-        if ((rawGoal !== '' && reasonVal === '') || (rawGoal === '' && reasonVal !== '')) {
-            showToast('Both Manual Goal and Adjust Reason must be filled.', 'error');
-            if (rawGoal === '') row.querySelector('.goal-input').focus();
-            else row.querySelector('.reason-input').focus();
-            return;
-        }
-
-        payload.manual_goal = rawGoal === '' ? 0 : rawGoal;
-        payload.reason = reasonVal;
-    } else if (type === 'comment') {
-        payload.comment = row.querySelector('.comment-input').value;
-    } else if (type === 'entity') {
-        payload.entity = row.querySelector('.entity-input').value;
-    }
-
-    const originalText = btn.innerText;
-    btn.innerText = '...';
-    btn.disabled = true;
-
+    // Legacy entrypoint (old Save buttons). Index page is now test-style (auto-save, latest-only).
+    // Keep this function as a safe shim in case cached HTML still calls it.
     try {
-        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        const data = await res.json();
-        if (data.status === 'success') {
-            showToast('Saved successfully', 'success');
+        if (!row || !id) return;
 
-            // Keep current sort order: do NOT reload the page.
-            // Instead, update the inputs' original values and hide action buttons.
-            const row = btn.closest('tr');
-            const rowId = row ? row.getAttribute('data-id') : null;
-
-            if (type === 'goal' && row) {
-                const goalInput = row.querySelector('.goal-input');
-                const reasonInput = row.querySelector('.reason-input');
-                if (goalInput) {
-                    goalInput.setAttribute('data-original', String(goalInput.value ?? ''));
-                    goalInput.classList.remove('input-dirty');
-                }
-                if (reasonInput) {
-                    reasonInput.setAttribute('data-original', String(reasonInput.value ?? ''));
-                    reasonInput.classList.remove('input-dirty');
-                }
-                hideActions(rowId ? document.getElementById(`group-goal-${rowId}`) : null);
-            } else if (type === 'comment' && row) {
-                const commentInput = row.querySelector('.comment-input');
-                if (commentInput) {
-                    commentInput.setAttribute('data-original', String(commentInput.value ?? ''));
-                    commentInput.classList.remove('input-dirty');
-                }
-                hideActions(rowId ? document.getElementById(`group-comment-${rowId}`) : null);
-            } else if (type === 'entity' && row) {
-                const entityInput = row.querySelector('.entity-input');
-                if (entityInput) {
-                    entityInput.setAttribute('data-original', String(entityInput.value ?? ''));
-                    entityInput.classList.remove('input-dirty');
-                }
-                hideActions(rowId ? document.getElementById(`group-entity-${rowId}`) : null);
-            }
-
-            btn.innerText = originalText;
-            btn.disabled = false;
-        } else {
-            showToast('Server Error: ' + (data.message || 'Unknown'), 'error');
-            btn.innerText = originalText; btn.disabled = false;
+        if (type === 'goal' || type === 'comment') {
+            await saveIndexRowInPlace(row);
+        } else if (type === 'entity') {
+            const input = row.querySelector('.entity-input');
+            if (input) await saveEntityInPlace(input);
         }
     } catch (e) {
-        showToast('Network error, please try again.', 'error');
-        btn.innerText = originalText; btn.disabled = false;
+        // saveIndexRowInPlace/saveEntityInPlace already toast.
     }
 }
 
 
 async function saveAllGoalChanges() {
+    // Legacy bulk-save button. Keep it working, but perform latest-only in-place saves.
     const rows = getDataRows();
-    const goalUpdates = [];
-    const commentUpdates = [];
-    const entityUpdates = [];
-
-    let hasIncompleteGoalRow = false;
-
-    rows.forEach(row => {
-        if (row.style.display === 'none') return;
-
-        const id = row.getAttribute('data-id');
-        if (!id) return;
-
-        // --- Goal+Reason updates ---
-        const goalInput = row.querySelector('.goal-input');
-        const reasonInput = row.querySelector('.reason-input');
-        if (goalInput && reasonInput) {
-            const goalVal = String(goalInput.value ?? '');
-            const goalOrig = String(goalInput.getAttribute('data-original') ?? '');
-            const reasonVal = String(reasonInput.value ?? '');
-            const reasonOrig = String(reasonInput.getAttribute('data-original') ?? '');
-
-            const goalDirty = goalVal !== goalOrig;
-            const reasonDirty = reasonVal !== reasonOrig;
-            if (goalDirty || reasonDirty) {
-                const trimmedGoal = goalVal.trim();
-                const trimmedReason = reasonVal.trim();
-                const goalProvided = trimmedGoal !== '';
-                const reasonProvided = trimmedReason !== '';
-
-                if (goalProvided !== reasonProvided) {
-                    hasIncompleteGoalRow = true;
-                } else {
-                    goalUpdates.push({
-                        id: id,
-                        manual_goal: trimmedGoal === '' ? 0 : trimmedGoal,
-                        reason: trimmedReason,
-                    });
-                }
-            }
-        }
-
-        // --- Comment updates ---
-        const commentInput = row.querySelector('.comment-input');
-        if (commentInput) {
-            const commentVal = String(commentInput.value ?? '');
-            const commentOrig = String(commentInput.getAttribute('data-original') ?? '');
-            if (commentVal !== commentOrig) {
-                commentUpdates.push({
-                    id: id,
-                    comment: commentVal,
-                });
-            }
-        }
-
-        // --- EPX Entity updates (only if an editable entity input exists in the row) ---
-        const entityInput = row.querySelector('.entity-input');
-        if (entityInput) {
-            const entityVal = String(entityInput.value ?? '');
-            const entityOrig = String(entityInput.getAttribute('data-original') ?? '');
-            if (entityVal.trim() !== entityOrig.trim()) {
-                entityUpdates.push({
-                    id: id,
-                    entity: entityVal,
-                });
-            }
-        }
-    });
-
-    if (hasIncompleteGoalRow) {
-        showToast('Some rows are incomplete: both Manual Goal and Adjust Reason must be filled.', 'error');
-        return;
-    }
-
-    if (goalUpdates.length === 0 && commentUpdates.length === 0 && entityUpdates.length === 0) {
+    const dirtyRows = rows.filter(r => r && r.style.display !== 'none' && rowIsDirty(r));
+    if (dirtyRows.length === 0) {
         showToast('No changes to save.', 'error');
         return;
     }
 
-    // Disable the button to prevent double-submit.
     const btn = document.querySelector('button[onclick="saveAllGoalChanges()"]');
     const originalText = btn ? btn.innerText : '';
     if (btn) {
@@ -929,282 +917,25 @@ async function saveAllGoalChanges() {
         btn.disabled = true;
     }
 
-    try {
-    let goalOk = 0, goalErr = 0, commentOk = 0, commentErr = 0, entityOk = 0, entityErr = 0;
-
-        if (goalUpdates.length > 0) {
-            const resGoals = await fetch(apiUrl('/api/update-goals-batch'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ updates: goalUpdates })
-            });
-            const jsonGoals = await resGoals.json();
-            if (!resGoals.ok || jsonGoals.status !== 'success') {
-                showToast('Goal batch save failed: ' + (jsonGoals.message || 'Unknown'), 'error');
-                if (btn) { btn.innerText = originalText; btn.disabled = false; }
-                return;
-            }
-            const results = Array.isArray(jsonGoals.results) ? jsonGoals.results : [];
-            goalOk = results.filter(r => r && r.status === 'success').length;
-            goalErr = results.filter(r => r && r.status !== 'success').length;
+    let ok = 0;
+    let err = 0;
+    for (const row of dirtyRows) {
+        try {
+            const res = await saveIndexRowInPlace(row);
+            if (res && res.ok) ok++;
+            else err++;
+        } catch (e) {
+            err++;
         }
+    }
 
-        if (commentUpdates.length > 0) {
-            const resComments = await fetch(apiUrl('/api/update-comments-batch'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ updates: commentUpdates })
-            });
-            const jsonComments = await resComments.json();
-            if (!resComments.ok || jsonComments.status !== 'success') {
-                showToast('Comment batch save failed: ' + (jsonComments.message || 'Unknown'), 'error');
-                if (btn) { btn.innerText = originalText; btn.disabled = false; }
-                return;
-            }
-            const results = Array.isArray(jsonComments.results) ? jsonComments.results : [];
-            commentOk = results.filter(r => r && r.status === 'success').length;
-            commentErr = results.filter(r => r && r.status !== 'success').length;
-        }
+    if (err === 0) {
+        showToast(`Saved ${ok} change(s).`, 'success');
+    } else {
+        showToast(`Saved ${ok} change(s), ${err} failed.`, 'error');
+    }
 
-        // Entity changes are saved via the existing single-row endpoint.
-        // Keep it low-risk: batch calls with Promise.all, but don't fail the whole save if one row fails.
-        if (entityUpdates.length > 0) {
-            const results = await Promise.all(entityUpdates.map(async (u) => {
-                try {
-                    const res = await fetch(apiUrl('/api/update-entity'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: u.id, entity: u.entity })
-                    });
-                    const json = await res.json();
-                    if (!res.ok || json.status !== 'success') {
-                        return { status: 'error', message: json.message || 'Unknown' };
-                    }
-                    return { status: 'success' };
-                } catch (e) {
-                    return { status: 'error', message: 'Network error' };
-                }
-            }));
-
-            entityOk = results.filter(r => r && r.status === 'success').length;
-            entityErr = results.filter(r => r && r.status !== 'success').length;
-
-            // If successful, update originals so the UI is clean without reload.
-            if (entityOk > 0) {
-                entityUpdates.forEach(u => {
-                    const row = document.querySelector(`tr[data-id="${u.id}"]`);
-                    const input = row ? row.querySelector('.entity-input') : null;
-                    if (input) {
-                        input.setAttribute('data-original', String(input.value ?? ''));
-                        input.classList.remove('input-dirty');
-                    }
-                });
-            }
-        }
-
-        const totalOk = goalOk + commentOk + entityOk;
-        const totalErr = goalErr + commentErr + entityErr;
-        if (totalErr === 0) {
-            showToast(`Saved ${totalOk} change(s).`, 'success');
-        } else {
-            showToast(`Saved ${totalOk} change(s), ${totalErr} failed.`, 'error');
-        }
-
-    // Keep current sort order: do NOT reload automatically.
-    // Users can refresh manually if they want to pull the latest server-side values.
     if (btn) { btn.innerText = originalText; btn.disabled = false; }
-    return;
-    } catch (e) {
-        showToast('Batch save failed. Please try again.', 'error');
-        if (btn) { btn.innerText = originalText; btn.disabled = false; }
-    }
-}
-
-// --- Modal Logic ---
-function openModal() { document.getElementById('modalOverlay').classList.add('active'); setTimeout(() => document.getElementById('n_pg3').focus(), 100); }
-function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
-
-async function submitNewGoal() {
-    const btn = document.getElementById('btn-modal-submit');
-    const originalText = btn.innerText;
-    const pg3 = document.getElementById('n_pg3').value;
-    const oper = document.getElementById('n_oper').value;
-    const entity = (document.getElementById('n_entity')?.value || '').trim();
-    const goal = document.getElementById('n_goal').value;
-
-    const entityRequiredPages = ['TCB', 'HBC-JDC', 'DIA', 'EPX', 'BA'];
-    const currentPage = getCurrentPageFromUrl();
-    const isEntityRequired = entityRequiredPages.includes(currentPage);
-
-    if (!pg3 || !oper || !goal || (isEntityRequired && !entity)) {
-        showToast('Please fill in all required fields (*)', 'error');
-        return;
-    }
-
-    btn.innerText = '...'; btn.disabled = true;
-
-    const data = { prodgroup3: pg3, operation: oper, goal: goal, reason: document.getElementById('n_reason').value, page: currentPage };
-    if (isEntityRequired) {
-        data.entity = entity;
-    } else if (entity) {
-        data.entity = entity;
-    }
-
-    try {
-    const res = await fetch(apiUrl('/api/add-new-goal'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-        const json = await res.json();
-        if (json.status === 'success') {
-            showToast('New Goal Added!', 'success');
-            closeModal();
-            if (json.new_id) {
-                await insertNewGoalRowIntoTable(json.new_id);
-            }
-        } else {
-            showToast('Error: ' + json.message, 'error');
-            btn.innerText = originalText; btn.disabled = false;
-        }
-    } catch (e) {
-        showToast('Submission failed', 'error');
-        btn.innerText = originalText; btn.disabled = false;
-    }
-}
-
-async function insertNewGoalRowIntoTable(newId) {
-    const table = document.getElementById('mainTable');
-    const tbody = table ? table.querySelector('tbody') : null;
-    if (!tbody) return;
-
-    try {
-        const res = await fetch(apiUrl(`/api/report/${newId}`));
-        const json = await res.json();
-        if (!res.ok || json.status !== 'success' || !json.report) {
-            return;
-        }
-
-        const r = json.report;
-        const tr = document.createElement('tr');
-        tr.setAttribute('data-id', r.id);
-
-        const cell = (col, html, extraClass = '') => {
-            const td = document.createElement('td');
-            if (extraClass) td.className = extraClass;
-            td.setAttribute('data-col', col);
-            td.innerHTML = html;
-            return td;
-        };
-
-    // Keep styling consistent with existing rows.
-    // NOTE: Missing pinned/width classes here can cause the browser to recalculate the fixed table layout and
-    // make columns appear "squeezed" until a full refresh.
-    tr.appendChild(cell('prodgroup3', escapeHtml(r.prodgroup3 || ''), 'col-1 pinned-col pinned-1'));
-    tr.appendChild(cell('operation', escapeHtml(r.operation || ''), 'col-2 pinned-col pinned-2'));
-    tr.appendChild(cell('shift_start_wip', formatNum(r.shift_start_wip), 'col-3 pinned-col pinned-3'));
-    tr.appendChild(cell('entity', escapeHtml(r.entity || ''), 'cell-pad-4 pinned-col pinned-4 pinned-last'));
-        tr.appendChild(cell('qtg1', formatNum(r.qtg1)));
-        tr.appendChild(cell('qps1', formatNum(r.qps1)));
-        tr.appendChild(cell('mor', formatNum(r.mor), 'mor-val'));
-        tr.appendChild(cell('tr', formatNum(r.tr), 'tr-val'));
-        tr.appendChild(cell('output', formatNum(r.output)));
-        tr.appendChild(cell('system_goal', formatNum(r.system_suggested_goal), 'highlight-col'));
-
-        // subcell_info column changes header text based on page, but underlying data-col stays subcell_info.
-        tr.appendChild(cell('subcell_info', escapeHtml(r.subcell_info || '')));
-
-        // manual_goal: use the same input class so existing JS handlers work.
-        tr.appendChild(cell(
-            'manual_goal',
-            `<input type="number" class="table-input goal-input" value="" data-original="" oninput="handleInput(this, 'goal')">`,
-            'cell-pad-4'
-        ));
-
-        tr.appendChild(cell(
-            'adjust_reason',
-            `<div class="action-group" id="group-goal-${r.id}">
-                <input type="text" class="table-input reason-input" value="" data-original="" oninput="handleInput(this, 'goal')">
-                <button class="btn-mini btn-save" onclick="saveRow(this, 'goal')">Save</button>
-                <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'goal')">✖</button>
-            </div>`,
-            'cell-pad-4'
-        ));
-
-        tr.appendChild(cell(
-            'miss_comment',
-            `<div class="action-group" id="group-comment-${r.id}">
-                <textarea class="table-input comment-input comment-textarea" rows="2" data-original="" oninput="handleInput(this, 'comment')"></textarea>
-                <button class="btn-mini btn-save" onclick="saveRow(this, 'comment')">Save</button>
-                <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'comment')">✖</button>
-            </div>`,
-            'cell-pad-4'
-        ));
-
-        // Remove empty-state row if present.
-        const emptyRow = tbody.querySelector('tr.empty-state-row');
-        if (emptyRow) emptyRow.remove();
-
-        tbody.prepend(tr);
-
-    // Force a layout pass so the fixed-layout table measures consistently after insertion.
-    // (This is a no-op visually but prevents the transient "squeezed" state seen until manual refresh.)
-    void table.offsetWidth;
-
-        // Respect column visibility rules (hide entity / subcell columns depending on page).
-        const activePage = getCurrentPageFromUrl();
-        const columnVisibilityConfig = {
-            'entity': ['TCB', 'HBC-JDC', 'DIA', 'BA'],
-            'subcell_info': ['TCB', 'DIA', 'BA']
-        };
-        for (const [colName, allowedPages] of Object.entries(columnVisibilityConfig)) {
-            if (!allowedPages.includes(activePage)) {
-                const els = tr.querySelectorAll(`[data-col="${colName}"]`);
-                els.forEach(el => el.style.display = 'none');
-            }
-        }
-
-    // Update sticky/pinned layout after DOM changes.
-    updatePinnedColumnOffsets();
-
-        // Recalculate totals.
-        calculateTotals();
-    } catch (e) {
-        // If anything fails, we just leave the UI as-is (goal is already saved server-side).
-    }
-}
-
-function formatNum(v) {
-    if (v === null || v === undefined || v === '') return '';
-    const n = Number(v);
-    if (Number.isNaN(n)) return '';
-    // Match server-side rounding in template (3 decimals).
-    return parseFloat(n.toFixed(3)).toString();
-}
-
-function escapeHtml(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-function showToast(msg, type = 'success') {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠'}</span><span>${msg}</span>`;
-    container.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(-10px)'; setTimeout(() => toast.remove(), 300); }, 3000);
-}
-
-function confirmReportIssue(event) {
-    const ok = window.confirm('Open Outlook email draft to report an issue?');
-    if (!ok && event) {
-        event.preventDefault();
-        return false;
-    }
-
-    const link = event && event.currentTarget ? event.currentTarget : null;
-    if (!link) return ok;
 
     // Edit these template strings when you want to change the draft format.
     const recipient = 'wanji.chen@intel.com';
@@ -1233,3 +964,41 @@ function confirmReportIssue(event) {
 
     return ok;
 }
+
+// --- Row deletion (soft-delete) ---
+window.confirmDeleteIndexRow = async function confirmDeleteIndexRow(btnEl) {
+    const row = btnEl && btnEl.closest ? btnEl.closest('tr') : null;
+    const id = row ? row.getAttribute('data-id') : null;
+    if (!row || !id) return;
+
+    const pg3 = (row.querySelector('td[data-col="prodgroup3"]')?.textContent || '').trim();
+    const oper = (row.querySelector('td[data-col="operation"]')?.textContent || '').trim();
+    const entity = (row.querySelector('td[data-col="entity"] input')?.value || row.querySelector('td[data-col="entity"]')?.textContent || '').trim();
+
+    const msg = `Delete this row?\n\nProdgroup3: ${pg3}\nOperation: ${oper}${entity ? `\nEntity: ${entity}` : ''}\n\nThis will delete the record.`;
+    if (!window.confirm(msg)) return;
+
+    // Prevent double-click.
+    btnEl.disabled = true;
+    try {
+        const res = await fetch(apiUrl('/api/delete-row'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id })
+        });
+
+        const { raw, json } = await safeReadJsonResponse(res);
+        if (!res.ok || !json || json.status !== 'success') {
+            const msg = (json && json.message) ? json.message : (raw ? raw.slice(0, 240) : `HTTP ${res.status}`);
+            throw new Error(msg);
+        }
+
+        row.remove();
+        calculateTotals();
+        showToast('Row deleted.', 'success');
+    } catch (e) {
+        showToast(String(e.message || e), 'error');
+    } finally {
+        btnEl.disabled = false;
+    }
+};

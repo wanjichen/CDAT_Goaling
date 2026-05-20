@@ -12,20 +12,17 @@
 }
 
 /* --- Pinned (sticky) left columns for the test table --- */
-#testTable {
-  border-collapse: separate;
-  border-spacing: 0;
-  min-width: 1400px;
-  table-layout: fixed;
-}
-
 /*
   IMPORTANT:
   index.css has a global `table { width: 100%; min-width: 1920px; table-layout: fixed; }`.
-  On the Test page this can cause some columns (like QTG1) to get squeezed/missed.
-  Force the test table to size to its content, and rely on the container's overflow scroll.
+  On the Test page we want:
+  - fixed per-column widths (via th/td[data-col] rules)
+  - a horizontally scrollable container (.table-container)
+  - NO conflicting table-layout rules that can lead to header/column overlap.
 */
 #testTable {
+  border-collapse: separate;
+  border-spacing: 0;
   width: max-content;
   min-width: max-content;
   table-layout: auto;
@@ -128,8 +125,8 @@
 /* Keep long header labels readable (avoid wrapping after recent column width changes). */
 #testTable th[data-col="shift_start_wip_onhold"],
 #testTable td[data-col="shift_start_wip_onhold"] {
-  min-width: 240px;
-  width: 240px;
+  min-width: 120px;
+  width: 120px;
 }
 
 #testTable th[data-col="shift_start_wip_onhold"] {
@@ -156,20 +153,7 @@
   overflow: visible;
 }
 
-/* Match width behavior to existing QPS columns so headers/values feel consistent. */
-#testTable th[data-col="qps1"],
-#testTable td[data-col="qps1"],
-#testTable th[data-col="qps2"],
-#testTable td[data-col="qps2"],
-#testTable th[data-col="stg1"],
-#testTable td[data-col="stg1"],
-#testTable th[data-col="qtg2"],
-#testTable td[data-col="qtg2"],
-#testTable th[data-col="stg2"],
-#testTable td[data-col="stg2"] {
-  min-width: 90px;
-  width: 90px;
-}
+
 
 #testTable td.pinned-col.pinned-2,
 #testTable th.pinned-col.pinned-2 {
@@ -471,12 +455,65 @@
   border: 1px solid rgba(148, 163, 184, 0.65);
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+/* Make Adjusted Reason input denser (if present on this page in future). */
+#testTable input.reason-input {
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 #testTable textarea.comment-input:focus {
   outline: none;
   border-color: rgba(100, 116, 139, 0.9);
   box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.12);
+}
+
+/* Row action buttons (Delete) */
+#testTable td[data-col="actions"] {
+  text-align: center;
+}
+
+#testTable td[data-col="actions"].cell-pad-4 {
+  text-align: center;
+}
+
+#testTable td[data-col="actions"] .btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(220, 38, 38, 0.65);
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  font-weight: 650;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+}
+
+#testTable td[data-col="actions"] .btn-delete .trash-icon {
+  font-size: 14px;
+  line-height: 1;
+  color: #dc2626;
+}
+
+#testTable td[data-col="actions"] .btn-delete:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(220, 38, 38, 0.9);
+}
+
+#testTable td[data-col="actions"] .btn-delete:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+#testTable td[data-col="actions"] .btn-delete:disabled,
+#testTable td[data-col="actions"] .btn-delete[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Keep Goal header text clean (no extra appended text). */
@@ -507,11 +544,6 @@
 }
 
 /* --- Tighten Test table column widths (scoped) --- */
-#testTable {
-  width: 100%;
-  table-layout: fixed;
-}
-
 #testTable th,
 #testTable td {
   padding: 5px 8px;
@@ -599,42 +631,68 @@
 
 /* Column width hints */
 #testTable th[data-col="prodgroup3"],
-#testTable td[data-col="prodgroup3"] { width: 130px; }
+#testTable td[data-col="prodgroup3"] {
+  width: 110px;
+  min-width: 110px;
+}
 
 #testTable th[data-col="operation"],
-#testTable td[data-col="operation"] { width: 130px; }
+#testTable td[data-col="operation"] {
+  width: 110px;
+  min-width: 110px;
+}
 
 #testTable th[data-col="shift_start_wip"],
-#testTable td[data-col="shift_start_wip"] { width: 155px; }
+#testTable td[data-col="shift_start_wip"] {
+  width: 110px;
+  min-width: 110px;
+}
 
 #testTable th[data-col="shift_start_wip_onhold"],
-#testTable td[data-col="shift_start_wip_onhold"] { width: 155px; }
+#testTable td[data-col="shift_start_wip_onhold"] { width: 120px; }
 
 #testTable th[data-col="commit1"],
 #testTable td[data-col="commit1"],
 #testTable th[data-col="commit2"],
-#testTable td[data-col="commit2"] { width: 110px; }
+#testTable td[data-col="commit2"] {
+  width: 90px;
+  min-width: 90px;
+}
 
+/* Metric columns: keep a consistent width across the numeric KPI fields. */
+#testTable th[data-col="qtg1"],
+#testTable td[data-col="qtg1"],
 #testTable th[data-col="qps1"],
 #testTable td[data-col="qps1"],
+#testTable th[data-col="stg1"],
+#testTable td[data-col="stg1"],
+#testTable th[data-col="qtg2"],
+#testTable td[data-col="qtg2"],
 #testTable th[data-col="qps2"],
 #testTable td[data-col="qps2"],
+#testTable th[data-col="stg2"],
+#testTable td[data-col="stg2"],
 #testTable th[data-col="mor"],
 #testTable td[data-col="mor"],
 #testTable th[data-col="tr"],
-#testTable td[data-col="tr"] { width: 80px; }
+#testTable td[data-col="tr"] {
+  width: 70px;
+  min-width: 70px;
+}
+
+
 
 #testTable th[data-col="link_cell_qty"],
 #testTable td[data-col="link_cell_qty"] { width: 95px; }
 
 #testTable th[data-col="capacity"],
-#testTable td[data-col="capacity"] { width: 125px; }
+#testTable td[data-col="capacity"] { width: 95px; }
 
 #testTable th[data-col="goal"],
-#testTable td[data-col="goal"] { width: 115px; }
+#testTable td[data-col="goal"] { width: 95px; }
 
 #testTable th[data-col="output"],
-#testTable td[data-col="output"] { width: 105px; }
+#testTable td[data-col="output"] { width: 95px; }
 
 #testTable th[data-col="miss_goal_comment"],
 #testTable td[data-col="miss_goal_comment"] { width: 220px; }

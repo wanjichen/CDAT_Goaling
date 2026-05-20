@@ -1094,6 +1094,12 @@ body {
             resize: vertical;
             white-space: pre-wrap;
             line-height: 1.25;
+            font-size: 12px;
+        }
+
+        /* Make Adjusted Reason a bit denser (smaller font) */
+        input.table-input.reason-input {
+            font-size: 12px;
         }
 
         /* Keep the very narrow Adjusted Goal cell from clipping input borders. */
@@ -1328,6 +1334,51 @@ body {
         .modal-card .tab-link:hover {
             background: #f4f4f4;
             border-bottom-color: var(--border-color);
+        }
+
+        /* Row action buttons (Delete) */
+        #mainTable td[data-col="actions"] {
+            text-align: center;
+        }
+
+        #mainTable td[data-col="actions"].cell-pad-4 {
+            text-align: center;
+        }
+
+        #mainTable td[data-col="actions"] .btn-delete {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(220, 38, 38, 0.65);
+            background: rgba(239, 68, 68, 0.12);
+            color: #b91c1c;
+            font-weight: 650;
+            cursor: pointer;
+            user-select: none;
+            text-decoration: none;
+        }
+
+        #mainTable td[data-col="actions"] .btn-delete .trash-icon {
+            font-size: 14px;
+            line-height: 1;
+            color: #dc2626;
+        }
+
+        #mainTable td[data-col="actions"] .btn-delete:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.18);
+            border-color: rgba(220, 38, 38, 0.9);
+        }
+
+        #mainTable td[data-col="actions"] .btn-delete:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        #mainTable td[data-col="actions"] .btn-delete:disabled,
+        #mainTable td[data-col="actions"] .btn-delete[aria-disabled="true"] {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
 
         /* --- Toast Notification --- */

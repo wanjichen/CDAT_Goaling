@@ -272,19 +272,20 @@ function setProgress(td, outputVal, goalVal) {
   let pct = 0;
   if (goalN > 0) pct = (outN / goalN) * 100;
 
-  const pctClamped = clamp(pct, 0, 200);
-  fill.style.width = `${clamp(pctClamped, 0, 100)}%`;
+  const pctClamped = (window.ProgressScale && window.ProgressScale.clamp)
+    ? window.ProgressScale.clamp(pct, 0, 200)
+    : clamp(pct, 0, 200);
+
+  const pctForWidth = (window.ProgressScale && window.ProgressScale.clamp)
+    ? window.ProgressScale.clamp(pctClamped, 0, 100)
+    : clamp(pctClamped, 0, 100);
+  fill.style.width = `${pctForWidth}%`;
 
   fill.classList.remove('is-ok', 'is-warn', 'is-bad');
-  if (goalN <= 0 && outN <= 0) {
-    // nothing
-  } else if (pct >= 100) {
-    fill.classList.add('is-ok');
-  } else if (pct >= 70) {
-    fill.classList.add('is-warn');
-  } else {
-    fill.classList.add('is-bad');
-  }
+  const cls = (window.ProgressScale && window.ProgressScale.classifyProgress)
+    ? window.ProgressScale.classifyProgress(pct, outN, goalN)
+    : (goalN <= 0 && outN <= 0 ? '' : (pct >= 100 ? 'is-ok' : (pct >= 70 ? 'is-warn' : 'is-bad')));
+  if (cls) fill.classList.add(cls);
 
   label.textContent = goalN > 0 ? formatPercent(pct) : '';
   td.title = goalN > 0 ? `${outN} / ${goalN} (${pct.toFixed(1)}%)` : `${outN} / ${goalN}`;
@@ -685,6 +686,45 @@ async function saveTestRowInternal(row, type, options = {}) {
   }
 }
 
+// --- Row deletion (soft-delete) ---
+window.confirmDeleteTestRow = async function confirmDeleteTestRow(btnEl) {
+  const row = btnEl && btnEl.closest ? btnEl.closest('tr') : null;
+  const id = row ? row.getAttribute('data-id') : null;
+  if (!row || !id) return;
+
+  const pg3 = (row.querySelector('td[data-col="prodgroup3"]')?.textContent || '').trim();
+  const oper = (row.querySelector('td[data-col="operation"]')?.textContent || '').trim();
+
+  const msg = `Delete this row?\n\nProdgroup3: ${pg3}\nOperation: ${oper}\n\nThis will delete the record.`;
+  if (!window.confirm(msg)) return;
+
+  btnEl.disabled = true;
+  try {
+    const res = await fetch(apiUrl('/api/test/delete-row'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    });
+
+    const raw = await res.text();
+    let data;
+    try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
+
+    if (!res.ok || !data || data.status !== 'success') {
+      const msg = (data && data.message) ? data.message : (raw ? raw.slice(0, 240) : `HTTP ${res.status}`);
+      throw new Error(msg);
+    }
+
+    row.remove();
+    calculateTestTotals();
+    showToast('Row deleted.', 'success');
+  } catch (e) {
+    showToast(String(e.message || e), 'error');
+  } finally {
+    btnEl.disabled = false;
+  }
+};
+
 window.saveTestRow = async function saveTestRow(btn, type) {
   const row = btn.closest('tr');
   try {
@@ -727,13 +767,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const left2 = left1 + w1;
   const left3 = left2 + w2;
 
-    table.style.setProperty('--test-pinned-left-1', `${left1}px`);
-    table.style.setProperty('--test-pinned-left-2', `${left2}px`);
+  // Pinned-3 starts after col1+col2. (w3 is not needed for left3, but keep for debugging.)
+  void w3;
+
+  table.style.setProperty('--test-pinned-left-1', `${left1}px`);
+  table.style.setProperty('--test-pinned-left-2', `${left2}px`);
   table.style.setProperty('--test-pinned-left-3', `${left3}px`);
 
-  // (No pinned-total-width var needed; keep behavior aligned with Assembly.)
-
-    updateTestPinnedLastDivider(table);
+  updateTestPinnedLastDivider(table);
   }
 
   function updateTestPinnedLastDivider(table) {
@@ -756,6 +797,15 @@ document.addEventListener('DOMContentLoaded', () => {
       link.classList.add('active');
     }
   });
+
+  // Keep sticky pinned offsets correct.
+  // - Run once immediately
+  // - Run again after the browser has laid out fonts/styles
+  // - Run on resize
+  updateTestPinnedOffsets();
+  requestAnimationFrame(() => updateTestPinnedOffsets());
+  setTimeout(() => updateTestPinnedOffsets(), 250);
+  window.addEventListener('resize', () => updateTestPinnedOffsets());
 
   // Ensure action buttons start hidden.
   getTestDataRows().forEach(row => {

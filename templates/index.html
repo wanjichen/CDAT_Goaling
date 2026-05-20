@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>CDAT MFG Goaling Report</title>
+    <title>Goaling Report - Assembly Modules</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
@@ -102,6 +102,10 @@
                 Reminder: you are viewing shift {{ selected_shift }}, not the latest calendar shift ({{ current_shift
                 }}).
             </div>
+
+            <div class="shift-filter-status is-warning">
+                Delete is disabled because you are not viewing the current shift.
+            </div>
             {% endif %}
         </div>
         <!-- Navigation -->
@@ -120,9 +124,6 @@
                 <a href="{{ url_for('index', page='2D-Xray', shift=selected_shift) }}" class="tab-link">2D-Xray</a>
                 <a href="{{ url_for('index', page='BA', shift=selected_shift) }}" class="tab-link">BA</a>
             </div>
-            <button class="tab-link copy-tab-btn" onclick="saveAllGoalChanges()" title="Save all changes in one batch"
-                aria-label="Save all adjusted goal and reason changes"><span class="btn-icon"
-                    aria-hidden="true">&#128190;</span>Save All Changes</button>
             <button class="tab-link copy-tab-btn" onclick="copyTableToClipboard()"
                 title="Copy the visible table rows and columns to your clipboard"
                 aria-label="Copy the visible table rows and columns to your clipboard"><span class="btn-icon"
@@ -222,6 +223,7 @@
                         <th class="sortable w-comment" data-col="miss_comment"
                             onclick="sortTable(this, 'miss_comment')">Miss Goal Comment <span class="sort-icon">⇕</span>
                         </th>
+                        <th class="w-25" data-col="actions">Actions</th>
                     </tr>
 
                     <!-- Filter Row -->
@@ -264,6 +266,7 @@
                                 data-filter-col="adjust_reason" oninput="applyFilters()"></th>
                         <th data-col="miss_comment"><input type="text" class="filter-input-field"
                                 data-filter-col="miss_comment" oninput="applyFilters()"></th>
+                        <th data-col="actions"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -318,8 +321,6 @@
                                     value="{{ r.goal_adjusted_reason or '' }}"
                                     data-original="{{ r.goal_adjusted_reason or '' }}"
                                     oninput="handleInput(this, 'goal')">
-                                <button class="btn-mini btn-save" onclick="saveRow(this, 'goal')">Save</button>
-                                <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'goal')">✖</button>
                             </div>
                         </td>
 
@@ -329,14 +330,20 @@
                                 <textarea class="table-input comment-input comment-textarea" rows="2"
                                     data-original="{{ r.miss_goal_comment or '' }}"
                                     oninput="handleInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
-                                <button class="btn-mini btn-save" onclick="saveRow(this, 'comment')">Save</button>
-                                <button class="btn-mini btn-cancel" onclick="cancelRow(this, 'comment')">✖</button>
                             </div>
+                        </td>
+                        <td class="cell-pad-4" data-col="actions">
+                            <button type="button" class="tab-link btn-secondary btn-delete"
+                                onclick="confirmDeleteIndexRow(this)" title="Delete this row" aria-label="Delete" {% if
+                                selected_shift and current_shift and selected_shift !=current_shift %}disabled
+                                aria-disabled="true" {% endif %}>
+                                <span class="trash-icon" aria-hidden="true">🗑</span>
+                            </button>
                         </td>
                     </tr>
                     {% else %}
                     <tr class="empty-state-row">
-                        <td colspan="14" class="empty-state-cell">
+                        <td colspan="20" class="empty-state-cell">
                             No records found for this view.
                         </td>
                     </tr>
@@ -366,12 +373,14 @@
                         <td id="total-manual_goal" data-col="manual_goal">0</td>
                         <td data-col="adjust_reason"></td>
                         <td data-col="miss_comment"></td>
+                        <td data-col="actions"></td>
                     </tr>
                 </tfoot>
             </table>
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/progress_scale.js') }}"></script>
     <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 

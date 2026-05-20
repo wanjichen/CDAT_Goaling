@@ -82,6 +82,7 @@ def register_test_routes(app) -> None:
             rows = (
                 db.session.query(TestReport)
                 .filter(TestReport.id.in_(latest_ids))
+                .filter((TestReport.is_deleted.is_(None)) | (TestReport.is_deleted.is_(False)))
                 .order_by(TestReport.prodgroup3.asc(), TestReport.operation.asc())
                 .all()
             )

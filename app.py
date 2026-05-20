@@ -337,6 +337,9 @@ class Report(db.Model):
     miss_goal_comment_updated_at = db.Column(db.DateTime)
     miss_goal_comment_updated_by = db.Column(db.String(100))
 
+    # Soft-delete marker (DB column added manually).
+    is_deleted = db.Column(db.Boolean, default=False)
+
 
 class TestReport(db.Model):
     """Model for Test Modules.
@@ -389,6 +392,9 @@ class TestReport(db.Model):
     miss_goal_comment = db.Column(db.String(255))
     miss_goal_comment_updated_at = db.Column(db.DateTime)
     miss_goal_comment_updated_by = db.Column(db.String(100))
+
+    # Soft-delete marker (DB column added manually).
+    is_deleted = db.Column(db.Boolean, default=False)
 
 
 def apply_test_report_updates_in_place(old_report: TestReport, **updates) -> None:
@@ -829,6 +835,8 @@ def index(page_name='TCB'):
         reports = Report.query.join(
             latest_ids_subquery,
             Report.id == latest_ids_subquery.c.id
+        ).filter(
+            (Report.is_deleted.is_(None)) | (Report.is_deleted.is_(False))
         ).order_by(desc(Report.id)).all()
     current_date = datetime.now().strftime('%Y-%m-%d')
 
@@ -947,6 +955,51 @@ def update_goal():
         )
 
         return json_success(new_id=new_entry.id)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
+@app.route('/api/update-goal-inplace', methods=['POST'])
+def update_goal_inplace():
+    """Update Adjusted Goal + Adjusted Reason in-place (no versioned rows).
+
+    Request JSON:
+        {"id": 1, "manual_goal": 10, "reason": "..."}
+
+    Behavior:
+        - Updates the existing row.
+        - Recomputes TR from the adjusted goal + MOR.
+        - Sets goal_adjusted_at/by.
+    """
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(Report, data.get('id'))
+
+    if not old:
+        return json_error("Record not found", 404)
+
+    try:
+        raw_goal = data.get('manual_goal')
+        raw_reason = data.get('reason')
+
+        reason_val = ('' if raw_reason is None else str(raw_reason)).strip()
+        goal_provided = raw_goal is not None and str(raw_goal).strip() != ''
+        reason_provided = reason_val != ''
+
+        # Keep the same rule as the existing versioned endpoint.
+        if goal_provided != reason_provided:
+            return json_error('Both Manual Goal and Adjust Reason must be filled', 400)
+
+        new_goal = float(raw_goal or 0)
+        old.manual_adjusted_goal = new_goal
+        old.goal_adjusted_reason = reason_val
+        old.goal_adjusted_at = datetime.now()
+        old.goal_adjusted_by = user
+        old.tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
+
+        db.session.commit()
+        return json_success(id=old.id, tr=old.tr)
     except Exception as e:
         db.session.rollback()
         return json_error(str(e))
@@ -1073,6 +1126,31 @@ def update_comment():
         return json_error(str(e))
 
 
+@app.route('/api/update-comment-inplace', methods=['POST'])
+def update_comment_inplace():
+    """Update Miss Goal Comment in-place (no versioned rows).
+
+    Request JSON:
+      {"id": 1, "comment": "..."}
+    """
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(Report, data.get('id'))
+
+    if not old:
+        return json_error("Record not found", 404)
+
+    try:
+        old.miss_goal_comment = data.get('comment')
+        old.miss_goal_comment_updated_at = datetime.now()
+        old.miss_goal_comment_updated_by = user
+        db.session.commit()
+        return json_success(id=old.id)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
 @app.route('/api/update-entity', methods=['POST'])
 def update_entity():
     """Update ENTITY for a single row by id (in-place update).
@@ -1098,6 +1176,30 @@ def update_entity():
         db.session.commit()
 
         return json_success(id=old.id)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
+@app.route('/api/delete-row', methods=['POST'])
+def delete_row():
+    """Soft-delete an assembly/index row in-place by setting is_deleted=True."""
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(Report, data.get('id'))
+
+    if not old:
+        return json_error('Record not found', 404)
+
+    # Safety guard: only allow deleting rows from the current calendar shift.
+    current_shift = get_current_shift_from_calendar()
+    if current_shift and old.shift and str(old.shift).strip() != str(current_shift).strip():
+        return json_error('Delete is only allowed for the current shift', 403)
+
+    try:
+        old.is_deleted = True
+        db.session.commit()
+        return json_success(id=old.id, deleted_by=user)
     except Exception as e:
         db.session.rollback()
         return json_error(str(e))
@@ -1442,6 +1544,30 @@ def test_update_comments_batch():
                 {'old_id': old_id_int, 'status': 'error', 'message': str(e)})
 
     return json_success(results=results)
+
+
+@app.route('/api/test/delete-row', methods=['POST'])
+def test_delete_row():
+    """Soft-delete a test modules row in-place by setting is_deleted=True."""
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(TestReport, data.get('id'))
+
+    if not old:
+        return json_error('Record not found', 404)
+
+    # Safety guard: only allow deleting rows from the current calendar shift.
+    current_shift = get_current_shift_from_calendar()
+    if current_shift and old.shift and str(old.shift).strip() != str(current_shift).strip():
+        return json_error('Delete is only allowed for the current shift', 403)
+
+    try:
+        old.is_deleted = True
+        db.session.commit()
+        return json_success(id=old.id, deleted_by=user)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
 
 
 if __name__ == '__main__':

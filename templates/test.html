@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CDAT Goaling - Test Modules</title>
+  <title>Goaling Report - Test Modules</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260520">
 </head>
+
 <body>
   <div id="toast-container"></div>
 
@@ -16,7 +18,7 @@
     <div class="header-left">
       <h2><a class="header-home-link" href="{{ url_for('index') }}">CDAT MFG Goaling Report</a></h2>
       <div class="header-meta-banner">
-  <span class="meta-chip">
+        <span class="meta-chip">
           <span class="icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
               <path
@@ -42,8 +44,9 @@
                 d="M12 1.75a10.25 10.25 0 1 0 10.25 10.25A10.262 10.262 0 0 0 12 1.75Zm0 19a8.75 8.75 0 1 1 8.75-8.75A8.76 8.76 0 0 1 12 20.75Zm.75-13.5a.75.75 0 0 0-1.5 0v5a.75.75 0 0 0 .33.62l3.5 2.33a.75.75 0 1 0 .84-1.24l-3.17-2.11Z" />
             </svg>
           </span>
-      <span class="value"
-        title="{% if last_refresh_source and last_refresh_source != 'unavailable' %}Source: {{ last_refresh_source }}{% else %}Source: N/A{% endif %}">Last refresh: {{ last_refresh_at.strftime('%Y-%m-%d %H:%M:%S') if last_refresh_at else 'N/A' }}</span>
+          <span class="value"
+            title="{% if last_refresh_source and last_refresh_source != 'unavailable' %}Source: {{ last_refresh_source }}{% else %}Source: N/A{% endif %}">Last
+            refresh: {{ last_refresh_at.strftime('%Y-%m-%d %H:%M:%S') if last_refresh_at else 'N/A' }}</span>
         </span>
       </div>
     </div>
@@ -96,6 +99,10 @@
       <div class="shift-filter-status is-warning">
         Reminder: you are viewing shift {{ selected_shift }}, not the latest calendar shift ({{ current_shift }}).
       </div>
+
+      <div class="shift-filter-status is-warning">
+        Delete is disabled because you are not viewing the current shift.
+      </div>
       {% endif %}
     </div>
   </div>
@@ -130,8 +137,9 @@
         <input type="text" id="t_oper" class="form-input" placeholder="e.g. 2171">
         <label>GOAL *</label>
         <input type="number" id="t_goal" class="form-input" placeholder="Must enter a number > 0">
-  <label>CELL QTY *</label>
-  <input type="number" id="t_cellqty" class="form-input" placeholder="Must enter an integer >= 0" step="1" min="0" inputmode="numeric" pattern="\d*">
+        <label>CELL QTY *</label>
+        <input type="number" id="t_cellqty" class="form-input" placeholder="Must enter an integer >= 0" step="1" min="0"
+          inputmode="numeric" pattern="\d*">
       </div>
       <div class="modal-footer-actions">
         <button class="tab-link modal-action-btn" id="btn-test-modal-submit" onclick="submitNewTestGoal()">Save
@@ -142,131 +150,264 @@
   </div>
 
   <div class="content">
-      <div class="table-container" style="max-height: 70vh;">
-        <table id="testTable">
-          <thead>
-            <tr>
-              <th class="pinned-col pinned-1 sortable" data-col="prodgroup3" onclick="sortTestTable(this, 'prodgroup3')">Prodgroup3 <span class="sort-icon">⇕</span></th>
-              <th class="pinned-col pinned-2 sortable" data-col="operation" onclick="sortTestTable(this, 'operation')">Operation <span class="sort-icon">⇕</span></th>
-              <th class="pinned-col pinned-3 sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Shift Start WIP <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="shift_start_wip_onhold" onclick="sortTestTable(this, 'shift_start_wip_onhold')">Start WIP Onhold <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')">Commit1 <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')">Commit2 <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="qtg1" onclick="sortTestTable(this, 'qtg1')">QTG1 <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="stg1" onclick="sortTestTable(this, 'stg1')">STG1 <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="qtg2" onclick="sortTestTable(this, 'qtg2')">QTG2 <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="qps2" onclick="sortTestTable(this, 'qps2')">QPS2 <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="stg2" onclick="sortTestTable(this, 'stg2')">STG2 <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="mor" onclick="sortTestTable(this, 'mor')">MOR <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="tr" onclick="sortTestTable(this, 'tr')">TR <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Cell Qty <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span class="sort-icon">⇕</span></th>
-              <th class="sortable highlight-col" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="output" onclick="sortTestTable(this, 'output')">Output <span class="sort-icon">⇕</span></th>
-              <th class="sortable" data-col="progress" onclick="sortTestTable(this, 'progress')" title="Output / Goal">Progress <span class="sort-icon">⇕</span></th>
-              <th data-col="miss_goal_comment">Miss Goal Comment</th>
-            </tr>
+    <div class="table-container" style="max-height: 70vh;">
+      <table id="testTable">
+        <thead>
+          <tr>
+            <th class="pinned-col pinned-1 sortable" data-col="prodgroup3" onclick="sortTestTable(this, 'prodgroup3')">
+              Prodgroup3 <span class="sort-icon">⇕</span></th>
+            <th class="pinned-col pinned-2 sortable" data-col="operation" onclick="sortTestTable(this, 'operation')">
+              Operation <span class="sort-icon">⇕</span></th>
+            <th class="pinned-col pinned-3 sortable" data-col="shift_start_wip"
+              onclick="sortTestTable(this, 'shift_start_wip')">Shift Start WIP <span class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="shift_start_wip_onhold"
+              onclick="sortTestTable(this, 'shift_start_wip_onhold')">Start WIP Onhold <span class="sort-icon">⇕</span>
+            </th>
+            <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')">Commit1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')">Commit2 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qtg1" onclick="sortTestTable(this, 'qtg1')">QTG1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="stg1" onclick="sortTestTable(this, 'stg1')">STG1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qtg2" onclick="sortTestTable(this, 'qtg2')">QTG2 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qps2" onclick="sortTestTable(this, 'qps2')">QPS2 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="stg2" onclick="sortTestTable(this, 'stg2')">STG2 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="mor" onclick="sortTestTable(this, 'mor')">MOR <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="tr" onclick="sortTestTable(this, 'tr')">TR <span class="sort-icon">⇕</span>
+            </th>
+            <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Cell Qty <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable highlight-col" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="output" onclick="sortTestTable(this, 'output')">Output <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="progress" onclick="sortTestTable(this, 'progress')" title="Output / Goal">
+              Progress <span class="sort-icon">⇕</span></th>
+            <th data-col="miss_goal_comment">Miss Goal Comment</th>
+            <th data-col="actions">Actions</th>
+          </tr>
 
-            <!-- Filter Row -->
-            <tr class="filter-row">
-              <th class="pinned-col pinned-1" data-col="prodgroup3"><input type="text" class="filter-input-field" data-filter-col="prodgroup3" oninput="applyTestFilters()"></th>
-              <th class="pinned-col pinned-2" data-col="operation"><input type="text" class="filter-input-field" data-filter-col="operation" oninput="applyTestFilters()"></th>
-              <th class="pinned-col pinned-3" data-col="shift_start_wip"><input type="text" class="filter-input-field" data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
-              <th data-col="shift_start_wip_onhold"><input type="text" class="filter-input-field" data-filter-col="shift_start_wip_onhold" oninput="applyTestFilters()"></th>
-              <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1" oninput="applyTestFilters()"></th>
-              <th data-col="commit2"><input type="text" class="filter-input-field" data-filter-col="commit2" oninput="applyTestFilters()"></th>
-              <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1" oninput="applyTestFilters()"></th>
-              <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1" oninput="applyTestFilters()"></th>
-              <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1" oninput="applyTestFilters()"></th>
-              <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2" oninput="applyTestFilters()"></th>
-              <th data-col="qps2"><input type="text" class="filter-input-field" data-filter-col="qps2" oninput="applyTestFilters()"></th>
-              <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2" oninput="applyTestFilters()"></th>
-              <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor" oninput="applyTestFilters()"></th>
-              <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr" oninput="applyTestFilters()"></th>
-              <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty" oninput="applyTestFilters()"></th>
-              <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity" oninput="applyTestFilters()"></th>
-              <th class="highlight-col" data-col="goal"><input type="text" class="filter-input-field" data-filter-col="goal" oninput="applyTestFilters()"></th>
-              <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output" oninput="applyTestFilters()"></th>
-              <th data-col="progress"></th>
-              <th data-col="miss_goal_comment"><input type="text" class="filter-input-field" data-filter-col="miss_goal_comment" oninput="applyTestFilters()"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% if rows and rows|length > 0 %}
-              {% for r in rows %}
-              <tr data-id="{{ r.id }}">
-                <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
-                <td class="pinned-col pinned-2" data-col="operation">{{ r.operation }}</td>
-                <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
-                <td data-col="shift_start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
-                <td data-col="commit1">{{ r.commit1 or 0 }}</td>
-                <td data-col="commit2">{{ r.commit2 or 0 }}</td>
-                <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
-                <td data-col="qps1">{{ r.qps1 or 0 }}</td>
-                <td data-col="stg1">{{ r.stg1 or 0 }}</td>
-                <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
-                <td data-col="qps2">{{ r.qps2 or 0 }}</td>
-                <td data-col="stg2">{{ r.stg2 or 0 }}</td>
-                <td class="mor-val" data-col="mor">{{ r.mor or 0 }}</td>
-                <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
-                <td class="cell-pad-4" data-col="link_cell_qty">
-                  <div class="action-group" id="group-cellqty-{{ r.id }}">
-                    <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off" class="table-input cellqty-input" value="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}"
-                      data-original="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}" oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
-                  </div>
-                </td>
-                <td data-col="capacity">{% if r.capacity is none %}0.0{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}</td>
-                <td class="cell-pad-4 highlight-col" data-col="goal">
-                  <div class="action-group" id="group-goal-{{ r.id }}">
-                    <input type="number" class="table-input goal-input" value="{{ r.goal if r.goal is not none else '' }}"
-                      data-original="{{ r.goal if r.goal is not none else '' }}" oninput="handleTestInput(this, 'goal')">
-                  </div>
-                </td>
-                <td data-col="output">{{ r.output or 0 }}</td>
-                <td data-col="progress" class="progress-cell"></td>
-                <td class="cell-pad-4" data-col="miss_goal_comment"
-                    title="Comment by: {{ r.miss_goal_comment_updated_by or 'N/A' }}&#10;At: {{ r.miss_goal_comment_updated_at or 'N/A' }}">
-                  <div class="action-group" id="group-comment-{{ r.id }}">
-                    <textarea class="table-input comment-input comment-textarea" rows="2"
-                      data-original="{{ r.miss_goal_comment or '' }}" oninput="handleTestInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-            {% else %}
-              <tr class="empty-state-row"><td colspan="20" style="padding: 14px;">No rows for this shift/page.</td></tr>
-            {% endif %}
-          </tbody>
-          <tfoot>
-            <tr class="total-row">
-              <td class="pinned-col pinned-1" data-col="prodgroup3"><strong>Total</strong></td>
-              <td class="pinned-col pinned-2" data-col="operation"></td>
-              <td class="pinned-col pinned-3" data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
-              <td data-col="shift_start_wip_onhold" id="test-total-shift_start_wip_onhold"></td>
-              <td data-col="commit1" id="test-total-commit1"></td>
-              <td data-col="commit2" id="test-total-commit2"></td>
-              <td data-col="qtg1"></td>
-              <td data-col="qps1"></td>
-              <td data-col="stg1"></td>
-              <td data-col="qtg2"></td>
-              <td data-col="qps2"></td>
-              <td data-col="stg2"></td>
-              <td data-col="mor"></td>
-              <td data-col="tr" id="test-total-tr"></td>
-              <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
-              <td data-col="capacity" id="test-total-capacity"></td>
-              <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
-              <td data-col="output" id="test-total-output"></td>
-              <td data-col="progress" id="test-total-progress" class="progress-cell"></td>
-              <td data-col="miss_goal_comment"></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+          <!-- Filter Row -->
+          <tr class="filter-row">
+            <th class="pinned-col pinned-1" data-col="prodgroup3"><input type="text" class="filter-input-field"
+                data-filter-col="prodgroup3" oninput="applyTestFilters()"></th>
+            <th class="pinned-col pinned-2" data-col="operation"><input type="text" class="filter-input-field"
+                data-filter-col="operation" oninput="applyTestFilters()"></th>
+            <th class="pinned-col pinned-3" data-col="shift_start_wip"><input type="text" class="filter-input-field"
+                data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
+            <th data-col="shift_start_wip_onhold"><input type="text" class="filter-input-field"
+                data-filter-col="shift_start_wip_onhold" oninput="applyTestFilters()"></th>
+            <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1"
+                oninput="applyTestFilters()"></th>
+            <th data-col="commit2"><input type="text" class="filter-input-field" data-filter-col="commit2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
+                oninput="applyTestFilters()"></th>
+            <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qps2"><input type="text" class="filter-input-field" data-filter-col="qps2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
+                oninput="applyTestFilters()"></th>
+            <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
+                oninput="applyTestFilters()"></th>
+            <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty"
+                oninput="applyTestFilters()"></th>
+            <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity"
+                oninput="applyTestFilters()"></th>
+            <th class="highlight-col" data-col="goal"><input type="text" class="filter-input-field"
+                data-filter-col="goal" oninput="applyTestFilters()"></th>
+            <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output"
+                oninput="applyTestFilters()"></th>
+            <th data-col="progress"></th>
+            <th data-col="miss_goal_comment"><input type="text" class="filter-input-field"
+                data-filter-col="miss_goal_comment" oninput="applyTestFilters()"></th>
+            <th data-col="actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if rows and rows|length > 0 %}
+          {% for r in rows %}
+          <tr data-id="{{ r.id }}">
+            <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
+            <td class="pinned-col pinned-2" data-col="operation">{{ r.operation }}</td>
+            <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+            <td data-col="shift_start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
+            <td data-col="commit1">{{ r.commit1 or 0 }}</td>
+            <td data-col="commit2">{{ r.commit2 or 0 }}</td>
+            <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
+            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+            <td data-col="stg1">{{ r.stg1 or 0 }}</td>
+            <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
+            <td data-col="qps2">{{ r.qps2 or 0 }}</td>
+            <td data-col="stg2">{{ r.stg2 or 0 }}</td>
+            <td data-col="mor">{{ r.mor or 0 }}</td>
+            <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
+            <td class="cell-pad-4" data-col="link_cell_qty">
+              <div class="action-group" id="group-cellqty-{{ r.id }}">
+                <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                  class="table-input cellqty-input" value="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}"
+                  data-original="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}"
+                  oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
+              </div>
+            </td>
+            <td data-col="capacity">{% if r.capacity is none %}0.0{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
+            </td>
+            <td class="cell-pad-4 highlight-col" data-col="goal">
+              <div class="action-group" id="group-goal-{{ r.id }}">
+                <input type="number" class="table-input goal-input" value="{{ r.goal if r.goal is not none else '' }}"
+                  data-original="{{ r.goal if r.goal is not none else '' }}" oninput="handleTestInput(this, 'goal')">
+              </div>
+            </td>
+            <td data-col="output">{{ r.output or 0 }}</td>
+            <td data-col="progress" class="progress-cell"></td>
+            <td class="cell-pad-4" data-col="miss_goal_comment"
+              title="Comment by: {{ r.miss_goal_comment_updated_by or 'N/A' }}&#10;At: {{ r.miss_goal_comment_updated_at or 'N/A' }}">
+              <div class="action-group" id="group-comment-{{ r.id }}">
+                <textarea class="table-input comment-input comment-textarea" rows="2"
+                  data-original="{{ r.miss_goal_comment or '' }}"
+                  oninput="handleTestInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
+              </div>
+            </td>
+            <td class="cell-pad-4" data-col="actions">
+              <button type="button" class="tab-link btn-secondary btn-delete" onclick="confirmDeleteTestRow(this)"
+                title="Delete this row" aria-label="Delete" {% if selected_shift and current_shift and selected_shift
+                !=current_shift %}disabled aria-disabled="true" {% endif %}>
+                <span class="trash-icon" aria-hidden="true">🗑</span>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr class="empty-state-row">
+            <td colspan="21" style="padding: 14px;">No rows for this shift/page.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td class="pinned-col pinned-1" data-col="prodgroup3"><strong>Total</strong></td>
+            <td class="pinned-col pinned-2" data-col="operation"></td>
+            <td class="pinned-col pinned-3" data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
+            <td data-col="shift_start_wip_onhold" id="test-total-shift_start_wip_onhold"></td>
+            <td data-col="commit1" id="test-total-commit1"></td>
+            <td data-col="commit2" id="test-total-commit2"></td>
+            <td data-col="qtg1"></td>
+            <td data-col="qps1"></td>
+            <td data-col="stg1"></td>
+            <td data-col="qtg2"></td>
+            <td data-col="qps2"></td>
+            <td data-col="stg2"></td>
+            <td data-col="mor"></td>
+            <td data-col="tr" id="test-total-tr"></td>
+            <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
+            <td data-col="capacity" id="test-total-capacity"></td>
+            <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
+            <td data-col="output" id="test-total-output"></td>
+            <td data-col="progress" id="test-total-progress" class="progress-cell"></td>
+            <td data-col="miss_goal_comment"></td>
+            <td data-col="actions"></td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   </div>
+  </div>
 
-  <script src="{{ url_for('static', filename='js/test.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/progress_scale.js') }}?v=20260520"></script>
+  <script src="{{ url_for('static', filename='js/test.js') }}?v=20260520"></script>
+
+  <script>
+    // Lightweight layout debug (no DevTools needed).
+    // Enable by adding ?debug=1 to the URL.
+    (function () {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('debug') !== '1') return;
+
+        const styleBox = document.createElement('div');
+        styleBox.id = 'layout-debug-box';
+        styleBox.style.cssText = [
+          'position:fixed',
+          'left:12px',
+          'top:12px',
+          'right:auto',
+          'bottom:auto',
+          'z-index:99999',
+          'background:rgba(15,23,42,0.92)',
+          'color:#e2e8f0',
+          'padding:12px 14px',
+          'border:1px solid rgba(148,163,184,0.45)',
+          'border-radius:8px',
+          'font:13px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+          'max-width:520px',
+          'white-space:pre-wrap'
+        ].join(';');
+        styleBox.textContent = 'layout debug: collecting…';
+        document.body.appendChild(styleBox);
+
+        const measure = () => {
+          const t = document.getElementById('testTable');
+          const hr = t?.querySelector('thead tr:first-child');
+          const cs = t ? getComputedStyle(t) : null;
+
+          const getTh = (col) => hr?.querySelector(`th[data-col="${col}"]`) || null;
+          const getRect = (col) => getTh(col)?.getBoundingClientRect() || null;
+          const getW = (col) => getTh(col)?.offsetWidth ?? null;
+
+          const rQTG1 = getRect('qtg1');
+          const rMOR = getRect('mor');
+          const rTR = getRect('tr');
+
+          const lines = [];
+          lines.push('Pinned offsets (CSS vars)');
+          lines.push(`  left-1: ${cs?.getPropertyValue('--test-pinned-left-1').trim() || 'n/a'}`);
+          lines.push(`  left-2: ${cs?.getPropertyValue('--test-pinned-left-2').trim() || 'n/a'}`);
+          lines.push(`  left-3: ${cs?.getPropertyValue('--test-pinned-left-3').trim() || 'n/a'}`);
+          lines.push('');
+          lines.push('Header widths');
+          lines.push(`  prodgroup3: ${getW('prodgroup3')}`);
+          lines.push(`  operation : ${getW('operation')}`);
+          lines.push(`  shift_wip  : ${getW('shift_start_wip')}`);
+          lines.push(`  qtg1       : ${getW('qtg1')}`);
+          lines.push(`  mor        : ${getW('mor')}`);
+          lines.push(`  tr         : ${getW('tr')}`);
+          lines.push('');
+          lines.push('Header left positions (px)');
+          lines.push(`  qtg1.left: ${rQTG1 ? Math.round(rQTG1.left) : 'n/a'}`);
+          lines.push(`  mor.left : ${rMOR ? Math.round(rMOR.left) : 'n/a'}`);
+          lines.push(`  tr.left  : ${rTR ? Math.round(rTR.left) : 'n/a'}`);
+          lines.push('');
+          lines.push('If MOR/TR are overlapped, send me this box text.');
+          styleBox.textContent = lines.join('\n');
+        };
+
+        window.addEventListener('load', () => {
+          measure();
+          requestAnimationFrame(measure);
+          setTimeout(measure, 400);
+        });
+      } catch (e) {
+        // ignore
+      }
+    })();
+  </script>
 </body>
+
 </html>
