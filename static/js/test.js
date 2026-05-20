@@ -317,7 +317,8 @@ function updateTestProgressBars() {
 function setTotalText(id, value) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.textContent = value === 0 ? '' : String(Number(value.toFixed(3)));
+  const decimals = (id === 'test-total-tr') ? 1 : 3;
+  el.textContent = value === 0 ? '' : String(Number(value.toFixed(decimals)));
 }
 
 function calculateTestTotals() {

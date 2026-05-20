@@ -780,7 +780,6 @@ body {
             table-layout: fixed;
         }
 
-        th,
         td {
             padding: 6px 6px;
             /* Slightly reduced padding to maximize space */
@@ -792,6 +791,18 @@ body {
             overflow: hidden;
             text-overflow: ellipsis;
             /* Crucial: stops text from stretching the column */
+            vertical-align: middle;
+        }
+
+        th {
+            padding: 6px 6px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            height: 40px;
+            box-sizing: border-box;
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
             vertical-align: middle;
         }
 
@@ -867,25 +878,25 @@ body {
         }
 
         .col-1 {
-            width: 28px;
-            min-width: 28px;
-            max-width: 28px;
+            width: 33px;
+            min-width: 33px;
+            max-width: 33px;
             padding-left: 8px;
             padding-right: 4px;
         }
 
         .col-2 {
-            width: 25px;
-            min-width: 25px;
-            max-width: 25px;
+            width: 31px;
+            min-width: 31px;
+            max-width: 31px;
             padding-left: 4px;
             padding-right: 4px;
         }
 
         .col-3 {
-            width: 30px;
-            min-width: 30px;
-            max-width: 30px;
+            width: 31px;
+            min-width: 31px;
+            max-width: 31px;
             padding-left: 4px;
             padding-right: 0;
             box-shadow: none;
@@ -925,9 +936,9 @@ body {
     /* Let Progress follow the same sizing as other w-25 columns (like Output). */
     #mainTable th[data-col="progress"],
     #mainTable td[data-col="progress"] {
-        width: 25px;
-        min-width: 25px;
-        max-width: 25px;
+    width: 28px;
+    min-width: 28px;
+    max-width: 28px;
     }
 
     #mainTable td.progress-cell {
@@ -1045,9 +1056,13 @@ body {
             cursor: not-allowed;
         }
 
-        .w-reason,
+        .w-reason {
+            width: 50px;
+            transition: width 0.3s ease;
+        }
+
         .w-comment {
-            width: 80px;
+            width: 50px;
             transition: width 0.3s ease;
         }
 
@@ -1220,19 +1235,45 @@ body {
         }
 
         .w-25 {
-            width: 25px;
+            width: 23px;
         }
 
         /* Ensure Entity column follows the same sizing as other w-25 columns */
         th[data-col="entity"],
         td[data-col="entity"] {
-            width: 25px;
-            min-width: 25px;
-            max-width: 25px;
+            width: 23px;
+            min-width: 23px;
+            max-width: 23px;
+        }
+
+        /* MOR/TR: slightly narrower than other w-25 columns */
+        th[data-col="mor"],
+        td[data-col="mor"],
+        th[data-col="tr"],
+        td[data-col="tr"] {
+            width: 21px;
+            min-width: 21px;
+            max-width: 21px;
         }
 
         .w-30 {
             width: 30px;
+        }
+
+        /* Adjusted Goal column: slightly wider for readability */
+        th[data-col="manual_goal"],
+        td[data-col="manual_goal"] {
+            width: 36px;
+            min-width: 36px;
+            max-width: 36px;
+        }
+
+        /* Goal column: slightly narrower to make room for Adjusted Goal */
+        th[data-col="system_goal"],
+        td[data-col="system_goal"] {
+            width: 28px;
+            min-width: 28px;
+            max-width: 28px;
         }
 
         .w-45 {
@@ -1242,9 +1283,9 @@ body {
         /* Let Subcell/Suggest Goal values stay readable when text is long. */
         th[data-col="subcell_info"],
         td[data-col="subcell_info"] {
-            width: 45px;
-            min-width: 45px;
-            max-width: 45px;
+            width: 40px;
+            min-width: 40px;
+            max-width: 40px;
         }
 
         td[data-col="subcell_info"] {

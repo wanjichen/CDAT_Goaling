@@ -173,8 +173,7 @@
                         <th class="col-2 sortable pinned-col pinned-2" data-col="operation"
                             onclick="sortTable(this, 'operation')">Operation <span class="sort-icon">⇕</span></th>
                         <th class="col-3 sortable pinned-col pinned-3" data-col="shift_start_wip"
-                            onclick="sortTable(this, 'shift_start_wip')">Shift Start WIP <span
-                                class="sort-icon">⇕</span></th>
+                            onclick="sortTable(this, 'shift_start_wip')">Start WIP <span class="sort-icon">⇕</span></th>
                         <th class="sortable w-25 pinned-col pinned-4 pinned-last" data-col="entity"
                             onclick="sortTable(this, 'entity')">
                             Entity <span class="sort-icon">⇕</span></th>
@@ -295,7 +294,7 @@
                         <td data-col="qps2">{{ (r.qps2 | round(3)) if r.qps2 else '' }}</td>
                         <td data-col="stg2">{{ (r.stg2 | round(3)) if r.stg2 else '' }}</td>
                         <td class="mor-val" data-col="mor">{{ (r.mor | round(3)) if r.mor else '' }}</td>
-                        <td class="tr-val" data-col="tr">{{ (r.tr | round(3)) if r.tr else '' }}</td>
+                        <td class="tr-val" data-col="tr">{{ '%.1f'|format(r.tr) if r.tr else '' }}</td>
                         <td data-col="output">{{ (r.output | round(3)) if r.output else '' }}</td>
                         <td data-col="progress" class="progress-cell"></td>
                         <td class="highlight-col" data-col="system_goal">{{
