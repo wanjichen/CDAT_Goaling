@@ -66,6 +66,89 @@ async function safeReadJsonResponse(res) {
     }
 }
 
+    // --- Add New Goal modal (Index page) ---
+    // index.html calls openModal()/closeModal()/submitNewGoal() from inline onclick handlers.
+    // These must be global (window.*) so the HTML can find them.
+    window.openModal = function openModal() {
+        const overlay = document.getElementById('modalOverlay');
+        if (!overlay) return;
+        overlay.classList.add('active');
+
+        // Optional: focus first input for faster entry.
+        const first = overlay.querySelector('input, textarea, select, button');
+        if (first) setTimeout(() => first.focus(), 0);
+    };
+
+    window.closeModal = function closeModal() {
+        const overlay = document.getElementById('modalOverlay');
+        if (!overlay) return;
+        overlay.classList.remove('active');
+    };
+
+    window.submitNewGoal = async function submitNewGoal() {
+        const overlay = document.getElementById('modalOverlay');
+        if (!overlay) return;
+
+        const btn = document.getElementById('btn-modal-submit');
+        if (btn) btn.disabled = true;
+
+        try {
+            // Collect fields by IDs if present; otherwise fallback to common name patterns.
+            const pickVal = (id, selector) => {
+                const el = (id ? document.getElementById(id) : null) || overlay.querySelector(selector);
+                return el ? (el.value ?? '').toString().trim() : '';
+            };
+
+            // Index modal uses explicit IDs (n_pg3, n_oper, n_goal, n_reason, n_entity).
+            const prodgroup3 = pickVal('n_pg3', '#n_pg3');
+            const operation = pickVal('n_oper', '#n_oper');
+            const entity = pickVal('n_entity', '#n_entity');
+            const goal = pickVal('n_goal', '#n_goal');
+            const reason = pickVal('n_reason', '#n_reason');
+
+            // Optional legacy fields (not currently present in the index modal UI).
+            const shiftStartWip = pickVal('modal-shift_start_wip', 'input[name="shift_start_wip"], input[data-field="shift_start_wip"], #shift_start_wip');
+
+            // Minimal validation.
+            if (!prodgroup3 || !operation) {
+                showToast('Prodgroup3 and Operation are required.', 'error');
+                return;
+            }
+
+            const payload = {
+                prodgroup3,
+                operation,
+                // Only include entity when present in the UI.
+                ...(entity ? { entity } : {}),
+                shift_start_wip: shiftStartWip === '' ? 0 : shiftStartWip,
+                goal: goal === '' ? 0 : goal,
+                goal_adjusted_reason: reason,
+                page: getCurrentPageFromUrl(),
+            };
+
+            const res = await fetch(apiUrl('/api/add-new-goal'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            const { json, raw } = await safeReadJsonResponse(res);
+            if (!res.ok) {
+                const msg = (json && (json.error || json.message)) ? (json.error || json.message) : (raw || `HTTP ${res.status}`);
+                showToast(`Add failed: ${msg}`, 'error');
+                return;
+            }
+
+            // Easiest + safest in production: refresh the page so server renders the new row consistently.
+            window.closeModal();
+            window.location.reload();
+        } catch (err) {
+            showToast(`Add failed: ${err?.message || err}`, 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    };
+
 // --- In-place editing (no version history) ---
 // Mirror the Test page behavior: debounce saves and update the existing row.
 const _indexAutoSaveTimers = new Map();
