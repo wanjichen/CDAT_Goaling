@@ -2,8 +2,8 @@
 // Progress is computed as (output / goal) * 100.
 // Scale:
 // - ok:   pct >= 100
-// - warn: pct >= 70
-// - bad:  pct < 70
+// - warn: pct >= 50
+// - bad:  pct < 50
 
 (function (global) {
   'use strict';
@@ -26,7 +26,7 @@
 
     if (goalN <= 0 && outN <= 0) return '';
     if (pct >= 100) return 'is-ok';
-    if (pct >= 70) return 'is-warn';
+  if (pct >= 50) return 'is-warn';
     return 'is-bad';
   }
 

@@ -561,7 +561,7 @@ function setProgress(td, outputVal, goalVal) {
     fill.classList.remove('is-ok', 'is-warn', 'is-bad');
     const cls = (window.ProgressScale && window.ProgressScale.classifyProgress)
         ? window.ProgressScale.classifyProgress(pct, outN, goalN)
-        : (goalN <= 0 && outN <= 0 ? '' : (pct >= 100 ? 'is-ok' : (pct >= 70 ? 'is-warn' : 'is-bad')));
+        : (goalN <= 0 && outN <= 0 ? '' : (pct >= 100 ? 'is-ok' : (pct >= 50 ? 'is-warn' : 'is-bad')));
     if (cls) fill.classList.add(cls);
 
     label.textContent = goalN > 0 ? formatPercent(pct) : '';
