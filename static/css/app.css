@@ -45,9 +45,18 @@
 
 body {
     margin: 0;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    /* iOS-like system font stack (SF Pro on Apple devices, Segoe UI on Windows) */
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto,
+        Helvetica, Arial, system-ui, sans-serif;
     background: var(--bg-body);
     color: var(--text-dark);
+
+    /* Improve legibility on Apple platforms; harmless elsewhere */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /* Data tables look better when numbers align */
+    font-variant-numeric: tabular-nums;
 }
 
 .header {

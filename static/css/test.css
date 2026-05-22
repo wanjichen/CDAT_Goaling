@@ -627,6 +627,8 @@
   box-sizing: border-box;
   font-size: 12px;
   padding: 3px 4px;
+  cursor: text;
+  background: transparent;
 }
 
 /* Column width hints */

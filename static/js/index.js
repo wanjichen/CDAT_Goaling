@@ -680,67 +680,6 @@ function getVisibleDataRows() {
     return Array.from(tbody.querySelectorAll("tr:not(.empty-state-row)")).filter(row => row.style.display !== 'none');
 }
 
-function buildTableClipboardText() {
-    const visibleCols = getVisibleColumns();
-    const visibleRows = getVisibleDataRows();
-
-    if (visibleCols.length === 0) {
-        return '';
-    }
-
-    const headerLine = visibleCols
-        .map(th => stripSortGlyphs(th.textContent))
-        .join('\t');
-
-    const bodyLines = visibleRows.map(row => {
-        const rowCells = visibleCols.map(th => {
-            const colName = th.getAttribute('data-col');
-            const td = row.querySelector(`td[data-col="${colName}"]`);
-            return getCellValue(td, false).replace(/[\t\r\n]+/g, ' ').trim();
-        });
-        return rowCells.join('\t');
-    });
-
-    return [headerLine, ...bodyLines].join('\n');
-}
-
-async function copyTableToClipboard() {
-    const clipboardText = buildTableClipboardText();
-
-    if (!clipboardText) {
-        showToast('No table data to copy.', 'error');
-        return;
-    }
-
-    try {
-        if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(clipboardText);
-            showToast('Table copied to clipboard.', 'success');
-            return;
-        }
-
-        const textArea = document.createElement('textarea');
-        textArea.value = clipboardText;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-9999px';
-        textArea.style.top = '0';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-
-        const copied = document.execCommand('copy');
-        document.body.removeChild(textArea);
-
-        if (!copied) {
-            throw new Error('Copy command was rejected');
-        }
-
-        showToast('Table copied to clipboard.', 'success');
-    } catch (error) {
-        showToast('Copy failed. Please try again.', 'error');
-    }
-}
-
 // --- FILTERING LOGIC ---
 function applyFilters() {
     const filterInputs = document.querySelectorAll('.filter-input-field');

@@ -116,25 +116,6 @@ window.exportTestToCSV = function exportTestToCSV() {
   URL.revokeObjectURL(url);
 };
 
-window.copyTestTableToClipboard = async function copyTestTableToClipboard() {
-  const table = document.getElementById('testTable');
-  if (!table) return;
-
-  const headers = Array.from(table.querySelectorAll('thead tr th')).map(th => (th.textContent || '').trim());
-  const lines = [headers.join('\t')];
-  getVisibleTestRows().forEach(tr => {
-    const values = Array.from(tr.querySelectorAll('td')).map(getCellTextForCsv);
-    lines.push(values.join('\t'));
-  });
-
-  try {
-    await navigator.clipboard.writeText(lines.join('\n'));
-    showToast('Copied table to clipboard.', 'success');
-  } catch {
-    showToast('Copy failed (browser blocked clipboard).', 'error');
-  }
-};
-
 // Save-all batch editing is intentionally removed: edits auto-save in-place now.
 
 window.openTestModal = function openTestModal() {

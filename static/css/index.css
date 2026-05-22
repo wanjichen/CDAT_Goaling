@@ -438,6 +438,14 @@ body {
             line-height: 1;
         }
 
+        .header .tab-link .btn-icon svg {
+            width: 15px;
+            height: 15px;
+            display: block;
+            transform: translateY(1px);
+            fill: currentColor;
+        }
+
         .header .btn-export {
             background: linear-gradient(135deg, var(--success) 0%, #2a9d57 100%) !important;
             color: #ffffff !important;
@@ -473,6 +481,7 @@ body {
             flex: 1 1 380px;
             min-width: 260px;
         }
+
 
         .shift-filter-controls {
             display: flex;
@@ -547,13 +556,13 @@ body {
             box-shadow: 0 6px 14px rgba(37, 99, 235, 0.2);
         }
 
-        /* Normalize <a> and <button> rendering so both controls are pixel-identical. */
+        /* Download Raw Data button (anchor) — tuned for SVG icons + consistent height */
         .shift-filter-bar .nav-tabs .copy-tab-btn {
             box-sizing: border-box;
-            line-height: 1;
+            margin-left: 0;
+            flex: 0 0 auto;
             height: 32px;
-            padding-top: 8px;
-            padding-bottom: 8px;
+            padding: 8px 12px;
             border-radius: 10px;
             border: none;
             background: linear-gradient(180deg, var(--nav-copy-bg) 0%, #f1f5f9 100%);
@@ -561,23 +570,23 @@ body {
             box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
         }
 
-        .shift-filter-bar .nav-tabs .copy-tab-btn {
-            margin-left: 0;
-            flex: 0 0 auto;
-            padding-left: 12px;
-            padding-right: 12px;
-            background: linear-gradient(180deg, var(--nav-copy-bg) 0%, #f1f5f9 100%);
-            color: var(--pane-text);
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+        .shift-filter-bar .nav-tabs .copy-tab-btn:hover {
+            background: linear-gradient(180deg, #eef2f7 0%, #e9eef6 100%);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            transform: translateY(-1px);
         }
 
-        /* Normalize <a> and <button> rendering so the download link matches the Copy Table button height. */
-        .shift-filter-bar .nav-tabs a.copy-tab-btn {
-            line-height: 1;
-            padding-top: 8px;
-            padding-bottom: 8px;
-            min-height: 26px;
-            box-sizing: border-box;
+        .shift-filter-bar .nav-tabs .copy-tab-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        }
+
+        .shift-filter-bar .nav-tabs .copy-tab-btn .btn-icon svg {
+            width: 14px;
+            height: 14px;
+            display: block;
+            transform: translateY(1px);
+            fill: currentColor;
         }
 
         .shift-filter-form {
@@ -1083,6 +1092,7 @@ body {
             box-sizing: border-box;
             padding: 0 8px;
             transition: all 0.2s;
+            cursor: text;
         }
 
         /* Allow multi-line input for Miss Goal Comment */
