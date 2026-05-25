@@ -31,7 +31,7 @@ def register_test_routes(app) -> None:
         current_user = get_current_user()
         current_date = date.today().isoformat()
 
-    # Test pages are partitioned by module.
+        # Test pages are partitioned by module.
         # Only expose enabled modules as tabs.
         tabs = ['HDMx']
 
@@ -41,24 +41,20 @@ def register_test_routes(app) -> None:
             page_name = tabs[0] if tabs else page_name
 
         requested_shift = (request.args.get('shift') or '').strip()
+        shift_chosen = (request.args.get('shift_chosen') or '').strip() in {
+            '1', 'true', 'yes', 'on'}
 
         current_shift = get_current_shift_from_calendar()
         available_shifts = get_recent_test_database_shifts_for_page(
             page_name, limit=5)
         latest_db_shift = available_shifts[0] if available_shifts else None
 
-        # Default to the current calendar shift if it exists in the DB for this page.
-        # Otherwise, fall back to the latest shift present in the DB.
-        default_shift = None
-        if current_shift and current_shift in available_shifts:
-            default_shift = current_shift
-        else:
-            default_shift = latest_db_shift
-
-        if requested_shift and requested_shift in available_shifts:
-            selected_shift = requested_shift
-        else:
-            selected_shift = default_shift
+        # Default to newest/latest on plain refresh.
+        # Only honor an older shift when it was explicitly chosen via the dropdown.
+        selected_shift = requested_shift if (
+            shift_chosen and requested_shift) else latest_db_shift
+        if selected_shift and available_shifts and selected_shift not in available_shifts:
+            selected_shift = latest_db_shift
 
         if not selected_shift:
             # No data in DB for this page yet.

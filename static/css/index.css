@@ -32,7 +32,6 @@ body {
     background: var(--bg-surface);
 }
 
-/* Sticky headers (vertical) while scrolling the table */
 #mainTable thead th {
     position: sticky !important;
     top: 0;
@@ -64,12 +63,12 @@ body {
 /* --- Alternating row colors (zebra striping) --- */
 /* Minimal change: stripe only tbody rows; keep hover styling on top. */
 #mainTable tbody tr:nth-child(even) td {
-    background-color: #e9edf5;
+    background-color: var(--ios-table-stripe, #e9edf5);
 }
 
 /* Ensure pinned columns match the row stripe color (they have their own solid background). */
 #mainTable tbody tr:nth-child(even) td.pinned-col {
-    background-color: #e9edf5 !important;
+    background-color: var(--ios-table-stripe, #e9edf5) !important;
 }
 
 /* Pinned Total row cells should stay pinned and stay on top of body cells. */
@@ -276,6 +275,7 @@ body {
         .meta-chip .value {
             font-weight: 400;
             opacity: 0.98;
+            color: var(--header-text-soft);
         }
 
         .meta-chip+.meta-chip {
@@ -346,15 +346,21 @@ body {
         }
 
         .header .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, #4b7ef0 100%) !important;
+            background: var(--ios-blue, var(--primary)) !important;
             color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.18) !important;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
+            border: 1px solid rgba(255, 255, 255, 0.16) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18) !important;
         }
 
         .header .btn-primary:hover {
-            background: linear-gradient(135deg, var(--primary-hover) 0%, #275ddf 100%) !important;
-            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.24) !important;
+            background: #006fe6 !important;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22) !important;
+        }
+
+        .header .btn-primary:active {
+            background: #0061cc !important;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.22) !important;
+            transform: translateY(0) !important;
         }
 
         .header .btn-secondary {
@@ -447,37 +453,43 @@ body {
         }
 
         .header .btn-export {
-            background: linear-gradient(135deg, var(--success) 0%, #2a9d57 100%) !important;
+            background: #34c759 !important;
             color: #ffffff !important;
             border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18) !important;
             font-weight: 700 !important;
         }
 
         .header .btn-export:hover {
-            background: linear-gradient(135deg, var(--success-hover) 0%, #218548 100%) !important;
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.26) !important;
+            background: #2db84f !important;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22) !important;
+        }
+
+        .header .btn-export:active {
+            background: #28a745 !important;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.22) !important;
+            transform: translateY(0) !important;
         }
 
         .shift-filter-bar {
             margin: 6px 20px 0;
-            padding: 6px 12px;
+            padding: 4px 10px;
             border-radius: 6px;
-            border: 1px solid var(--pane-border);
-            background: var(--pane-bg);
+            border: 1px solid var(--ios-separator, var(--pane-border));
+            background: var(--nav-track-bg, rgba(255, 255, 255, 0.85));
             color: var(--pane-text);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             flex-wrap: wrap;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
         }
 
         .shift-filter-note {
             font-size: 11px;
-            line-height: 1.35;
+            line-height: 1.0;
             font-weight: 600;
-            color: var(--note-text);
+            color: var(--warning-text, var(--note-text));
             flex: 1 1 380px;
             min-width: 260px;
         }
@@ -487,7 +499,7 @@ body {
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
             width: 100%;
         }
@@ -576,6 +588,17 @@ body {
             transform: translateY(-1px);
         }
 
+        .shift-filter-bar .nav-tabs .copy-tab-btn.quick-link-btn:hover {
+            transform: none;
+        }
+
+        .shift-filter-bar .nav-tabs .copy-tab-btn.quick-link-btn:focus-visible {
+            background: rgba(0, 122, 255, 0.10);
+            outline: 2px solid rgba(0, 122, 255, 0.35);
+            outline-offset: 2px;
+            border-radius: 10px;
+        }
+
         .shift-filter-bar .nav-tabs .copy-tab-btn:active {
             transform: translateY(0);
             box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
@@ -587,6 +610,34 @@ body {
             display: block;
             transform: translateY(1px);
             fill: currentColor;
+        }
+
+        /* Cross-page quick links (Assembly <-> Test): make them visually distinct from Download Raw Data */
+        .shift-filter-bar .nav-tabs .quick-link-btn {
+            /* iOS-like plain link ("link" button): blue text, no container */
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            color: var(--ios-blue);
+            font-weight: 500;
+            letter-spacing: 0;
+        }
+
+        .shift-filter-bar .nav-tabs .quick-link-btn:hover {
+            background: rgba(0, 122, 255, 0.08);
+            color: var(--ios-blue);
+            box-shadow: none;
+        }
+
+        .shift-filter-bar .nav-tabs .quick-link-btn:active {
+            background: rgba(0, 122, 255, 0.12);
+            color: var(--ios-blue);
+            box-shadow: none;
+            transform: none;
+        }
+
+        .shift-filter-bar .nav-tabs .copy-tab-btn.quick-link-btn .ios-link-icon {
+            color: var(--ios-blue);
         }
 
         .shift-filter-form {
@@ -601,9 +652,9 @@ body {
         .shift-filter-form select {
             min-width: 220px;
             padding: 6px 8px;
-            border: 1px solid var(--primary-border);
+            border: 1px solid var(--ios-separator, var(--primary-border));
             border-radius: 6px;
-            background: #ffffff;
+            background: rgba(255, 255, 255, 0.85);
             color: var(--primary-ink);
             font-size: 13px;
         }
@@ -611,8 +662,8 @@ body {
         .shift-filter-status {
             padding: 6px 10px;
             border-radius: 6px;
-            border: 1px solid var(--primary-border);
-            background: #ffffff;
+            border: 1px solid var(--ios-separator, var(--primary-border));
+            background: rgba(255, 255, 255, 0.85);
             color: var(--pane-text);
             font-size: 12px;
             line-height: 1.35;
@@ -805,7 +856,7 @@ body {
 
         th {
             padding: 6px 6px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--ios-separator, var(--border-color));
             text-align: left;
             height: 40px;
             box-sizing: border-box;
@@ -825,8 +876,8 @@ body {
             color: var(--table-head-text);
             text-transform: none;
             letter-spacing: 0.15px;
-            border-bottom: 1px solid var(--table-head-border);
-            box-shadow: inset 0 -1px 0 rgba(198, 210, 225, 0.45);
+            border-bottom: 1px solid var(--ios-separator, var(--table-head-border));
+            box-shadow: inset 0 -1px 0 var(--ios-separator, rgba(198, 210, 225, 0.45));
             white-space: nowrap;
         }
 
@@ -866,7 +917,7 @@ body {
             padding: 4px 6px;
             background: var(--table-head-bg);
             z-index: 15;
-            border-bottom: 2px solid var(--table-head-border);
+            border-bottom: 1px solid var(--ios-separator, var(--table-head-border));
         }
 
         .filter-input-field {
@@ -876,13 +927,15 @@ body {
             box-sizing: border-box;
             padding: 4px 4px;
             font-size: 12px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
+            border: 1px solid var(--ios-separator, #ccc);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.85);
             font-family: inherit;
         }
 
         .filter-input-field:focus {
-            border-color: var(--primary);
+            border-color: var(--ios-blue, var(--primary));
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.20);
             outline: none;
         }
 

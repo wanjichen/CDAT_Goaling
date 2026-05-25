@@ -774,7 +774,8 @@ def compute_tr_from_goal_and_mor(goal_value, mor_value):
         return 0.0
     # TR formula: TR = Goal / MOR
     # Display/precision requirement: keep 1 decimal.
-    return round(goal_value / mor, 1)
+    # Business rule: TR should never be negative.
+    return max(0.0, round(goal_value / mor, 1))
 
 
 def persist_report_version(old_report, **updates):
@@ -807,6 +808,8 @@ def index(page_name='TCB'):
     # 1. Get the friendly page name from URL
     page_name = request.args.get('page') or page_name or 'TCB'
     requested_shift = (request.args.get('shift') or '').strip()
+    shift_chosen = (request.args.get('shift_chosen') or '').strip() in {
+        '1', 'true', 'yes', 'on'}
 
     current_user = get_current_user()
     current_shift = get_current_shift_from_calendar()
@@ -817,11 +820,11 @@ def index(page_name='TCB'):
         available_shifts = sorted(available_shifts, reverse=True)
     latest_db_shift = available_shifts[0] if available_shifts else None
 
-    # Only honor shifts that exist in the DB list.
-    # Default behavior: always show the latest DB shift unless the user explicitly requests another valid shift.
-    if requested_shift and requested_shift in available_shifts:
-        selected_shift = requested_shift
-    else:
+    # Default to newest/latest on plain refresh.
+    # Only honor an older shift when it was explicitly chosen via the dropdown.
+    selected_shift = requested_shift if (
+        shift_chosen and requested_shift) else latest_db_shift
+    if selected_shift and available_shifts and selected_shift not in available_shifts:
         selected_shift = latest_db_shift
 
     shift_mismatch = bool(
@@ -943,12 +946,10 @@ def update_goal():
 
     try:
         new_goal = float(data.get('manual_goal') or 0)
-        calculated_tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
 
         new_entry = persist_report_version(
             old,
             manual_adjusted_goal=new_goal,
-            tr=calculated_tr,
             goal_adjusted_reason=data.get('reason'),
             goal_adjusted_at=datetime.now(),
             goal_adjusted_by=user
@@ -996,7 +997,6 @@ def update_goal_inplace():
         old.goal_adjusted_reason = reason_val
         old.goal_adjusted_at = datetime.now()
         old.goal_adjusted_by = user
-        old.tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
 
         db.session.commit()
         return json_success(id=old.id, tr=old.tr)

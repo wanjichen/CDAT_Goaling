@@ -6,7 +6,7 @@
   border-radius: 6px;
   overflow: auto;
   flex: 1;
-  border: 1px solid var(--border-color, #cbd5e1);
+  border: 1px solid var(--ios-separator, var(--border-color, #cbd5e1));
   position: relative;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -112,6 +112,15 @@
   max-width: 100%;
   display: block;
   margin: 0;
+  border: 1px solid var(--ios-separator, var(--border-color, #cbd5e1));
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+#testTable thead tr.filter-row input.filter-input-field:focus {
+  border-color: var(--ios-blue, var(--primary, #2563eb));
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.20);
+  outline: none;
 }
 
 /* Pinned columns should behave like Assembly: keep content clipped to the cell. */
@@ -194,6 +203,7 @@
     Force sticky positioning for the test table so all header cells remain visible. */
   position: sticky !important;
   top: 0;
+  border-bottom: 1px solid var(--ios-separator, var(--table-head-border, #d7dfe8));
 }
 
 /* Keep header row height stable so filter-row offset stays correct. */
@@ -210,6 +220,7 @@
   top: var(--test-header-height, 44px);
   height: var(--test-filter-height, 34px);
   vertical-align: middle;
+  border-bottom: 1px solid var(--ios-separator, var(--table-head-border, #d7dfe8));
 }
 
 /* Header pinned cells above body pinned cells */
@@ -521,12 +532,12 @@
 /* --- Alternating row colors (zebra striping) --- */
 /* Match the Assembly page striping for consistency. */
 #testTable tbody tr:nth-child(even) td {
-  background-color: #e9edf5;
+  background-color: var(--ios-table-stripe, #e9edf5);
 }
 
 /* Ensure pinned columns match the row stripe color (they have their own solid background). */
 #testTable tbody tr:nth-child(even) td.pinned-col {
-  background-color: #e9edf5 !important;
+  background-color: var(--ios-table-stripe, #e9edf5) !important;
 }
 
 /* Footer (Total row) should scroll with the table.

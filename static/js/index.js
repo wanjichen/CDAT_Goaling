@@ -226,12 +226,7 @@ async function saveIndexRowInPlace(row, type, { silent = false } = {}) {
                 reasonInput.classList.remove('input-dirty');
             }
 
-            // Update TR cell from server response.
-            const trTd = row.querySelector('td[data-col="tr"]');
-            if (trTd && data && typeof data.tr !== 'undefined') {
-                const n = Number(data.tr);
-                trTd.textContent = Number.isFinite(n) ? n.toFixed(1) : String(data.tr ?? '');
-            }
+            // TR is display-only on the client. Do not overwrite it here.
         } else if (type === 'comment') {
             const commentInput = row.querySelector('.comment-input');
             if (commentInput) {
@@ -454,6 +449,13 @@ function calculateTotals() {
         const getVal = (col) => {
             const td = row.querySelector(`td[data-col="${col}"]`);
             if (!td) return 0;
+
+            // TR is display-only. Always sum the displayed cell text (DB-rendered),
+            // and never use any in-place inputs or client-side recomputation.
+            if (col === 'tr') {
+                return parseFloat(String(td.textContent || '').trim()) || 0;
+            }
+
             const input = td.querySelector('input');
             const val = input ? input.value : td.textContent;
             return parseFloat(val) || 0;
@@ -789,9 +791,7 @@ function handleInput(input, type) {
     // No Save/Cancel UX: save in-place (debounced) like test.html.
     if (isGoalDirty || isReasonDirty) scheduleIndexAutoSave(row, 'goal');
 
-        const goalVal = parseFloat(goalInput.value) || 0;
-        const mor = parseFloat(row.querySelector('.mor-val').innerText) || 0;
-        row.querySelector('.tr-val').innerText = calculateTrFromGoalAndMor(goalVal, mor);
+    // TR is display-only (DB value). Do not recalculate it client-side.
 
         // Recalculate totals dynamically as the user types
     calculateTotals();
@@ -821,9 +821,7 @@ function cancelRow(btn, type) {
         goalInput.classList.remove('input-dirty');
         reasonInput.classList.remove('input-dirty');
 
-        const goalVal = parseFloat(goalInput.value) || 0;
-        const mor = parseFloat(row.querySelector('.mor-val').innerText) || 0;
-        row.querySelector('.tr-val').innerText = calculateTrFromGoalAndMor(goalVal, mor);
+    // TR is display-only (DB value). Do not recalculate it client-side.
 
         // Recalculate totals back to original
         calculateTotals();

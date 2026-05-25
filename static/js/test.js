@@ -327,6 +327,7 @@ function calculateTestTotals() {
   let totalCommit2 = 0;
   // QPS totals intentionally not displayed.
   let totalMor = 0;
+  // TR is display-only (DB value). We still sum the displayed TR values for the footer.
   let totalTr = 0;
   let totalCellQty = 0;
   let totalCapacity = 0;
@@ -347,7 +348,7 @@ function calculateTestTotals() {
     totalCommit1 += getVal('commit1');
     totalCommit2 += getVal('commit2');
   // QPS totals intentionally not displayed.
-    totalMor += getVal('mor');
+  totalMor += getVal('mor');
   totalTr += getVal('tr');
     totalCellQty += getVal('link_cell_qty');
     totalCapacity += getVal('capacity');
@@ -365,7 +366,6 @@ function calculateTestTotals() {
   setTotalText('test-total-shift_start_wip_onhold', totalShiftStartWipOnhold);
   setTotalText('test-total-commit1', totalCommit1);
   setTotalText('test-total-commit2', totalCommit2);
-  // No MOR total in footer.
   setTotalText('test-total-tr', totalTr);
   setTotalText('test-total-link_cell_qty', totalCellQty);
   setTotalText('test-total-capacity', totalCapacity);
@@ -622,12 +622,7 @@ async function saveTestRowInternal(row, type, options = {}) {
       setInputDirtyState(goalInput, false);
       hideActions(document.getElementById(`group-goal-${id}`));
 
-      // Update TR cell from server response.
-      const trTd = row.querySelector('td[data-col="tr"]');
-      if (trTd && data && typeof data.tr !== 'undefined') {
-        const n = Number(data.tr);
-        trTd.textContent = Number.isFinite(n) ? n.toFixed(1) : String(data.tr ?? '');
-      }
+  // TR is display-only on the client. Do not overwrite it here.
 
   if (!silent) showToast('Saved.', 'success');
   calculateTestTotals();
@@ -650,12 +645,7 @@ async function saveTestRowInternal(row, type, options = {}) {
         hideActions(document.getElementById(`group-goal-${id}`));
       }
 
-      // Update TR cell from server response.
-      const trTd = row.querySelector('td[data-col="tr"]');
-      if (trTd && data && typeof data.tr !== 'undefined') {
-        const n = Number(data.tr);
-        trTd.textContent = Number.isFinite(n) ? n.toFixed(1) : String(data.tr ?? '');
-      }
+  // TR is display-only on the client. Do not overwrite it here.
 
       // Update capacity cell from server response.
       const capTd = row.querySelector('td[data-col="capacity"]');
