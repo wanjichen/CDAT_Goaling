@@ -297,7 +297,7 @@
                   oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
               </div>
             </td>
-            <td data-col="capacity">{% if r.capacity is none %}0.0{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
+            <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
             </td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">

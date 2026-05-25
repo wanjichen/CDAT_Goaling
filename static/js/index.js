@@ -558,6 +558,13 @@ function setProgress(td, outputVal, goalVal) {
         : clamp(pctClamped, 0, 100);
     fill.style.width = `${pctForWidth}%`;
 
+    // Gradual fill color (red→orange→green). Keep class thresholds for semantics.
+    if (window.ProgressScale && typeof window.ProgressScale.fillGradientCss === 'function') {
+        fill.style.background = window.ProgressScale.fillGradientCss(pct);
+    } else {
+        fill.style.background = '';
+    }
+
     fill.classList.remove('is-ok', 'is-warn', 'is-bad');
     const cls = (window.ProgressScale && window.ProgressScale.classifyProgress)
         ? window.ProgressScale.classifyProgress(pct, outN, goalN)

@@ -160,9 +160,17 @@ window.submitNewTestGoal = async function submitNewTestGoal() {
     if (!res.ok || json.status !== 'success') {
       throw new Error(json.message || `HTTP ${res.status}`);
     }
-    showToast('New goal added. Refreshing...', 'success');
+    // Server may return MOR/Capacity/TR if it could infer MOR from existing rows.
+    if (json && (typeof json.capacity !== 'undefined' || typeof json.mor !== 'undefined')) {
+      const cap = (json.capacity === null || json.capacity === undefined) ? 'N/A' : Number(json.capacity).toFixed(1);
+      const mor = (json.mor === null || json.mor === undefined) ? 'N/A' : String(json.mor);
+      showToast(`New goal added. MOR=${mor}, Capacity=${cap}.`, 'success');
+    } else {
+      showToast('New goal added.', 'success');
+    }
     closeTestModal();
-    // Simple + safe: reload the page so the row appears and grouping logic applies.
+    // Keep existing behavior (simple + safe): reload so the row appears and grouping logic applies.
+    // NOTE: If you ever switch to in-place insert, you can remove this reload.
     window.location.reload();
   } catch (e) {
     showToast(String(e.message || e), 'error');
@@ -261,6 +269,13 @@ function setProgress(td, outputVal, goalVal) {
     ? window.ProgressScale.clamp(pctClamped, 0, 100)
     : clamp(pctClamped, 0, 100);
   fill.style.width = `${pctForWidth}%`;
+
+  // Gradual fill color (red→orange→green). Keep class thresholds for semantics.
+  if (window.ProgressScale && typeof window.ProgressScale.fillGradientCss === 'function') {
+    fill.style.background = window.ProgressScale.fillGradientCss(pct);
+  } else {
+    fill.style.background = '';
+  }
 
   fill.classList.remove('is-ok', 'is-warn', 'is-bad');
   const cls = (window.ProgressScale && window.ProgressScale.classifyProgress)

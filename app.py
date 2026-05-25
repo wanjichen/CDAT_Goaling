@@ -1401,8 +1401,26 @@ def test_add_new_goal():
 
         module_val = derive_module_from_operation(operation)
 
-        # On insert, MOR may be NULL; treat as 0.
+        # Reuse MOR when possible so Capacity can be calculated immediately.
+        # MOR is normally populated by the refresh job; for user-inserted rows,
+        # we can look it up from an existing row with the same key.
         mor_val = 0.0
+        try:
+            existing_mor = db.session.query(TestReport.mor).filter(
+                TestReport.year == default_year,
+                TestReport.shift == default_shift,
+                TestReport.module == module_val,
+                TestReport.prodgroup3 == prodgroup3,
+                TestReport.operation == operation,
+                TestReport.is_deleted.is_(False),
+                TestReport.mor.isnot(None),
+            ).order_by(TestReport.id.desc()).first()
+            if existing_mor and existing_mor[0] not in (None, 0):
+                mor_val = float(existing_mor[0])
+        except Exception:
+            # Don't fail insert if MOR lookup fails; fallback to 0.
+            mor_val = 0.0
+
         capacity_val = round(mor_val * float(cell_qty_val) /
                              30.0, 1) if cell_qty_val is not None else None
         calculated_tr = compute_tr_from_goal_and_mor(goal_val, mor_val)
@@ -1413,6 +1431,7 @@ def test_add_new_goal():
             prodgroup3=prodgroup3,
             operation=operation,
             module=module_val,
+            mor=mor_val,
             goal=goal_val,
             tr=calculated_tr,
             link_cell_qty=cell_qty_val,
@@ -1422,7 +1441,12 @@ def test_add_new_goal():
         )
         db.session.add(new_entry)
         db.session.commit()
-        return json_success(new_id=new_entry.id)
+        return json_success(
+            new_id=new_entry.id,
+            mor=mor_val,
+            capacity=capacity_val,
+            tr=calculated_tr,
+        )
     except Exception as e:
         db.session.rollback()
         return json_error(str(e))

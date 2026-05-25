@@ -30,9 +30,28 @@
     return 'is-bad';
   }
 
+  // Gradual color scale for progress fill (keeps labels/classes unchanged).
+  // 0%   -> red (h=0)
+  // 50%  -> orange (h=30)
+  // 100% -> green (h=120)
+  function progressHue(pct) {
+    const p = clamp(Number(pct) || 0, 0, 100);
+    if (p <= 50) return (p / 50) * 30; // 0..30
+    return 30 + ((p - 50) / 50) * 90;  // 30..120
+  }
+
+  function fillGradientCss(pct) {
+    const h = progressHue(pct);
+    // Slightly glossy gradient like iOS progress bars.
+    const c1 = `hsl(${h} 85% 45%)`;
+    const c2 = `hsl(${h} 90% 70%)`;
+    return `linear-gradient(90deg, ${c1}, ${c2})`;
+  }
+
   global.ProgressScale = {
     clamp,
     computeProgressPct,
     classifyProgress,
+  fillGradientCss,
   };
 })(window);
