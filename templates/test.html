@@ -292,8 +292,9 @@
             <td class="cell-pad-4" data-col="link_cell_qty">
               <div class="action-group" id="group-cellqty-{{ r.id }}">
                 <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-                  class="table-input cellqty-input" value="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}"
-                  data-original="{{ r.link_cell_qty if r.link_cell_qty is not none else '' }}"
+                  class="table-input cellqty-input"
+                  value="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                  data-original="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
                   oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
               </div>
             </td>
