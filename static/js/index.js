@@ -226,7 +226,13 @@ async function saveIndexRowInPlace(row, type, { silent = false } = {}) {
                 reasonInput.classList.remove('input-dirty');
             }
 
-            // TR is display-only on the client. Do not overwrite it here.
+            // TR is display-only on the client, but it *is* persisted server-side.
+            // Refresh the displayed TR from the server response (no local recompute).
+            const trCell = row.querySelector('td[data-col="tr"]');
+            if (trCell && data && typeof data.tr !== 'undefined' && data.tr !== null) {
+                const trNum = Number(data.tr);
+                trCell.textContent = Number.isFinite(trNum) ? trNum.toFixed(1) : '';
+            }
         } else if (type === 'comment') {
             const commentInput = row.querySelector('.comment-input');
             if (commentInput) {

@@ -347,7 +347,17 @@
                         <td data-col="qps2">{{ (r.qps2 | round(3)) if r.qps2 else '' }}</td>
                         <td data-col="stg2">{{ (r.stg2 | round(3)) if r.stg2 else '' }}</td>
                         <td class="mor-val" data-col="mor">{{ (r.mor | round(3)) if r.mor else '' }}</td>
-                        <td class="tr-val" data-col="tr">{{ '%.1f'|format(r.tr) if r.tr else '' }}</td>
+                        <td class="tr-val" data-col="tr">
+                            {% set _mor = (r.mor | float) if r.mor else 0 %}
+                            {% set _goal = (r.manual_adjusted_goal | float) if (r.manual_adjusted_goal and
+                            r.manual_adjusted_goal > 0) else ((r.system_suggested_goal | float) if
+                            r.system_suggested_goal else 0) %}
+                            {% if _mor and _mor != 0 and _goal and _goal != 0 %}
+                            {{ '%.1f'|format(_goal / _mor) }}
+                            {% else %}
+
+                            {% endif %}
+                        </td>
                         <td data-col="output">{{ (r.output | round(3)) if r.output else '' }}</td>
                         <td data-col="progress" class="progress-cell"></td>
                         <td class="highlight-col" data-col="system_goal">{{

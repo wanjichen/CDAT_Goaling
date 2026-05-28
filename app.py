@@ -998,6 +998,17 @@ def update_goal_inplace():
         old.goal_adjusted_at = datetime.now()
         old.goal_adjusted_by = user
 
+        # Persist TR when manual_adjusted_goal changes.
+        # Rule (align with index.html display):
+        #   - If manual_adjusted_goal > 0 -> TR = manual_adjusted_goal / MOR
+        #   - Else -> TR = system_suggested_goal / MOR
+        # Notes:
+        #   - Clamp to non-negative
+        #   - Keep 1 decimal
+        goal_for_tr = new_goal if new_goal and new_goal > 0 else (
+            old.system_suggested_goal or 0)
+        old.tr = compute_tr_from_goal_and_mor(goal_for_tr, old.mor)
+
         db.session.commit()
         return json_success(id=old.id, tr=old.tr)
     except Exception as e:
