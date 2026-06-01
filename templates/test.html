@@ -54,8 +54,10 @@
           </span>
           <span class="value"
             title="{% if last_refresh_source and last_refresh_source != 'unavailable' %}Source: {{ last_refresh_source }}{% else %}Source: N/A{% endif %}">Last
-            refresh: {{ last_refresh_at.strftime('%Y-%m-%d %H:%M:%S') if last_refresh_at else 'N/A' }}</span>
+            refresh: {{ last_refresh_at.strftime('%Y-%m-%d %H:%M:%S') if last_refresh_at else 'N/A'
+            }}</span>
         </span>
+
       </div>
     </div>
     <div class="header-actions">
