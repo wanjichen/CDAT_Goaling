@@ -257,7 +257,7 @@ ENABLE_IDENTITY_DEBUG_ENDPOINT = env_flag(
 OPERATION_GROUPS = {
     'TCB':      [1204],
     'HBC-JDC':  [510, 971],
-    'DIA':      [1171, 2090],
+    'DIA':      [1171, 2090, 1960],
     'TACS23':   [2171, 2172, 2174],
     'TPX':      [1501, 4992, 5651, 5652, 5653, 5654],
     'DFLX':     [2004, 2053],
