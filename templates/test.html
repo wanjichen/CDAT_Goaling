@@ -112,7 +112,7 @@
         </select>
       </form>
       <div class="shift-filter-note" role="note" aria-label="Data refresh schedule">
-        * Goaling data refreshes around 07:45/19:45 every shift. Please verify after these times for the current shift.
+        * Goaling data refreshes around 07:50/19:50 every shift. Please verify after these times for the current shift.
       </div>
       {% if not selected_shift or (shift_mismatch and selected_shift == latest_db_shift) %}
       <div class="shift-filter-status{% if shift_mismatch %} is-warning{% endif %}">
@@ -186,7 +186,7 @@
         <input type="text" id="t_oper" class="form-input" placeholder="e.g. 2171">
         <label>GOAL *</label>
         <input type="number" id="t_goal" class="form-input" placeholder="Must enter a number > 0">
-        <label>CELL QTY *</label>
+        <label>{% if current_page == 'STHI' %}LINK QTY{% else %}CELL QTY{% endif %} *</label>
         <input type="number" id="t_cellqty" class="form-input" placeholder="Must enter an integer >= 0" step="1" min="0"
           inputmode="numeric" pattern="\d*">
       </div>
@@ -207,8 +207,15 @@
               Prodgroup3 <span class="sort-icon">⇕</span></th>
             <th class="pinned-col pinned-2 sortable" data-col="operation" onclick="sortTestTable(this, 'operation')">
               Operation <span class="sort-icon">⇕</span></th>
+            {% if current_page == 'STHI' %}
+            <th class="pinned-col pinned-3 sortable" data-col="dlcp" onclick="sortTestTable(this, 'dlcp')">
+              DLCP <span class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">
+              Start WIP <span class="sort-icon">⇕</span></th>
+            {% else %}
             <th class="pinned-col pinned-3 sortable" data-col="shift_start_wip"
               onclick="sortTestTable(this, 'shift_start_wip')">Start WIP <span class="sort-icon">⇕</span></th>
+            {% endif %}
             <th class="sortable" data-col="shift_start_wip_onhold"
               onclick="sortTestTable(this, 'shift_start_wip_onhold')">Start WIP Onhold <span class="sort-icon">⇕</span>
             </th>
@@ -230,10 +237,12 @@
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="mor" onclick="sortTestTable(this, 'mor')">MOR <span
                 class="sort-icon">⇕</span></th>
+            {% if current_page != 'STHI' %}
             <th class="sortable" data-col="tr" onclick="sortTestTable(this, 'tr')">TR <span class="sort-icon">⇕</span>
             </th>
-            <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Cell Qty <span
-                class="sort-icon">⇕</span></th>
+            {% endif %}
+            <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">{% if
+              current_page == 'STHI' %}Link Qty{% else %}Cell Qty{% endif %} <span class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable highlight-col" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span
@@ -252,8 +261,15 @@
                 data-filter-col="prodgroup3" oninput="applyTestFilters()"></th>
             <th class="pinned-col pinned-2" data-col="operation"><input type="text" class="filter-input-field"
                 data-filter-col="operation" oninput="applyTestFilters()"></th>
+            {% if current_page == 'STHI' %}
+            <th class="pinned-col pinned-3" data-col="dlcp"><input type="text" class="filter-input-field"
+                data-filter-col="dlcp" oninput="applyTestFilters()"></th>
+            <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
+                data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
+            {% else %}
             <th class="pinned-col pinned-3" data-col="shift_start_wip"><input type="text" class="filter-input-field"
                 data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
+            {% endif %}
             <th data-col="shift_start_wip_onhold"><input type="text" class="filter-input-field"
                 data-filter-col="shift_start_wip_onhold" oninput="applyTestFilters()"></th>
             <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1"
@@ -274,8 +290,10 @@
                 oninput="applyTestFilters()"></th>
             <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
                 oninput="applyTestFilters()"></th>
+            {% if current_page != 'STHI' %}
             <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
                 oninput="applyTestFilters()"></th>
+            {% endif %}
             <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty"
                 oninput="applyTestFilters()"></th>
             <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity"
@@ -296,7 +314,12 @@
           <tr data-id="{{ r.id }}">
             <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
             <td class="pinned-col pinned-2" data-col="operation">{{ r.operation }}</td>
+            {% if current_page == 'STHI' %}
+            <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
+            <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+            {% else %}
             <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+            {% endif %}
             <td data-col="shift_start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
             <td data-col="commit1">{{ r.commit1 or 0 }}</td>
             <td data-col="commit2">{{ r.commit2 or 0 }}</td>
@@ -307,7 +330,9 @@
             <td data-col="qps2">{{ r.qps2 or 0 }}</td>
             <td data-col="stg2">{{ r.stg2 or 0 }}</td>
             <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
+            {% if current_page != 'STHI' %}
             <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
+            {% endif %}
             <td class="cell-pad-4" data-col="link_cell_qty">
               <div class="action-group" id="group-cellqty-{{ r.id }}">
                 <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
@@ -354,7 +379,12 @@
           <tr class="total-row">
             <td class="pinned-col pinned-1" data-col="prodgroup3"><strong>Total</strong></td>
             <td class="pinned-col pinned-2" data-col="operation"></td>
+            {% if current_page == 'STHI' %}
+            <td class="pinned-col pinned-3" data-col="dlcp"></td>
+            <td data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
+            {% else %}
             <td class="pinned-col pinned-3" data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
+            {% endif %}
             <td data-col="shift_start_wip_onhold" id="test-total-shift_start_wip_onhold"></td>
             <td data-col="commit1" id="test-total-commit1"></td>
             <td data-col="commit2" id="test-total-commit2"></td>
@@ -365,7 +395,9 @@
             <td data-col="qps2"></td>
             <td data-col="stg2"></td>
             <td data-col="mor"></td>
+            {% if current_page != 'STHI' %}
             <td data-col="tr" id="test-total-tr"></td>
+            {% endif %}
             <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
             <td data-col="capacity" id="test-total-capacity"></td>
             <td class="highlight-col" data-col="goal" id="test-total-goal"></td>

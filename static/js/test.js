@@ -658,7 +658,11 @@ async function saveTestRowInternal(row, type, options = {}) {
         }
       }
 
-  if (!silent) showToast('Saved.', 'success');
+      // Debug: show module in toast if available
+      if (!silent) {
+        const debugModule = data.debug_module || 'unknown';
+        showToast(`Saved. (module=${debugModule}, capacity=${data.capacity})`, 'success');
+      }
       calculateTestTotals();
     } else {
       const c = row.querySelector('.comment-input');

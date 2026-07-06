@@ -33,7 +33,10 @@ def register_test_routes(app) -> None:
 
         # Test pages are partitioned by module.
         # Only expose enabled modules as tabs.
+        # STHI is only visible to the developer (wanjiche) until officially released.
         tabs = ['HDMx']
+        if current_user and current_user.lower() == 'wanjiche':
+            tabs.append('STHI')
 
         page_name = (request.args.get('page') or (
             tabs[0] if tabs else '')).strip()
@@ -75,13 +78,24 @@ def register_test_routes(app) -> None:
         try:
             latest_ids = get_latest_test_report_ids_for_shift_and_page(
                 selected_shift, page_name)
-            rows = (
-                db.session.query(TestReport)
-                .filter(TestReport.id.in_(latest_ids))
-                .filter((TestReport.is_deleted.is_(None)) | (TestReport.is_deleted.is_(False)))
-                .order_by(TestReport.prodgroup3.asc(), TestReport.operation.asc())
-                .all()
-            )
+
+            # STHI sorts by prodgroup3, then dlcp; other modules sort by prodgroup3, then operation
+            if page_name == 'STHI':
+                rows = (
+                    db.session.query(TestReport)
+                    .filter(TestReport.id.in_(latest_ids))
+                    .filter((TestReport.is_deleted.is_(None)) | (TestReport.is_deleted.is_(False)))
+                    .order_by(TestReport.prodgroup3.asc(), TestReport.dlcp.asc())
+                    .all()
+                )
+            else:
+                rows = (
+                    db.session.query(TestReport)
+                    .filter(TestReport.id.in_(latest_ids))
+                    .filter((TestReport.is_deleted.is_(None)) | (TestReport.is_deleted.is_(False)))
+                    .order_by(TestReport.prodgroup3.asc(), TestReport.operation.asc())
+                    .all()
+                )
         except Exception as e:
             return json_error(str(e))
 

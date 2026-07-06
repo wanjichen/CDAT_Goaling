@@ -383,6 +383,7 @@ class TestReport(db.Model):
     qps2 = db.Column(db.Float)
     stg2 = db.Column(db.Float)
     prebuild1 = db.Column(db.Float)
+    dlcp = db.Column(db.String(50))  # STHI-specific column (text)
 
     # NOTE: Test modules use in-place edits directly on `goal`.
     # The legacy `manual_adjusted_goal` column may not exist in the DB.
@@ -480,6 +481,7 @@ def test_report_to_dict(r: TestReport):
         'commit1': r.commit1,
         'commit2': r.commit2,
         'prebuild1': r.prebuild1,
+        'dlcp': r.dlcp,
     }
 
 
@@ -1329,8 +1331,9 @@ def test_update_cellqty():
     """Update Cell Qty (link_cell_qty) in-place.
 
     Test behavior:
-      - capacity = mor * cell_qty / 30
-      - goal     = mor * cell_qty / 30
+      - capacity = mor * cell_qty / 30  (for HDMx and other modules)
+      - capacity = mor * cell_qty       (for STHI)
+      - goal     = capacity
       - tr       = goal / mor
     """
     data = get_request_payload()
@@ -1358,7 +1361,11 @@ def test_update_cellqty():
         tr_val = None
 
         if qty_val is not None:
-            capacity_val = round(mor_val * float(qty_val) / 30.0, 1)
+            # STHI uses capacity = mor * qty; other modules use capacity = mor * qty / 30
+            if old.module == 'STHI':
+                capacity_val = round(mor_val * float(qty_val), 1)
+            else:
+                capacity_val = round(mor_val * float(qty_val) / 30.0, 1)
             goal_val = capacity_val
             tr_val = compute_tr_from_goal_and_mor(goal_val, mor_val)
 
@@ -1376,6 +1383,7 @@ def test_update_cellqty():
             capacity=capacity_val,
             goal=goal_val,
             tr=tr_val,
+            debug_module=old.module,
         )
     except Exception as e:
         db.session.rollback()
@@ -1432,8 +1440,14 @@ def test_add_new_goal():
             # Don't fail insert if MOR lookup fails; fallback to 0.
             mor_val = 0.0
 
-        capacity_val = round(mor_val * float(cell_qty_val) /
-                             30.0, 1) if cell_qty_val is not None else None
+        # STHI uses capacity = mor * qty; other modules use capacity = mor * qty / 30
+        if cell_qty_val is not None:
+            if module_val == 'STHI':
+                capacity_val = round(mor_val * float(cell_qty_val), 1)
+            else:
+                capacity_val = round(mor_val * float(cell_qty_val) / 30.0, 1)
+        else:
+            capacity_val = None
         calculated_tr = compute_tr_from_goal_and_mor(goal_val, mor_val)
 
         new_entry = TestReport(
