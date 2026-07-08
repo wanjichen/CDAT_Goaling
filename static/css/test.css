@@ -412,6 +412,12 @@
   box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18);
 }
 
+/* --- QPS1 Warning highlight (STHI: when qps1 > goal) --- */
+#testTable td.qps1-warning {
+  color: #dc2626 !important;
+  font-weight: 700 !important;
+}
+
 /* Miss Goal Comment: subtle editable cue (textarea). */
 #testTable textarea.comment-input {
   border: 1px solid rgba(148, 163, 184, 0.65);

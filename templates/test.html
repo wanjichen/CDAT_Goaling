@@ -8,7 +8,7 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260520">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260708b">
 </head>
 
 <body>
@@ -373,7 +373,9 @@
             </td>
             <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
             </td>
-            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+            <td data-col="qps1"
+              class="{% if (r.qps1|default(0)|float) >= 0 and (r.goal|default(0)|float) < (r.qps1|default(0)|float) %}qps1-warning{% endif %}">
+              {{ r.qps1 or 0 }}</td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">
                 <input type="number" class="table-input goal-input" value="{{ r.goal if r.goal is not none else '' }}"
@@ -483,7 +485,7 @@
   </div>
 
   <script src="{{ url_for('static', filename='js/progress_scale.js') }}?v=20260520"></script>
-  <script src="{{ url_for('static', filename='js/test.js') }}?v=20260520"></script>
+  <script src="{{ url_for('static', filename='js/test.js') }}?v=20260708b"></script>
 
   <script>
     // Lightweight layout debug (no DevTools needed).

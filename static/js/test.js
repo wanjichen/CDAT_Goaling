@@ -317,6 +317,29 @@ function updateTestProgressBars() {
   }
 }
 
+// Update QPS1 warning highlight for STHI tab (goal < qps1)
+function updateQps1Warnings() {
+  // Only apply on STHI page
+  if (getCurrentTestPageFromUrl() !== 'STHI') return;
+  
+  getTestDataRows().forEach(row => {
+    const tdQps1 = row.querySelector('td[data-col="qps1"]');
+    if (!tdQps1) return;
+    
+    const qps1Val = parseTestNumber(getTestCellValue(tdQps1, false));
+    const tdGoal = row.querySelector('td[data-col="goal"]');
+    const goalVal = parseTestNumber(getTestCellValue(tdGoal, false));
+    
+    // Add or remove warning class based on comparison (qps1 > goal means goal < qps1)
+    // Skip if QPS1 is negative
+    if (qps1Val >= 0 && goalVal < qps1Val) {
+      tdQps1.classList.add('qps1-warning');
+    } else {
+      tdQps1.classList.remove('qps1-warning');
+    }
+  });
+}
+
 function setTotalText(id, value) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -528,6 +551,8 @@ window.handleTestInput = function handleTestInput(input, type) {
 
   // Keep totals live as the user types.
   calculateTestTotals();
+  // Update QPS1 warning highlight when goal changes (STHI only)
+  updateQps1Warnings();
   scheduleTestAutoSave(row, 'goal');
   } else if (type === 'comment') {
     actionGroup = document.getElementById(`group-comment-${rowId}`);
@@ -816,6 +841,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial totals.
   calculateTestTotals();
+  
+  // Initial QPS1 warning highlights (STHI only).
+  updateQps1Warnings();
 
   // Defer so table-layout: fixed / fonts settle before measuring.
   setTimeout(updateTestPinnedOffsets, 0);
