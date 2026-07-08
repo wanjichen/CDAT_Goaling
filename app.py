@@ -375,6 +375,7 @@ class TestReport(db.Model):
 
     # Test-only columns (now added to cdat_goaling)
     shift_start_wip_onhold = db.Column(db.Float)
+    sfgi_wip = db.Column(db.Float)
     link_cell_qty = db.Column(db.Float)
     capacity = db.Column(db.Float)
     goal = db.Column(db.Float)
@@ -461,6 +462,7 @@ def test_report_to_dict(r: TestReport):
         'tr': r.tr,
         'shift_start_wip': r.shift_start_wip,
         'shift_start_wip_onhold': r.shift_start_wip_onhold,
+        'sfgi_wip': r.sfgi_wip,
         'link_cell_qty': r.link_cell_qty,
         'capacity': r.capacity,
         'system_suggested_goal': r.system_suggested_goal,
@@ -1402,6 +1404,8 @@ def test_add_new_goal():
         default_year, default_shift = get_current_year_and_shift_from_calendar()
 
         prodgroup3 = (data.get('prodgroup3') or '').strip()
+        # Optional field for STHI; default to 'FF' if not provided
+        dlcp_val = (data.get('dlcp') or '').strip() or 'FF'
         operation = (data.get('operation') or '').strip()
         raw_goal = data.get('goal')
         raw_cell_qty = data.get('cell_qty')
@@ -1454,6 +1458,7 @@ def test_add_new_goal():
             year=default_year,
             shift=default_shift,
             prodgroup3=prodgroup3,
+            dlcp=dlcp_val,
             operation=operation,
             module=module_val,
             mor=mor_val,

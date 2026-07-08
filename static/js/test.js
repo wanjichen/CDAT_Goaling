@@ -133,6 +133,8 @@ window.submitNewTestGoal = async function submitNewTestGoal() {
   const originalText = btn ? btn.innerText : '';
 
   const pg3 = (document.getElementById('t_pg3')?.value || '').trim();
+  const dlcpEl = document.getElementById('t_dlcp');
+  const dlcp = dlcpEl ? (dlcpEl.value || '').trim().toUpperCase() : '';
   const oper = (document.getElementById('t_oper')?.value || '').trim();
   const goal = (document.getElementById('t_goal')?.value || '').trim();
   const cellQtyRaw = (document.getElementById('t_cellqty')?.value || '').trim();
@@ -151,10 +153,14 @@ window.submitNewTestGoal = async function submitNewTestGoal() {
 
   if (btn) { btn.innerText = '...'; btn.disabled = true; }
   try {
+    const payload = { prodgroup3: pg3, operation: oper, goal: goal, cell_qty: cellQtyRaw, page: page };
+    if (dlcp) {
+      payload.dlcp = dlcp;
+    }
     const res = await fetch(apiUrl('/api/test/add-new-goal'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ prodgroup3: pg3, operation: oper, goal: goal, cell_qty: cellQtyRaw, page: page })
+      body: JSON.stringify(payload)
     });
     const json = await res.json();
     if (!res.ok || json.status !== 'success') {
@@ -322,7 +328,7 @@ function calculateTestTotals() {
   const rows = getTestDataRows();
 
   let totalShiftStartWip = 0;
-  let totalShiftStartWipOnhold = 0;
+  let totalSfgiWip = 0;
   let totalCommit1 = 0;
   let totalCommit2 = 0;
   // QPS totals intentionally not displayed.
@@ -344,7 +350,7 @@ function calculateTestTotals() {
     };
 
     totalShiftStartWip += getVal('shift_start_wip');
-    totalShiftStartWipOnhold += getVal('shift_start_wip_onhold');
+    totalSfgiWip += getVal('sfgi_wip');
     totalCommit1 += getVal('commit1');
     totalCommit2 += getVal('commit2');
   // QPS totals intentionally not displayed.
@@ -363,7 +369,7 @@ function calculateTestTotals() {
   });
 
   setTotalText('test-total-shift_start_wip', totalShiftStartWip);
-  setTotalText('test-total-shift_start_wip_onhold', totalShiftStartWipOnhold);
+  setTotalText('test-total-sfgi_wip', totalSfgiWip);
   setTotalText('test-total-commit1', totalCommit1);
   setTotalText('test-total-commit2', totalCommit2);
   setTotalText('test-total-tr', totalTr);
@@ -399,7 +405,7 @@ window.sortTestTable = function sortTestTable(thElement, colName) {
 
   const numericCols = [
     'shift_start_wip',
-    'shift_start_wip_onhold',
+    'sfgi_wip',
     'commit1',
     'commit2',
   'qtg1',

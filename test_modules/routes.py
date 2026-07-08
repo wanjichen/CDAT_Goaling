@@ -33,10 +33,7 @@ def register_test_routes(app) -> None:
 
         # Test pages are partitioned by module.
         # Only expose enabled modules as tabs.
-        # STHI is only visible to the developer (wanjiche) until officially released.
-        tabs = ['HDMx']
-        if current_user and current_user.lower() == 'wanjiche':
-            tabs.append('STHI')
+        tabs = ['HDMx', 'STHI']
 
         page_name = (request.args.get('page') or (
             tabs[0] if tabs else '')).strip()

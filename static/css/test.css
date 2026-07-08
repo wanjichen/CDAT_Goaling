@@ -132,33 +132,33 @@
 }
 
 /* Keep long header labels readable (avoid wrapping after recent column width changes). */
-#testTable th[data-col="shift_start_wip_onhold"],
-#testTable td[data-col="shift_start_wip_onhold"] {
+#testTable th[data-col="sfgi_wip"],
+#testTable td[data-col="sfgi_wip"] {
   min-width: 120px;
   width: 120px;
 }
 
-#testTable th[data-col="shift_start_wip_onhold"] {
+#testTable th[data-col="sfgi_wip"] {
   white-space: nowrap;
 }
 
 /* Keep header label + sort icon on one row without changing table cell display semantics. */
-#testTable th[data-col="shift_start_wip_onhold"] {
+#testTable th[data-col="sfgi_wip"] {
   line-height: 1;
 }
 
-#testTable th[data-col="shift_start_wip_onhold"] .sort-icon {
+#testTable th[data-col="sfgi_wip"] .sort-icon {
   margin-left: 6px;
 }
 
-#testTable th[data-col="shift_start_wip_onhold"] .sort-icon {
+#testTable th[data-col="sfgi_wip"] .sort-icon {
   display: inline-block;
   white-space: nowrap;
   vertical-align: middle;
 }
 
 /* Force the whole header cell to keep a single line including the icon. */
-#testTable th[data-col="shift_start_wip_onhold"] {
+#testTable th[data-col="sfgi_wip"] {
   overflow: visible;
 }
 
@@ -619,8 +619,8 @@
   min-width: 110px;
 }
 
-#testTable th[data-col="shift_start_wip_onhold"],
-#testTable td[data-col="shift_start_wip_onhold"] { width: 120px; }
+#testTable th[data-col="sfgi_wip"],
+#testTable td[data-col="sfgi_wip"] { width: 120px; }
 
 #testTable th[data-col="commit1"],
 #testTable td[data-col="commit1"],
