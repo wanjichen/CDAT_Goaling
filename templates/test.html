@@ -216,47 +216,61 @@
               DLCP <span class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">
               Start WIP <span class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="sfgi_wip" onclick="sortTestTable(this, 'sfgi_wip')">SFGI WIP <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')">Commit1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qtg1" onclick="sortTestTable(this, 'qtg1')">QTG1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="stg1" onclick="sortTestTable(this, 'stg1')">STG1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="mor" onclick="sortTestTable(this, 'mor')">MOR <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Link Qty <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable highlight-col" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="output" onclick="sortTestTable(this, 'output')">Output <span
+                class="sort-icon">⇕</span></th>
             {% else %}
             <th class="pinned-col pinned-3 sortable" data-col="shift_start_wip"
               onclick="sortTestTable(this, 'shift_start_wip')">Start WIP <span class="sort-icon">⇕</span></th>
-            {% endif %}
-            <th class="sortable" data-col="sfgi_wip" onclick="sortTestTable(this, 'sfgi_wip')">SFGI WIP <span
-                class="sort-icon">⇕</span>
+            <th class="sortable" data-col="start_wip_onhold" onclick="sortTestTable(this, 'start_wip_onhold')">Start WIP
+              Onhold <span class="sort-icon">⇕</span>
             </th>
             <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')">Commit1 <span
                 class="sort-icon">⇕</span></th>
-            {% if current_page != 'STHI' %}
             <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')">Commit2 <span
                 class="sort-icon">⇕</span></th>
-            {% endif %}
             <th class="sortable" data-col="qtg1" onclick="sortTestTable(this, 'qtg1')">QTG1 <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="stg1" onclick="sortTestTable(this, 'stg1')">STG1 <span
                 class="sort-icon">⇕</span></th>
-            {% if current_page != 'STHI' %}
             <th class="sortable" data-col="qtg2" onclick="sortTestTable(this, 'qtg2')">QTG2 <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="qps2" onclick="sortTestTable(this, 'qps2')">QPS2 <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="stg2" onclick="sortTestTable(this, 'stg2')">STG2 <span
                 class="sort-icon">⇕</span></th>
-            {% endif %}
             <th class="sortable" data-col="mor" onclick="sortTestTable(this, 'mor')">MOR <span
                 class="sort-icon">⇕</span></th>
-            {% if current_page != 'STHI' %}
             <th class="sortable" data-col="tr" onclick="sortTestTable(this, 'tr')">TR <span class="sort-icon">⇕</span>
             </th>
-            {% endif %}
-            <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">{% if
-              current_page == 'STHI' %}Link Qty{% else %}Cell Qty{% endif %} <span class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Cell Qty <span
+                class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable highlight-col" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="output" onclick="sortTestTable(this, 'output')">Output <span
                 class="sort-icon">⇕</span></th>
+            {% endif %}
             <th class="sortable" data-col="progress" onclick="sortTestTable(this, 'progress')" title="Output / Goal">
               Progress <span class="sort-icon">⇕</span></th>
             <th data-col="miss_goal_comment">Miss Goal Comment</th>
@@ -274,38 +288,51 @@
                 data-filter-col="dlcp" oninput="applyTestFilters()"></th>
             <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
                 data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
-            {% else %}
-            <th class="pinned-col pinned-3" data-col="shift_start_wip"><input type="text" class="filter-input-field"
-                data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
-            {% endif %}
             <th data-col="sfgi_wip"><input type="text" class="filter-input-field" data-filter-col="sfgi_wip"
                 oninput="applyTestFilters()"></th>
             <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1"
                 oninput="applyTestFilters()"></th>
-            {% if current_page != 'STHI' %}
+            <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1"
+                oninput="applyTestFilters()"></th>
+            <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
+                oninput="applyTestFilters()"></th>
+            <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
+                oninput="applyTestFilters()"></th>
+            <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty"
+                oninput="applyTestFilters()"></th>
+            <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
+                oninput="applyTestFilters()"></th>
+            <th class="highlight-col" data-col="goal"><input type="text" class="filter-input-field"
+                data-filter-col="goal" oninput="applyTestFilters()"></th>
+            <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output"
+                oninput="applyTestFilters()"></th>
+            {% else %}
+            <th class="pinned-col pinned-3" data-col="shift_start_wip"><input type="text" class="filter-input-field"
+                data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
+            <th data-col="start_wip_onhold"><input type="text" class="filter-input-field"
+                data-filter-col="start_wip_onhold" oninput="applyTestFilters()"></th>
+            <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1"
+                oninput="applyTestFilters()"></th>
             <th data-col="commit2"><input type="text" class="filter-input-field" data-filter-col="commit2"
                 oninput="applyTestFilters()"></th>
-            {% endif %}
             <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1"
                 oninput="applyTestFilters()"></th>
             <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
                 oninput="applyTestFilters()"></th>
             <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
                 oninput="applyTestFilters()"></th>
-            {% if current_page != 'STHI' %}
             <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2"
                 oninput="applyTestFilters()"></th>
             <th data-col="qps2"><input type="text" class="filter-input-field" data-filter-col="qps2"
                 oninput="applyTestFilters()"></th>
             <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2"
                 oninput="applyTestFilters()"></th>
-            {% endif %}
             <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
                 oninput="applyTestFilters()"></th>
-            {% if current_page != 'STHI' %}
             <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
                 oninput="applyTestFilters()"></th>
-            {% endif %}
             <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty"
                 oninput="applyTestFilters()"></th>
             <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity"
@@ -314,6 +341,7 @@
                 data-filter-col="goal" oninput="applyTestFilters()"></th>
             <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output"
                 oninput="applyTestFilters()"></th>
+            {% endif %}
             <th data-col="progress"></th>
             <th data-col="miss_goal_comment"><input type="text" class="filter-input-field"
                 data-filter-col="miss_goal_comment" oninput="applyTestFilters()"></th>
@@ -329,26 +357,43 @@
             {% if current_page == 'STHI' %}
             <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
             <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
-            {% else %}
-            <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
-            {% endif %}
             <td data-col="sfgi_wip">{{ r.sfgi_wip or 0 }}</td>
             <td data-col="commit1">{{ r.commit1 or 0 }}</td>
-            {% if current_page != 'STHI' %}
+            <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
+            <td data-col="stg1">{{ r.stg1 or 0 }}</td>
+            <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
+            <td class="cell-pad-4" data-col="link_cell_qty">
+              <div class="action-group" id="group-cellqty-{{ r.id }}">
+                <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                  class="table-input cellqty-input"
+                  value="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                  data-original="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                  oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
+              </div>
+            </td>
+            <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
+            </td>
+            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+            <td class="cell-pad-4 highlight-col" data-col="goal">
+              <div class="action-group" id="group-goal-{{ r.id }}">
+                <input type="number" class="table-input goal-input" value="{{ r.goal if r.goal is not none else '' }}"
+                  data-original="{{ r.goal if r.goal is not none else '' }}" oninput="handleTestInput(this, 'goal')">
+              </div>
+            </td>
+            <td data-col="output">{{ r.output or 0 }}</td>
+            {% else %}
+            <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+            <td data-col="start_wip_onhold">{{ r.start_wip_onhold or 0 }}</td>
+            <td data-col="commit1">{{ r.commit1 or 0 }}</td>
             <td data-col="commit2">{{ r.commit2 or 0 }}</td>
-            {% endif %}
             <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
             <td data-col="qps1">{{ r.qps1 or 0 }}</td>
             <td data-col="stg1">{{ r.stg1 or 0 }}</td>
-            {% if current_page != 'STHI' %}
             <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
             <td data-col="qps2">{{ r.qps2 or 0 }}</td>
             <td data-col="stg2">{{ r.stg2 or 0 }}</td>
-            {% endif %}
             <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
-            {% if current_page != 'STHI' %}
             <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
-            {% endif %}
             <td class="cell-pad-4" data-col="link_cell_qty">
               <div class="action-group" id="group-cellqty-{{ r.id }}">
                 <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
@@ -367,6 +412,7 @@
               </div>
             </td>
             <td data-col="output">{{ r.output or 0 }}</td>
+            {% endif %}
             <td data-col="progress" class="progress-cell"></td>
             <td class="cell-pad-4" data-col="miss_goal_comment"
               title="Comment by: {{ r.miss_goal_comment_updated_by or 'N/A' }}&#10;At: {{ r.miss_goal_comment_updated_at or 'N/A' }}">
@@ -398,30 +444,34 @@
             {% if current_page == 'STHI' %}
             <td class="pinned-col pinned-3" data-col="dlcp"></td>
             <td data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
-            {% else %}
-            <td class="pinned-col pinned-3" data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
-            {% endif %}
             <td data-col="sfgi_wip" id="test-total-sfgi_wip"></td>
             <td data-col="commit1" id="test-total-commit1"></td>
-            {% if current_page != 'STHI' %}
+            <td data-col="qtg1"></td>
+            <td data-col="stg1"></td>
+            <td data-col="mor"></td>
+            <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
+            <td data-col="capacity" id="test-total-capacity"></td>
+            <td data-col="qps1"></td>
+            <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
+            <td data-col="output" id="test-total-output"></td>
+            {% else %}
+            <td class="pinned-col pinned-3" data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
+            <td data-col="start_wip_onhold" id="test-total-start_wip_onhold"></td>
+            <td data-col="commit1" id="test-total-commit1"></td>
             <td data-col="commit2" id="test-total-commit2"></td>
-            {% endif %}
             <td data-col="qtg1"></td>
             <td data-col="qps1"></td>
             <td data-col="stg1"></td>
-            {% if current_page != 'STHI' %}
             <td data-col="qtg2"></td>
             <td data-col="qps2"></td>
             <td data-col="stg2"></td>
-            {% endif %}
             <td data-col="mor"></td>
-            {% if current_page != 'STHI' %}
             <td data-col="tr" id="test-total-tr"></td>
-            {% endif %}
             <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
             <td data-col="capacity" id="test-total-capacity"></td>
             <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
             <td data-col="output" id="test-total-output"></td>
+            {% endif %}
             <td data-col="progress" id="test-total-progress" class="progress-cell"></td>
             <td data-col="miss_goal_comment"></td>
             <td data-col="actions"></td>

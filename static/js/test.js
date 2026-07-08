@@ -329,6 +329,7 @@ function calculateTestTotals() {
 
   let totalShiftStartWip = 0;
   let totalSfgiWip = 0;
+  let totalStartWipOnhold = 0;
   let totalCommit1 = 0;
   let totalCommit2 = 0;
   // QPS totals intentionally not displayed.
@@ -351,6 +352,7 @@ function calculateTestTotals() {
 
     totalShiftStartWip += getVal('shift_start_wip');
     totalSfgiWip += getVal('sfgi_wip');
+    totalStartWipOnhold += getVal('start_wip_onhold');
     totalCommit1 += getVal('commit1');
     totalCommit2 += getVal('commit2');
   // QPS totals intentionally not displayed.
@@ -370,6 +372,7 @@ function calculateTestTotals() {
 
   setTotalText('test-total-shift_start_wip', totalShiftStartWip);
   setTotalText('test-total-sfgi_wip', totalSfgiWip);
+  setTotalText('test-total-start_wip_onhold', totalStartWipOnhold);
   setTotalText('test-total-commit1', totalCommit1);
   setTotalText('test-total-commit2', totalCommit2);
   setTotalText('test-total-tr', totalTr);
@@ -406,6 +409,7 @@ window.sortTestTable = function sortTestTable(thElement, colName) {
   const numericCols = [
     'shift_start_wip',
     'sfgi_wip',
+    'start_wip_onhold',
     'commit1',
     'commit2',
   'qtg1',
