@@ -416,7 +416,11 @@ def apply_test_report_updates_in_place(old_report: TestReport, **updates) -> Non
 
 
 def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
-    """Mirror the assembly latest-per-group logic for the test table."""
+    """Mirror the assembly latest-per-group logic for the test table.
+
+    For STHI, rows are uniquely identified by (prodgroup3, operation, dlcp).
+    For other modules, rows are uniquely identified by (prodgroup3, operation).
+    """
     filtered = db.session.query(
         TestReport.id,
         TestReport.prodgroup3,
@@ -426,12 +430,23 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
     )
     filtered = apply_test_operation_group_filter(filtered, page_name)
 
-    latest_ids = filtered.with_entities(
-        db.func.max(TestReport.id).label('id')
-    ).group_by(
-        TestReport.prodgroup3,
-        TestReport.operation,
-    ).subquery()
+    # STHI uses dlcp as an additional grouping key to distinguish rows
+    # (e.g., same prodgroup3+operation but different dlcp values like UX vs FF)
+    if page_name == 'STHI':
+        latest_ids = filtered.with_entities(
+            db.func.max(TestReport.id).label('id')
+        ).group_by(
+            TestReport.prodgroup3,
+            TestReport.operation,
+            TestReport.dlcp,
+        ).subquery()
+    else:
+        latest_ids = filtered.with_entities(
+            db.func.max(TestReport.id).label('id')
+        ).group_by(
+            TestReport.prodgroup3,
+            TestReport.operation,
+        ).subquery()
 
     return latest_ids
 
@@ -1345,17 +1360,28 @@ def test_update_cellqty():
         return json_error('Record not found', 404)
 
     raw_qty = data.get('cell_qty')
+    module = data.get('module') or (old.module if old else None)
     try:
         if raw_qty is None or str(raw_qty).strip() == '':
             qty_val = None
         else:
             raw_s = str(raw_qty).strip()
-            # Require an integer (digits only). Client sends string.
-            if not raw_s.isdigit():
-                return json_error('Cell Qty must be an integer', 400)
-            qty_val = int(raw_s)
-            if qty_val < 0:
-                return json_error('Cell Qty must be >= 0', 400)
+            # STHI allows one decimal place; other modules require integer.
+            if module == 'STHI':
+                try:
+                    qty_val = float(raw_s)
+                    if qty_val < 0:
+                        return json_error('Link Qty must be >= 0', 400)
+                    qty_val = round(qty_val, 1)  # Round to 1 decimal place
+                except ValueError:
+                    return json_error('Link Qty must be a valid number', 400)
+            else:
+                # Require an integer (digits only). Client sends string.
+                if not raw_s.isdigit():
+                    return json_error('Cell Qty must be an integer', 400)
+                qty_val = int(raw_s)
+                if qty_val < 0:
+                    return json_error('Cell Qty must be >= 0', 400)
 
         mor_val = float(old.mor or 0)
         capacity_val = None

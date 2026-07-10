@@ -191,8 +191,13 @@
         <label>GOAL *</label>
         <input type="number" id="t_goal" class="form-input" placeholder="Must enter a number > 0">
         <label>{% if current_page == 'STHI' %}LINK QTY{% else %}CELL QTY{% endif %} *</label>
+        {% if current_page == 'STHI' %}
+        <input type="number" id="t_cellqty" class="form-input" placeholder="Must enter a number >= 0 (e.g. 1.5)"
+          step="0.1" min="0">
+        {% else %}
         <input type="number" id="t_cellqty" class="form-input" placeholder="Must enter an integer >= 0" step="1" min="0"
           inputmode="numeric" pattern="\d*">
+        {% endif %}
       </div>
       <div class="modal-footer-actions">
         <button class="tab-link modal-action-btn" id="btn-test-modal-submit" onclick="submitNewTestGoal()">Save
@@ -364,10 +369,9 @@
             <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
             <td class="cell-pad-4" data-col="link_cell_qty">
               <div class="action-group" id="group-cellqty-{{ r.id }}">
-                <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-                  class="table-input cellqty-input"
-                  value="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
-                  data-original="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                <input type="number" step="0.1" min="0" autocomplete="off" class="table-input cellqty-input"
+                  value="{% if r.link_cell_qty is not none %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
+                  data-original="{% if r.link_cell_qty is not none %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
                   oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
               </div>
             </td>
@@ -385,7 +389,7 @@
             <td data-col="output">{{ r.output or 0 }}</td>
             {% else %}
             <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
-            <td data-col="start_wip_onhold">{{ r.start_wip_onhold or 0 }}</td>
+            <td data-col="start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
             <td data-col="commit1">{{ r.commit1 or 0 }}</td>
             <td data-col="commit2">{{ r.commit2 or 0 }}</td>
             <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
@@ -485,7 +489,7 @@
   </div>
 
   <script src="{{ url_for('static', filename='js/progress_scale.js') }}?v=20260520"></script>
-  <script src="{{ url_for('static', filename='js/test.js') }}?v=20260708b"></script>
+  <script src="{{ url_for('static', filename='js/test.js') }}?v=20260710"></script>
 
   <script>
     // Lightweight layout debug (no DevTools needed).

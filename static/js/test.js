@@ -529,12 +529,19 @@ window.applyTestFilters = function applyTestFilters() {
 window.handleTestInput = function handleTestInput(input, type) {
   const row = input.closest('tr');
   const rowId = row.getAttribute('data-id');
-  // Enforce integer-only for Cell Qty at the UI level.
+  // Enforce integer-only for Cell Qty at the UI level (HDMx only, STHI allows decimals).
   if (type === 'cellqty') {
+    const currentPage = getCurrentTestPageFromUrl();
     const raw = String(input.value ?? '');
-    // Keep only digits (no decimals or negatives). Empty is allowed (means NULL).
-    const sanitized = raw.replace(/[^0-9]/g, '');
-    if (sanitized !== raw) input.value = sanitized;
+    if (currentPage === 'STHI') {
+      // Allow one decimal place for STHI Link Qty
+      const sanitized = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+      if (sanitized !== raw) input.value = sanitized;
+    } else {
+      // Keep only digits (no decimals or negatives) for HDMx. Empty is allowed (means NULL).
+      const sanitized = raw.replace(/[^0-9]/g, '');
+      if (sanitized !== raw) input.value = sanitized;
+    }
   }
 
   const val = input.value;
@@ -616,6 +623,7 @@ async function saveTestRowInternal(row, type, options = {}) {
   } else if (type === 'cellqty') {
     const rawQty = String(row.querySelector('.cellqty-input').value ?? '').trim();
     payload.cell_qty = rawQty === '' ? null : rawQty;
+    payload.module = getCurrentTestPageFromUrl();  // Send module so backend knows STHI allows decimals
   } else if (type === 'comment') {
     payload.comment = row.querySelector('.comment-input').value;
   }
@@ -665,7 +673,18 @@ async function saveTestRowInternal(row, type, options = {}) {
       const qtyInput = row.querySelector('.cellqty-input');
       // Sync from server in case the backend coerces/normalizes the value.
       if (data && typeof data.link_cell_qty !== 'undefined') {
-        qtyInput.value = (data.link_cell_qty === null || data.link_cell_qty === undefined) ? '' : String(data.link_cell_qty);
+        const qtyVal = data.link_cell_qty;
+        if (qtyVal === null || qtyVal === undefined) {
+          qtyInput.value = '';
+        } else {
+          // For STHI, format with 1 decimal place
+          const currentPage = getCurrentTestPageFromUrl();
+          if (currentPage === 'STHI') {
+            qtyInput.value = Number(qtyVal).toFixed(1);
+          } else {
+            qtyInput.value = String(qtyVal);
+          }
+        }
       }
       qtyInput.setAttribute('data-original', String(qtyInput.value ?? ''));
       setInputDirtyState(qtyInput, false);
@@ -761,12 +780,21 @@ window.saveTestRow = async function saveTestRow(btn, type) {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Cell Qty: enforce integer-only even while typing.
+  // Cell Qty: enforce integer-only even while typing (HDMx only).
+  // STHI allows one decimal place for Link Qty.
   // Some browsers allow '.', 'e', '+', '-' temporarily on <input type="number">.
+  const currentPage = getCurrentTestPageFromUrl();
   document.querySelectorAll('#testTable input.cellqty-input').forEach((el) => {
     el.addEventListener('keydown', (ev) => {
-      const blocked = ['.', ',', 'e', 'E', '+', '-'];
-      if (blocked.includes(ev.key)) ev.preventDefault();
+      if (currentPage === 'STHI') {
+        // Allow decimal point for STHI, block others
+        const blocked = [',', 'e', 'E', '+', '-'];
+        if (blocked.includes(ev.key)) ev.preventDefault();
+      } else {
+        // Block all non-integer characters for HDMx
+        const blocked = ['.', ',', 'e', 'E', '+', '-'];
+        if (blocked.includes(ev.key)) ev.preventDefault();
+      }
     });
   });
 
@@ -814,7 +842,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Highlight active tab in the nav-tabs (same behavior as assembly).
-  const currentPage = getCurrentTestPageFromUrl();
   const links = document.querySelectorAll('.nav-tabs a.tab-link[href]');
   links.forEach(link => {
     const href = link.getAttribute('href') || '';
