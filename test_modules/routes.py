@@ -97,22 +97,21 @@ def register_test_routes(app) -> None:
             return json_error(str(e))
 
         # Last refresh contract:
-        # - If the calendar shift matches the latest shift in DB, use the local log file mtime.
+        # - Always use the local log file mtime as the primary source.
         #   (This reflects when the upstream output/source last refreshed.)
-        # - Otherwise fall back to the DB timestamp on the latest row for this module+shift.
+        # - Fall back to the DB timestamp only if the log file doesn't exist.
         last_refresh_at = None
         last_refresh_source = None
-        if current_shift and latest_db_shift and current_shift == latest_db_shift:
-            try:
-                log_path = Path(__file__).resolve(
-                ).parents[1] / 'data' / 'GoalingRefreshWIP.log2'
-                if log_path.exists():
-                    last_refresh_at = datetime.fromtimestamp(
-                        log_path.stat().st_mtime)
-                    last_refresh_source = 'log'
-            except Exception:
-                last_refresh_at = None
-                last_refresh_source = None
+        try:
+            log_path = Path(__file__).resolve(
+            ).parents[1] / 'data' / 'GoalingRefreshWIP.log2'
+            if log_path.exists():
+                last_refresh_at = datetime.fromtimestamp(
+                    log_path.stat().st_mtime)
+                last_refresh_source = 'log'
+        except Exception:
+            last_refresh_at = None
+            last_refresh_source = None
 
         if not last_refresh_at:
             # DB fallback: latest row timestamp for this module + shift.
