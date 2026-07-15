@@ -690,14 +690,8 @@ async function saveTestRowInternal(row, type, options = {}) {
       setInputDirtyState(qtyInput, false);
       hideActions(document.getElementById(`group-cellqty-${id}`));
 
-      // Cell Qty also drives Goal immediately (Goal remains editable; user can overwrite afterwards).
-      const goalInput = row.querySelector('.goal-input');
-      if (goalInput && data && typeof data.goal !== 'undefined') {
-        goalInput.value = (data.goal === null || data.goal === undefined) ? '' : String(data.goal);
-        goalInput.setAttribute('data-original', goalInput.value);
-        setInputDirtyState(goalInput, false);
-        hideActions(document.getElementById(`group-goal-${id}`));
-      }
+      // Goal is NOT updated when Cell Qty changes (for both HDMx and STHI).
+      // Only Capacity is auto-calculated.
 
   // TR is display-only on the client. Do not overwrite it here.
 

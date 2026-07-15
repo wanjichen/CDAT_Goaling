@@ -1385,32 +1385,26 @@ def test_update_cellqty():
 
         mor_val = float(old.mor or 0)
         capacity_val = None
-        goal_val = None
-        tr_val = None
 
         if qty_val is not None:
-            # STHI uses capacity = mor * qty; other modules use capacity = mor * qty / 30
+            # STHI uses capacity = mor * qty; HDMx uses capacity = mor * qty / 30
+            # Goal stays unchanged for both - only capacity is auto-calculated
             if old.module == 'STHI':
                 capacity_val = round(mor_val * float(qty_val), 1)
             else:
                 capacity_val = round(mor_val * float(qty_val) / 30.0, 1)
-            goal_val = capacity_val
-            tr_val = compute_tr_from_goal_and_mor(goal_val, mor_val)
 
+        # Only update link_cell_qty and capacity (goal stays unchanged)
         apply_test_report_updates_in_place(
             old,
             link_cell_qty=qty_val,
             capacity=capacity_val,
-            goal=goal_val,
-            tr=tr_val,
         )
 
         return json_success(
             new_id=old.id,
             link_cell_qty=qty_val,
             capacity=capacity_val,
-            goal=goal_val,
-            tr=tr_val,
             debug_module=old.module,
         )
     except Exception as e:
