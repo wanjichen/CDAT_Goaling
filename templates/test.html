@@ -242,8 +242,10 @@
             <th class="sortable" data-col="output" onclick="sortTestTable(this, 'output')">Output <span
                 class="sort-icon">⇕</span></th>
             {% else %}
-            <th class="pinned-col pinned-3 sortable" data-col="shift_start_wip"
-              onclick="sortTestTable(this, 'shift_start_wip')">Start WIP <span class="sort-icon">⇕</span></th>
+            <th class="pinned-col pinned-3 sortable" data-col="dlcp" onclick="sortTestTable(this, 'dlcp')">
+              DLCP <span class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Start WIP
+              <span class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="start_wip_onhold" onclick="sortTestTable(this, 'start_wip_onhold')">Start WIP
               Onhold <span class="sort-icon">⇕</span>
             </th>
@@ -314,7 +316,9 @@
             <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output"
                 oninput="applyTestFilters()"></th>
             {% else %}
-            <th class="pinned-col pinned-3" data-col="shift_start_wip"><input type="text" class="filter-input-field"
+            <th class="pinned-col pinned-3" data-col="dlcp"><input type="text" class="filter-input-field"
+                data-filter-col="dlcp" oninput="applyTestFilters()"></th>
+            <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
                 data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
             <th data-col="start_wip_onhold"><input type="text" class="filter-input-field"
                 data-filter-col="start_wip_onhold" oninput="applyTestFilters()"></th>
@@ -388,7 +392,8 @@
             </td>
             <td data-col="output">{{ r.output or 0 }}</td>
             {% else %}
-            <td class="pinned-col pinned-3" data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+            <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
+            <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
             <td data-col="start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
             <td data-col="commit1">{{ r.commit1 or 0 }}</td>
             <td data-col="commit2">{{ r.commit2 or 0 }}</td>
@@ -461,7 +466,8 @@
             <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
             <td data-col="output" id="test-total-output"></td>
             {% else %}
-            <td class="pinned-col pinned-3" data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
+            <td class="pinned-col pinned-3" data-col="dlcp"></td>
+            <td data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
             <td data-col="start_wip_onhold" id="test-total-start_wip_onhold"></td>
             <td data-col="commit1" id="test-total-commit1"></td>
             <td data-col="commit2" id="test-total-commit2"></td>
@@ -489,7 +495,7 @@
   </div>
 
   <script src="{{ url_for('static', filename='js/progress_scale.js') }}?v=20260520"></script>
-  <script src="{{ url_for('static', filename='js/test.js') }}?v=20260715b"></script>
+  <script src="{{ url_for('static', filename='js/test.js') }}?v=20260715c"></script>
 
   <script>
     // Lightweight layout debug (no DevTools needed).

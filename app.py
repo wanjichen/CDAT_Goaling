@@ -418,8 +418,7 @@ def apply_test_report_updates_in_place(old_report: TestReport, **updates) -> Non
 def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
     """Mirror the assembly latest-per-group logic for the test table.
 
-    For STHI, rows are uniquely identified by (prodgroup3, operation, dlcp).
-    For other modules, rows are uniquely identified by (prodgroup3, operation).
+    For all modules (STHI, HDMx, etc.), rows are uniquely identified by (prodgroup3, operation, dlcp).
     """
     filtered = db.session.query(
         TestReport.id,
@@ -430,23 +429,15 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
     )
     filtered = apply_test_operation_group_filter(filtered, page_name)
 
-    # STHI uses dlcp as an additional grouping key to distinguish rows
+    # All modules use dlcp as an additional grouping key to distinguish rows
     # (e.g., same prodgroup3+operation but different dlcp values like UX vs FF)
-    if page_name == 'STHI':
-        latest_ids = filtered.with_entities(
-            db.func.max(TestReport.id).label('id')
-        ).group_by(
-            TestReport.prodgroup3,
-            TestReport.operation,
-            TestReport.dlcp,
-        ).subquery()
-    else:
-        latest_ids = filtered.with_entities(
-            db.func.max(TestReport.id).label('id')
-        ).group_by(
-            TestReport.prodgroup3,
-            TestReport.operation,
-        ).subquery()
+    latest_ids = filtered.with_entities(
+        db.func.max(TestReport.id).label('id')
+    ).group_by(
+        TestReport.prodgroup3,
+        TestReport.operation,
+        TestReport.dlcp,
+    ).subquery()
 
     return latest_ids
 
