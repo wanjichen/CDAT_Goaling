@@ -112,7 +112,7 @@
         </select>
       </form>
       <div class="shift-filter-note" role="note" aria-label="Data refresh schedule">
-        * Goaling data refreshes around 07:50/19:50 every shift. Please verify after these times for the current shift.
+        * Goaling data refreshes around 07:30/19:30 every shift. Please verify after these times for the current shift.
       </div>
       {% if not selected_shift or (shift_mismatch and selected_shift == latest_db_shift) %}
       <div class="shift-filter-status{% if shift_mismatch %} is-warning{% endif %}">
@@ -182,10 +182,8 @@
       <div class="modal-body-scroll" onkeypress="if(event.key === 'Enter') submitNewTestGoal()">
         <label>PRODGROUP3 *</label>
         <input type="text" id="t_pg3" class="form-input" placeholder="e.g. ADLP282">
-        {% if current_page == 'STHI' %}
-        <label>DLCP (optional)</label>
+        <label>DLCP (optional, default: FF)</label>
         <input type="text" id="t_dlcp" class="form-input" placeholder="e.g. FF">
-        {% endif %}
         <label>OPERATION *</label>
         <input type="text" id="t_oper" class="form-input" placeholder="e.g. 2171">
         <label>GOAL *</label>
@@ -245,17 +243,16 @@
             <th class="pinned-col pinned-3 sortable" data-col="dlcp" onclick="sortTestTable(this, 'dlcp')">
               DLCP <span class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Start WIP
-              <span class="sort-icon">⇕</span></th>
+              <span class="sort-icon">⇕</span>
+            </th>
             <th class="sortable" data-col="start_wip_onhold" onclick="sortTestTable(this, 'start_wip_onhold')">Start WIP
               Onhold <span class="sort-icon">⇕</span>
             </th>
-            <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')">Commit1 <span
-                class="sort-icon">⇕</span></th>
-            <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')">Commit2 <span
-                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')" title="prebuild included">
+              Commit1 <span class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')" title="prebuild included">
+              Commit2 <span class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="qtg1" onclick="sortTestTable(this, 'qtg1')">QTG1 <span
-                class="sort-icon">⇕</span></th>
-            <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="stg1" onclick="sortTestTable(this, 'stg1')">STG1 <span
                 class="sort-icon">⇕</span></th>
@@ -272,6 +269,8 @@
             <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Cell Qty <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable highlight-col" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span
                 class="sort-icon">⇕</span></th>
@@ -328,8 +327,6 @@
                 oninput="applyTestFilters()"></th>
             <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1"
                 oninput="applyTestFilters()"></th>
-            <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
-                oninput="applyTestFilters()"></th>
             <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
                 oninput="applyTestFilters()"></th>
             <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2"
@@ -345,6 +342,8 @@
             <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty"
                 oninput="applyTestFilters()"></th>
             <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
                 oninput="applyTestFilters()"></th>
             <th class="highlight-col" data-col="goal"><input type="text" class="filter-input-field"
                 data-filter-col="goal" oninput="applyTestFilters()"></th>
@@ -367,7 +366,8 @@
             <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
             <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
             <td data-col="sfgi_wip">{{ r.sfgi_wip or 0 }}</td>
-            <td data-col="commit1">{{ r.commit1 or 0 }}</td>
+            <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{ r.commit1|int
+              }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
             <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
             <td data-col="stg1">{{ r.stg1 or 0 }}</td>
             <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
@@ -386,19 +386,23 @@
               {{ r.qps1 or 0 }}</td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">
-                <input type="number" class="table-input goal-input" value="{{ r.goal if r.goal is not none else '' }}"
-                  data-original="{{ r.goal if r.goal is not none else '' }}" oninput="handleTestInput(this, 'goal')">
+                <input type="number" step="0.1" class="table-input goal-input"
+                  value="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  data-original="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  oninput="handleTestInput(this, 'goal')">
               </div>
             </td>
-            <td data-col="output">{{ r.output or 0 }}</td>
+            <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
+              else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
             {% else %}
             <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
             <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
             <td data-col="start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
-            <td data-col="commit1">{{ r.commit1 or 0 }}</td>
-            <td data-col="commit2">{{ r.commit2 or 0 }}</td>
+            <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{ r.commit1|int
+              }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
+            <td data-col="commit2">{% if r.commit2 is none %}0{% elif r.commit2 == (r.commit2|int) %}{{ r.commit2|int
+              }}{% else %}{{ '%.3f'|format(r.commit2) }}{% endif %}</td>
             <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
-            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
             <td data-col="stg1">{{ r.stg1 or 0 }}</td>
             <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
             <td data-col="qps2">{{ r.qps2 or 0 }}</td>
@@ -416,13 +420,17 @@
             </td>
             <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
             </td>
+            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">
-                <input type="number" class="table-input goal-input" value="{{ r.goal if r.goal is not none else '' }}"
-                  data-original="{{ r.goal if r.goal is not none else '' }}" oninput="handleTestInput(this, 'goal')">
+                <input type="number" step="0.1" class="table-input goal-input"
+                  value="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  data-original="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  oninput="handleTestInput(this, 'goal')">
               </div>
             </td>
-            <td data-col="output">{{ r.output or 0 }}</td>
+            <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
+              else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
             {% endif %}
             <td data-col="progress" class="progress-cell"></td>
             <td class="cell-pad-4" data-col="miss_goal_comment"
@@ -472,7 +480,6 @@
             <td data-col="commit1" id="test-total-commit1"></td>
             <td data-col="commit2" id="test-total-commit2"></td>
             <td data-col="qtg1"></td>
-            <td data-col="qps1"></td>
             <td data-col="stg1"></td>
             <td data-col="qtg2"></td>
             <td data-col="qps2"></td>
@@ -481,6 +488,7 @@
             <td data-col="tr" id="test-total-tr"></td>
             <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
             <td data-col="capacity" id="test-total-capacity"></td>
+            <td data-col="qps1"></td>
             <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
             <td data-col="output" id="test-total-output"></td>
             {% endif %}
@@ -495,7 +503,7 @@
   </div>
 
   <script src="{{ url_for('static', filename='js/progress_scale.js') }}?v=20260520"></script>
-  <script src="{{ url_for('static', filename='js/test.js') }}?v=20260715c"></script>
+  <script src="{{ url_for('static', filename='js/test.js') }}?v=20260715b"></script>
 
   <script>
     // Lightweight layout debug (no DevTools needed).
