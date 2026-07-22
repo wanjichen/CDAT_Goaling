@@ -408,9 +408,7 @@ def apply_test_report_updates_in_place(old_report: TestReport, **updates) -> Non
     for k, v in updates.items():
         setattr(old_report, k, v)
 
-    # Keep module consistent with operation unless explicitly overridden.
-    if 'module' not in updates:
-        old_report.module = derive_module_from_operation(old_report.operation)
+    # Module is already set correctly in the database; no need to derive/overwrite it.
 
     db.session.commit()
 
@@ -418,7 +416,8 @@ def apply_test_report_updates_in_place(old_report: TestReport, **updates) -> Non
 def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
     """Mirror the assembly latest-per-group logic for the test table.
 
-    For all modules (STHI, HDMx, etc.), rows are uniquely identified by (prodgroup3, operation, dlcp).
+    For STHI and HDMx, rows are uniquely identified by (prodgroup3, operation, dlcp).
+    For BI, V8, and other modules, rows are uniquely identified by (prodgroup3, operation).
     """
     filtered = db.session.query(
         TestReport.id,
@@ -429,15 +428,24 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
     )
     filtered = apply_test_operation_group_filter(filtered, page_name)
 
-    # All modules use dlcp as an additional grouping key to distinguish rows
+    # STHI and HDMx use dlcp as an additional grouping key to distinguish rows
     # (e.g., same prodgroup3+operation but different dlcp values like UX vs FF)
-    latest_ids = filtered.with_entities(
-        db.func.max(TestReport.id).label('id')
-    ).group_by(
-        TestReport.prodgroup3,
-        TestReport.operation,
-        TestReport.dlcp,
-    ).subquery()
+    # BI and V8 do not use dlcp
+    if page_name in ('STHI', 'HDMx'):
+        latest_ids = filtered.with_entities(
+            db.func.max(TestReport.id).label('id')
+        ).group_by(
+            TestReport.prodgroup3,
+            TestReport.operation,
+            TestReport.dlcp,
+        ).subquery()
+    else:
+        latest_ids = filtered.with_entities(
+            db.func.max(TestReport.id).label('id')
+        ).group_by(
+            TestReport.prodgroup3,
+            TestReport.operation,
+        ).subquery()
 
     return latest_ids
 
@@ -756,26 +764,14 @@ def apply_operation_group_filter(query, page_name):
 
 
 def apply_test_operation_group_filter(query, page_name):
-    """Filter TestReport queries using TEST_OPERATION_GROUPS."""
-    # When Test reads from the shared cdat_goaling table, modules are the primary partition.
-    # Keep an operation filter as a fallback if mappings exist, but always constrain by module.
-    q = query
+    """Filter TestReport queries by module name.
 
+    The database already has the correct 'module' column values (BI, V8, HDMx, STHI),
+    so we simply filter by module. No operation mapping needed.
+    """
     if page_name:
-        q = q.filter(TestReport.module == page_name)
-
-    if page_name not in TEST_OPERATION_GROUPS:
-        return q
-
-    target_ops = TEST_OPERATION_GROUPS[page_name]
-    op_variants = []
-    for op in target_ops:
-        op_variants.append(str(op))
-        op_variants.append(f"{op}.0")
-        op_variants.append(f"{op}.00")
-
-    trimmed_operation = db.func.trim(db.cast(TestReport.operation, db.String))
-    return q.filter(trimmed_operation.in_(op_variants))
+        return query.filter(TestReport.module == page_name)
+    return query
 
 
 def compute_tr_from_goal_and_mor(goal_value, mor_value):
@@ -1378,9 +1374,10 @@ def test_update_cellqty():
         capacity_val = None
 
         if qty_val is not None:
-            # STHI uses capacity = mor * qty; HDMx uses capacity = mor * qty / 30
-            # Goal stays unchanged for both - only capacity is auto-calculated
-            if old.module == 'STHI':
+            # STHI, BI, V8 use capacity = mor * qty
+            # HDMx uses capacity = mor * qty / 30
+            # Goal stays unchanged for all - only capacity is auto-calculated
+            if old.module in ('STHI', 'BI', 'V8'):
                 capacity_val = round(mor_val * float(qty_val), 1)
             else:
                 capacity_val = round(mor_val * float(qty_val) / 30.0, 1)
@@ -1433,7 +1430,11 @@ def test_add_new_goal():
         if cell_qty_val < 0:
             return json_error('Cell Qty must be >= 0', 400)
 
-        module_val = derive_module_from_operation(operation)
+        # Use the page (tab) name as the module - this is sent from the frontend
+        # Fallback to derive_module_from_operation if page not provided
+        page_val = (data.get('page') or '').strip()
+        module_val = page_val if page_val else derive_module_from_operation(
+            operation)
 
         # Reuse MOR when possible so Capacity can be calculated immediately.
         # MOR is normally populated by the refresh job; for user-inserted rows,
@@ -1455,9 +1456,9 @@ def test_add_new_goal():
             # Don't fail insert if MOR lookup fails; fallback to 0.
             mor_val = 0.0
 
-        # STHI uses capacity = mor * qty; other modules use capacity = mor * qty / 30
+        # STHI, BI, V8 use capacity = mor * qty; HDMx uses capacity = mor * qty / 30
         if cell_qty_val is not None:
-            if module_val == 'STHI':
+            if module_val in ('STHI', 'BI', 'V8'):
                 capacity_val = round(mor_val * float(cell_qty_val), 1)
             else:
                 capacity_val = round(mor_val * float(cell_qty_val) / 30.0, 1)

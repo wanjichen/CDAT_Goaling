@@ -182,13 +182,15 @@
       <div class="modal-body-scroll" onkeypress="if(event.key === 'Enter') submitNewTestGoal()">
         <label>PRODGROUP3 *</label>
         <input type="text" id="t_pg3" class="form-input" placeholder="e.g. ADLP282">
+        {% if current_page in ['STHI', 'HDMx'] %}
         <label>DLCP (optional, default: FF)</label>
         <input type="text" id="t_dlcp" class="form-input" placeholder="e.g. FF">
+        {% endif %}
         <label>OPERATION *</label>
         <input type="text" id="t_oper" class="form-input" placeholder="e.g. 2171">
         <label>GOAL *</label>
         <input type="number" id="t_goal" class="form-input" placeholder="Must enter a number > 0">
-        <label>{% if current_page == 'STHI' %}LINK QTY{% else %}CELL QTY{% endif %} *</label>
+        <label>{% if current_page == 'HDMx' %}CELL QTY{% else %}LINK QTY{% endif %} *</label>
         {% if current_page == 'STHI' %}
         <input type="number" id="t_cellqty" class="form-input" placeholder="Must enter a number >= 0 (e.g. 1.5)"
           step="0.1" min="0">
@@ -239,7 +241,7 @@
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="output" onclick="sortTestTable(this, 'output')">Output <span
                 class="sort-icon">⇕</span></th>
-            {% else %}
+            {% elif current_page == 'HDMx' %}
             <th class="pinned-col pinned-3 sortable" data-col="dlcp" onclick="sortTestTable(this, 'dlcp')">
               DLCP <span class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Start WIP
@@ -267,6 +269,42 @@
             <th class="sortable" data-col="tr" onclick="sortTestTable(this, 'tr')">TR <span class="sort-icon">⇕</span>
             </th>
             <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Cell Qty <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qps1" onclick="sortTestTable(this, 'qps1')">QPS1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable highlight-col" data-col="goal" onclick="sortTestTable(this, 'goal')">Goal <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="output" onclick="sortTestTable(this, 'output')">Output <span
+                class="sort-icon">⇕</span></th>
+            {% else %}
+            {# BI and V8: like HDMx but without DLCP column #}
+            <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Start WIP
+              <span class="sort-icon">⇕</span>
+            </th>
+            <th class="sortable" data-col="start_wip_onhold" onclick="sortTestTable(this, 'start_wip_onhold')">Start WIP
+              Onhold <span class="sort-icon">⇕</span>
+            </th>
+            <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')" title="prebuild included">
+              Commit1 <span class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')" title="prebuild included">
+              Commit2 <span class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qtg1" onclick="sortTestTable(this, 'qtg1')">QTG1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="stg1" onclick="sortTestTable(this, 'stg1')">STG1 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qtg2" onclick="sortTestTable(this, 'qtg2')">QTG2 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qps2" onclick="sortTestTable(this, 'qps2')">QPS2 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="stg2" onclick="sortTestTable(this, 'stg2')">STG2 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="mor" onclick="sortTestTable(this, 'mor')">MOR <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="tr" onclick="sortTestTable(this, 'tr')">TR <span class="sort-icon">⇕</span>
+            </th>
+            <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Link Qty <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="capacity" onclick="sortTestTable(this, 'capacity')">Capacity <span
                 class="sort-icon">⇕</span></th>
@@ -314,9 +352,43 @@
                 data-filter-col="goal" oninput="applyTestFilters()"></th>
             <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output"
                 oninput="applyTestFilters()"></th>
-            {% else %}
+            {% elif current_page == 'HDMx' %}
             <th class="pinned-col pinned-3" data-col="dlcp"><input type="text" class="filter-input-field"
                 data-filter-col="dlcp" oninput="applyTestFilters()"></th>
+            <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
+                data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
+            <th data-col="start_wip_onhold"><input type="text" class="filter-input-field"
+                data-filter-col="start_wip_onhold" oninput="applyTestFilters()"></th>
+            <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1"
+                oninput="applyTestFilters()"></th>
+            <th data-col="commit2"><input type="text" class="filter-input-field" data-filter-col="commit2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1"
+                oninput="applyTestFilters()"></th>
+            <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qps2"><input type="text" class="filter-input-field" data-filter-col="qps2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
+                oninput="applyTestFilters()"></th>
+            <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
+                oninput="applyTestFilters()"></th>
+            <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty"
+                oninput="applyTestFilters()"></th>
+            <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
+                oninput="applyTestFilters()"></th>
+            <th class="highlight-col" data-col="goal"><input type="text" class="filter-input-field"
+                data-filter-col="goal" oninput="applyTestFilters()"></th>
+            <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output"
+                oninput="applyTestFilters()"></th>
+            {% else %}
+            {# BI and V8: like HDMx but without DLCP column #}
             <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
                 data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
             <th data-col="start_wip_onhold"><input type="text" class="filter-input-field"
@@ -394,8 +466,45 @@
             </td>
             <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
               else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
-            {% else %}
+            {% elif current_page == 'HDMx' %}
             <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
+            <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+            <td data-col="start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
+            <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{ r.commit1|int
+              }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
+            <td data-col="commit2">{% if r.commit2 is none %}0{% elif r.commit2 == (r.commit2|int) %}{{ r.commit2|int
+              }}{% else %}{{ '%.3f'|format(r.commit2) }}{% endif %}</td>
+            <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
+            <td data-col="stg1">{{ r.stg1 or 0 }}</td>
+            <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
+            <td data-col="qps2">{{ r.qps2 or 0 }}</td>
+            <td data-col="stg2">{{ r.stg2 or 0 }}</td>
+            <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
+            <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
+            <td class="cell-pad-4" data-col="link_cell_qty">
+              <div class="action-group" id="group-cellqty-{{ r.id }}">
+                <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                  class="table-input cellqty-input"
+                  value="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                  data-original="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                  oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
+              </div>
+            </td>
+            <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
+            </td>
+            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+            <td class="cell-pad-4 highlight-col" data-col="goal">
+              <div class="action-group" id="group-goal-{{ r.id }}">
+                <input type="number" step="0.1" class="table-input goal-input"
+                  value="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  data-original="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  oninput="handleTestInput(this, 'goal')">
+              </div>
+            </td>
+            <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
+              else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
+            {% else %}
+            {# BI and V8: like HDMx but without DLCP column #}
             <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
             <td data-col="start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
             <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{ r.commit1|int
@@ -473,8 +582,26 @@
             <td data-col="qps1"></td>
             <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
             <td data-col="output" id="test-total-output"></td>
-            {% else %}
+            {% elif current_page == 'HDMx' %}
             <td class="pinned-col pinned-3" data-col="dlcp"></td>
+            <td data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
+            <td data-col="start_wip_onhold" id="test-total-start_wip_onhold"></td>
+            <td data-col="commit1" id="test-total-commit1"></td>
+            <td data-col="commit2" id="test-total-commit2"></td>
+            <td data-col="qtg1"></td>
+            <td data-col="stg1"></td>
+            <td data-col="qtg2"></td>
+            <td data-col="qps2"></td>
+            <td data-col="stg2"></td>
+            <td data-col="mor"></td>
+            <td data-col="tr" id="test-total-tr"></td>
+            <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
+            <td data-col="capacity" id="test-total-capacity"></td>
+            <td data-col="qps1"></td>
+            <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
+            <td data-col="output" id="test-total-output"></td>
+            {% else %}
+            {# BI and V8: like HDMx but without DLCP column #}
             <td data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
             <td data-col="start_wip_onhold" id="test-total-start_wip_onhold"></td>
             <td data-col="commit1" id="test-total-commit1"></td>

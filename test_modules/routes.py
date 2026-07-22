@@ -33,7 +33,11 @@ def register_test_routes(app) -> None:
 
         # Test pages are partitioned by module.
         # Only expose enabled modules as tabs.
-        tabs = ['HDMx', 'STHI']
+        # BI and V8 are temporarily hidden, only visible to 'wanjiche'
+        if current_user == 'wanjiche':
+            tabs = ['BI', 'V8', 'HDMx', 'STHI']
+        else:
+            tabs = ['HDMx', 'STHI']
 
         page_name = (request.args.get('page') or (
             tabs[0] if tabs else '')).strip()
