@@ -137,7 +137,8 @@
     <div class="nav-tabs">
       <div class="nav-tabs-links">
         {% for tab in (tabs or []) %}
-        <a href="{{ url_for('test_home', page=tab) }}" class="tab-link">{{ tab }}</a>
+        <a href="{{ url_for('test_home', page=tab) }}" class="tab-link{% if tab == current_page %} active{% endif %}">{{
+          tab }}</a>
         {% endfor %}
       </div>
       <a class="tab-link copy-tab-btn quick-link-btn" href="{{ url_for('index') }}" title="Go to Assembly Modules"

@@ -55,7 +55,7 @@ function apiUrl(path) {
 
 function getCurrentTestPageFromUrl() {
   const u = new URL(window.location.href);
-  return (u.searchParams.get('page') || 'HDMx').trim();
+  return (u.searchParams.get('page') || 'BI').trim();
 }
 
 function showToast(message, type = 'info', timeoutMs = 2800) {
