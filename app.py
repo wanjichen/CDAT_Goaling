@@ -101,105 +101,6 @@ db = SQLAlchemy(app)
 register_test_routes(app)
 
 
-# --- Temporary diagnostics (non-secret) ---
-# Helps debug IIS 500s after DB host/schema changes.
-@app.get('/api/_db_probe')
-def _db_probe():
-    try:
-        one = db.session.execute(text('select 1')).scalar()
-        search_path = db.session.execute(text('show search_path')).scalar()
-        current_schema = db.session.execute(
-            text('select current_schema()')).scalar()
-
-        reg = db.session.execute(
-            text('select to_regclass(:t)'),
-            {'t': f'{db_schema}.cdat_goaling' if db_schema else 'cdat_goaling'}
-        ).scalar()
-
-        return json_success(
-            select1=one,
-            db_host=db_host,
-            db_port=db_port,
-            db_name=db_name,
-            db_schema=db_schema,
-            search_path=search_path,
-            current_schema=current_schema,
-            table_regclass=str(reg),
-        )
-    except Exception as e:
-        app.logger.exception('DB probe failed')
-        return json_error(f'{type(e).__name__}: {e}', 500)
-
-
-@app.get('/api/_debug/test_columns')
-def _debug_test_columns():
-    """Debug helper: confirm the running app sees new ORM columns and can read values.
-
-    Safe read-only endpoint.
-    """
-    try:
-        module = (request.args.get('module') or '').strip()
-        shift = (request.args.get('shift') or '').strip()
-
-        q = db.session.query(TestReport)
-        if module:
-            q = q.filter(TestReport.module == module)
-        if shift:
-            q = q.filter(TestReport.shift == shift)
-
-        sample = q.order_by(desc(TestReport.id)).limit(1).all()
-        r = sample[0] if sample else None
-
-        attrs = ['stg1', 'qtg2', 'qps2', 'stg2']
-        return json_success(
-            filters={'module': module or None, 'shift': shift or None},
-            has_attrs={a: hasattr(TestReport, a) for a in attrs},
-            sample=(
-                {
-                    'id': r.id,
-                    'shift': r.shift,
-                    'module': getattr(r, 'module', None),
-                    'prodgroup3': getattr(r, 'prodgroup3', None),
-                    'operation': getattr(r, 'operation', None),
-                    'stg1': getattr(r, 'stg1', None),
-                    'qtg2': getattr(r, 'qtg2', None),
-                    'qps2': getattr(r, 'qps2', None),
-                    'stg2': getattr(r, 'stg2', None),
-                }
-                if r else None
-            ),
-        )
-    except Exception as e:
-        app.logger.exception('Debug endpoint failed')
-        return json_error(f'{type(e).__name__}: {e}', 500)
-
-
-@app.get('/api/_debug/test_row_dict')
-def _debug_test_row_dict():
-    """Debug helper: return one row as passed to templates/test.html (dict shape).
-
-    This uses the same conversion function test_report_to_dict().
-    """
-    try:
-        module = (request.args.get('module') or '').strip()
-        shift = (request.args.get('shift') or '').strip()
-
-        q = db.session.query(TestReport)
-        if module:
-            q = q.filter(TestReport.module == module)
-        if shift:
-            q = q.filter(TestReport.shift == shift)
-
-        r = q.order_by(desc(TestReport.id)).first()
-        return json_success(
-            filters={'module': module or None, 'shift': shift or None},
-            dict=(test_report_to_dict(r) if r else None),
-        )
-    except Exception as e:
-        app.logger.exception('Debug dict endpoint failed')
-        return json_error(f'{type(e).__name__}: {e}', 500)
-
-
 @app.route('/download/wip-goal-reckon-raw')
 def download_wip_goal_reckon_raw():
     """Download the raw validation CSV used for data checking."""
@@ -251,55 +152,6 @@ ENABLE_IDENTITY_DEBUG_ENDPOINT = os.getenv(
 )
 ENABLE_IDENTITY_DEBUG_ENDPOINT = env_flag(
     'ENABLE_IDENTITY_DEBUG_ENDPOINT', ENABLE_IDENTITY_DEBUG_ENDPOINT)
-
-
-# --- Configuration: Map Page Names to Operation Codes ---
-OPERATION_GROUPS = {
-    'TCB':      [1204],
-    'HBC-JDC':  [510, 971],
-    'DIA':      [1171, 2090, 1960],
-    'TACS23':   [2171, 2172, 2174],
-    'TPX':      [1501, 4992, 5651, 5652, 5653, 5654],
-    'DFLX':     [2004, 2053],
-    'EPX':      [1225],
-    'CURE':     [970, 1173, 1235, 1266, 1366, 2135],
-    'PXVI':     [1025, 1175, 1245, 1863, 1892, 1895, 2436, 2863, 9668],
-    'CTC':      [2150, 2151, 2152, 2161],
-    '2D-Xray':  [265],
-    'BA':       [2133]
-}
-
-TEST_OPERATION_GROUPS = {
-    # Test Modules tab mapping (operation -> module).
-    # Dict insertion order defines tab order.
-    'LCBI': [7460, 7462, 7464, 7463, 7465, 7652],
-    'V8': [7721, 6881, 7731, 7734, 7571],
-    'HDMx': [6262, 7820],
-    'PHVI': [8831, 8832, 8833, 8834],
-    'OLB': [6379, 7571],
-    'STHI': [6970, 6508, 7297, 7899, 7297, 8748, 8749, 6341, 6342, 7681, 7682],
-}
-
-
-def derive_module_from_operation(operation_value) -> str:
-    """Derive module name from OPERATION_GROUPS.
-
-    Returns the module key (e.g. 'TCB', 'BA') when matched, otherwise 'Unknown'.
-    Matches common string variants: '1204', '1204.0', '1204.00'.
-    """
-    if operation_value is None:
-        return 'Unknown'
-
-    raw = str(operation_value).strip()
-    if not raw:
-        return 'Unknown'
-
-    for module_name, ops in {**OPERATION_GROUPS, **TEST_OPERATION_GROUPS}.items():
-        for op in ops:
-            if raw == str(op) or raw == f"{op}.0" or raw == f"{op}.00":
-                return module_name
-
-    return 'Unknown'
 
 
 class Report(db.Model):
@@ -576,9 +428,8 @@ def clone_report_with_updates(old_report, **updates):
     data = {c: getattr(old_report, c) for c in columns}
     data.update(updates)
 
-    # Ensure module is always populated unless explicitly overridden.
-    if 'module' not in updates:
-        data['module'] = derive_module_from_operation(data.get('operation'))
+    # Module is already set in the database; just copy it from the old row.
+    # No need to derive from operation codes.
 
     return Report(**data)
 
@@ -747,20 +598,14 @@ def get_recent_database_shifts_for_page(page_name, limit=5):
 
 
 def apply_operation_group_filter(query, page_name):
-    if page_name not in OPERATION_GROUPS:
-        return query
+    """Filter Report queries by module name.
 
-    target_ops = OPERATION_GROUPS[page_name]
-    # Precompute common float-string variants (e.g. '1204', '1204.0', '1204.00')
-    # so the DB can use a simple IN filter instead of per-row regexp_replace.
-    op_variants = []
-    for op in target_ops:
-        op_variants.append(str(op))
-        op_variants.append(f"{op}.0")
-        op_variants.append(f"{op}.00")
-
-    trimmed_operation = db.func.trim(db.cast(Report.operation, db.String))
-    return query.filter(trimmed_operation.in_(op_variants))
+    The database already has the correct 'module' column values,
+    so we simply filter by module. No operation mapping needed.
+    """
+    if page_name:
+        return query.filter(Report.module == page_name)
+    return query
 
 
 def apply_test_operation_group_filter(query, page_name):
@@ -782,6 +627,156 @@ def compute_tr_from_goal_and_mor(goal_value, mor_value):
     # Display/precision requirement: keep 1 decimal.
     # Business rule: TR should never be negative.
     return max(0.0, round(goal_value / mor, 1))
+
+
+def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
+    """Sync PHVI goal when V8 or HDMx goal changes.
+
+    Formula: PHVI goal = (V8 goal + HDMx goal) * 0.9 + PHVI.shift_start_wip
+
+    - V8 is already at prodgroup3 level
+    - HDMx needs to be summed across all DLCPs for the same prodgroup3
+    - If PHVI row doesn't exist, create it with defaults
+    - If both V8 and HDMx are deleted AND PHVI shift_start_wip = 0, soft-delete PHVI row
+    """
+    try:
+        # Check if any active V8 rows exist for this prodgroup3
+        v8_exists = db.session.query(TestReport.id).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'V8',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted.is_(False))
+        ).first() is not None
+
+        # Check if any active HDMx rows exist for this prodgroup3
+        hdmx_exists = db.session.query(TestReport.id).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'HDMx',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted.is_(False))
+        ).first() is not None
+
+        # Find existing PHVI row for this shift + prodgroup3
+        phvi_row = db.session.query(TestReport).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'PHVI',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted.is_(False))
+        ).first()
+
+        # If neither V8 nor HDMx exists, check if we should delete PHVI
+        if not v8_exists and not hdmx_exists:
+            if phvi_row:
+                shift_start_wip = float(phvi_row.shift_start_wip or 0)
+                if shift_start_wip == 0:
+                    # No V8/HDMx and no WIP - soft delete PHVI
+                    phvi_row.is_deleted = True
+                    phvi_row.goal_adjusted_at = datetime.now()
+                    phvi_row.goal_adjusted_by = user
+                    db.session.commit()
+                    app.logger.info(
+                        f"PHVI goal synced (deleted): shift={shift}, prodgroup3={prodgroup3}, "
+                        f"reason=no active V8/HDMx rows and shift_start_wip=0"
+                    )
+                else:
+                    # No V8/HDMx but has WIP - keep PHVI with goal = shift_start_wip
+                    phvi_goal = round(shift_start_wip, 1)
+                    mor_val = float(phvi_row.mor or 30)
+                    calculated_tr = compute_tr_from_goal_and_mor(
+                        phvi_goal, mor_val)
+                    phvi_row.goal = phvi_goal
+                    phvi_row.tr = calculated_tr
+                    phvi_row.goal_adjusted_at = datetime.now()
+                    phvi_row.goal_adjusted_by = user
+                    db.session.commit()
+                    app.logger.info(
+                        f"PHVI goal synced (update, WIP only): shift={shift}, prodgroup3={prodgroup3}, "
+                        f"V8=0, HDMx=0, shift_start_wip={shift_start_wip}, PHVI_goal={phvi_goal}"
+                    )
+            return
+
+        # Get V8 goal for this shift + prodgroup3 (already at prodgroup3 level)
+        v8_goal = db.session.query(
+            db.func.sum(db.func.coalesce(TestReport.goal, 0))
+        ).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'V8',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted.is_(False))
+        ).scalar() or 0
+
+        # Get HDMx goal for this shift + prodgroup3 (sum across all DLCPs)
+        hdmx_goal = db.session.query(
+            db.func.sum(db.func.coalesce(TestReport.goal, 0))
+        ).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'HDMx',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted.is_(False))
+        ).scalar() or 0
+
+        # Get shift_start_wip from existing PHVI row, or default to 0
+        shift_start_wip = float(
+            phvi_row.shift_start_wip or 0) if phvi_row else 0
+
+        # Calculate PHVI goal: (V8 + HDMx) * 0.9 + shift_start_wip
+        phvi_goal = round((float(v8_goal) + float(hdmx_goal))
+                          * 0.9 + shift_start_wip, 1)
+
+        # Calculate TR (MOR default is 30 for PHVI)
+        mor_val = float(phvi_row.mor or 30) if phvi_row else 30
+        calculated_tr = compute_tr_from_goal_and_mor(phvi_goal, mor_val)
+
+        if phvi_row:
+            # Update existing PHVI row
+            phvi_row.goal = phvi_goal
+            phvi_row.tr = calculated_tr
+            phvi_row.goal_adjusted_at = datetime.now()
+            phvi_row.goal_adjusted_by = user
+            db.session.commit()
+            app.logger.info(
+                f"PHVI goal synced (update): shift={shift}, prodgroup3={prodgroup3}, "
+                f"V8={v8_goal}, HDMx={hdmx_goal}, PHVI_goal={phvi_goal}"
+            )
+        else:
+            # Create new PHVI row with defaults
+            new_phvi = TestReport(
+                year=year,
+                shift=shift,
+                prodgroup3=prodgroup3,
+                operation='8832',
+                module='PHVI',
+                mor=30,
+                goal=phvi_goal,
+                tr=calculated_tr,
+                dlcp=None,
+                capacity=0,
+                link_cell_qty=0,
+                shift_start_wip=0,
+                goal_adjusted_at=datetime.now(),
+                goal_adjusted_by=user,
+            )
+            db.session.add(new_phvi)
+            db.session.commit()
+            app.logger.info(
+                f"PHVI goal synced (insert): shift={shift}, prodgroup3={prodgroup3}, "
+                f"V8={v8_goal}, HDMx={hdmx_goal}, PHVI_goal={phvi_goal}"
+            )
+
+    except Exception as e:
+        # Log error but don't fail the main operation
+        app.logger.warning(f"PHVI sync failed for {shift}/{prodgroup3}: {e}")
+        db.session.rollback()
 
 
 def persist_report_version(old_report, **updates):
@@ -850,21 +845,20 @@ def index(page_name='TCB'):
     current_date = datetime.now().strftime('%Y-%m-%d')
 
     # Last refresh contract (mirrors test.html):
-    # - If the calendar shift matches the latest shift in DB, use the local log file mtime.
+    # - Always use the calendar.csv file mtime as the primary source.
     #   (This reflects when the upstream output/source last refreshed.)
-    # - Otherwise fall back to the DB timestamp on the latest row for this module+shift.
+    # - Fall back to the DB timestamp only if the file doesn't exist.
     last_refresh_at = None
     last_refresh_source = None
-    if current_shift and latest_db_shift and current_shift == latest_db_shift:
-        try:
-            log_path = Path(app.root_path) / 'data' / 'GoalingRefreshWIP.log2'
-            if log_path.exists():
-                last_refresh_at = datetime.fromtimestamp(
-                    log_path.stat().st_mtime)
-                last_refresh_source = 'log'
-        except Exception:
-            last_refresh_at = None
-            last_refresh_source = None
+    try:
+        calendar_path = Path(app.root_path) / 'data' / 'calendar.csv'
+        if calendar_path.exists():
+            last_refresh_at = datetime.fromtimestamp(
+                calendar_path.stat().st_mtime)
+            last_refresh_source = 'calendar'
+    except Exception:
+        last_refresh_at = None
+        last_refresh_source = None
 
     if not last_refresh_at and selected_shift:
         try:
@@ -915,10 +909,11 @@ def add_new_goal():
             return json_error('ENTITY is required for this page.', 400)
 
         entity = raw_entity if raw_entity else None
-        module_val = derive_module_from_operation(data.get('operation'))
+        # Use page (tab name) directly as module - matches database module values
+        module_val = page if page else 'Unknown'
         new_entry = Report(
-            year=default_year,            # 使用最新记录的年份
-            shift=default_shift,          # 使用最新记录的班次
+            year=default_year,
+            shift=default_shift,
             prodgroup3=data.get('prodgroup3'),
             operation=data.get('operation'),
             module=module_val,
@@ -1302,6 +1297,10 @@ def test_update_goal():
             goal_adjusted_by=user
         )
 
+        # Sync PHVI goal if V8 or HDMx goal was updated
+        if old.module in ('V8', 'HDMx'):
+            sync_phvi_goal(old.year, old.shift, old.prodgroup3, user)
+
         return json_success(new_id=old.id, tr=calculated_tr, goal=new_goal)
     except Exception as e:
         db.session.rollback()
@@ -1431,10 +1430,8 @@ def test_add_new_goal():
             return json_error('Cell Qty must be >= 0', 400)
 
         # Use the page (tab) name as the module - this is sent from the frontend
-        # Fallback to derive_module_from_operation if page not provided
         page_val = (data.get('page') or '').strip()
-        module_val = page_val if page_val else derive_module_from_operation(
-            operation)
+        module_val = page_val if page_val else 'Unknown'
 
         # Reuse MOR when possible so Capacity can be calculated immediately.
         # MOR is normally populated by the refresh job; for user-inserted rows,
@@ -1483,6 +1480,11 @@ def test_add_new_goal():
         )
         db.session.add(new_entry)
         db.session.commit()
+
+        # Sync PHVI goal if V8 or HDMx goal was added
+        if module_val in ('V8', 'HDMx'):
+            sync_phvi_goal(default_year, default_shift, prodgroup3, user)
+
         return json_success(
             new_id=new_entry.id,
             mor=mor_val,
@@ -1508,6 +1510,7 @@ def test_update_goals_batch():
         return json_error('updates must be a list', 400)
 
     results = []
+    phvi_sync_contexts = set()  # Track which (year, shift, prodgroup3) need PHVI sync
 
     for item in updates:
         if not isinstance(item, dict):
@@ -1553,10 +1556,19 @@ def test_update_goals_batch():
             )
             results.append(
                 {'old_id': old_id_int, 'new_id': old.id, 'status': 'success'})
+
+            # Track V8/HDMx updates for PHVI sync
+            if old.module in ('V8', 'HDMx'):
+                phvi_sync_contexts.add((old.year, old.shift, old.prodgroup3))
+
         except Exception as e:
             db.session.rollback()
             results.append(
                 {'old_id': old_id_int, 'status': 'error', 'message': str(e)})
+
+    # Sync PHVI goals for all affected prodgroup3s
+    for year, shift, prodgroup3 in phvi_sync_contexts:
+        sync_phvi_goal(year, shift, prodgroup3, user)
 
     return json_success(results=results)
 
@@ -1627,13 +1639,260 @@ def test_delete_row():
     if current_shift and old.shift and str(old.shift).strip() != str(current_shift).strip():
         return json_error('Delete is only allowed for the current shift', 403)
 
+    # Capture values before deletion for PHVI sync
+    module = old.module
+    year = old.year
+    shift = old.shift
+    prodgroup3 = old.prodgroup3
+
     try:
         old.is_deleted = True
         db.session.commit()
+
+        # Sync PHVI goal if V8 or HDMx row was deleted
+        # This will either:
+        # - Recalculate PHVI goal if other V8/HDMx rows exist
+        # - Soft-delete PHVI if no V8/HDMx remain AND PHVI.shift_start_wip = 0
+        # - Keep PHVI with goal = shift_start_wip if no V8/HDMx but WIP > 0
+        if module in ('V8', 'HDMx'):
+            sync_phvi_goal(year, shift, prodgroup3, user)
+
         return json_success(id=old.id, deleted_by=user)
     except Exception as e:
         db.session.rollback()
         return json_error(str(e))
+
+
+# --- Goal vs Output Page (restricted access) ---
+ENTITY_MODULES = ['TCB', 'HBC-JDC', 'DIA', 'BA']
+ASSEMBLY_MODULES = ['TCB', 'HBC-JDC', 'DIA', 'TPX', 'DFLX',
+                    'EPX', 'CURE', 'PXVI', 'CTC', 'TACS23', '2D-Xray', 'BA']
+TEST_MODULES = ['BI', 'V8', 'HDMx', 'PHVI', 'STHI']
+GOAL_OUTPUT_ALLOWED_USERS = ['wanjiche']
+
+
+def get_goal_output_shifts(limit=14):
+    """Get the most recent shifts from the database for goal-output page."""
+    latest_id = db.func.max(Report.id).label('latest_id')
+    query = db.session.query(Report.shift, latest_id).filter(
+        Report.shift.isnot(None),
+        db.func.trim(db.cast(Report.shift, db.String)) != ''
+    )
+    rows = query.group_by(Report.shift).order_by(
+        desc(latest_id)).limit(limit).all()
+    return [row.shift for row in rows if row.shift]
+
+
+@app.route('/goal-output')
+def goal_output():
+    """Goal vs Output dashboard - restricted to specific users."""
+    user = get_current_user()
+    if user not in GOAL_OUTPUT_ALLOWED_USERS:
+        return "Access denied", 403
+
+    # Support multiple selections (comma-separated or multiple params)
+    requested_shifts = request.args.getlist('shift') or []
+    requested_modules = request.args.getlist('module') or []
+    requested_entity = (request.args.get('entity') or '').strip()
+
+    available_shifts = get_goal_output_shifts(limit=14)
+    if available_shifts:
+        available_shifts = sorted(available_shifts, reverse=True)
+
+    # Validate selected shifts
+    selected_shifts = [s for s in requested_shifts if s in available_shifts]
+    if not selected_shifts and available_shifts:
+        selected_shifts = [available_shifts[0]]  # Default to most recent shift
+
+    # Get available modules for the selected shifts (from both assembly and test tables)
+    available_modules = []
+    if selected_shifts:
+        # Get assembly modules
+        assembly_module_rows = db.session.query(Report.module).filter(
+            Report.shift.in_(selected_shifts),
+            Report.module.isnot(None),
+            Report.module.in_(ASSEMBLY_MODULES),
+            (Report.is_deleted.is_(None)) | (Report.is_deleted.is_(False))
+        ).distinct().all()
+
+        # Get test modules
+        test_module_rows = db.session.query(TestReport.module).filter(
+            TestReport.shift.in_(selected_shifts),
+            TestReport.module.isnot(None),
+            TestReport.module.in_(TEST_MODULES),
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted.is_(False))
+        ).distinct().all()
+
+        # Combine and sort
+        all_modules = set()
+        for r in assembly_module_rows:
+            if r.module:
+                all_modules.add(r.module)
+        for r in test_module_rows:
+            if r.module:
+                all_modules.add(r.module)
+        available_modules = sorted(all_modules)
+
+    # Validate selected modules
+    selected_modules = [m for m in requested_modules if m in available_modules]
+
+    # Get available entities for the selected modules (only for entity modules)
+    available_entities = []
+    entity_modules_selected = [
+        m for m in selected_modules if m in ENTITY_MODULES]
+    # Only show if exactly one entity module selected
+    show_entity_dropdown = len(entity_modules_selected) == 1
+    if selected_shifts and show_entity_dropdown:
+        entity_rows = db.session.query(Report.entity).filter(
+            Report.shift.in_(selected_shifts),
+            Report.module == entity_modules_selected[0],
+            Report.entity.isnot(None),
+            Report.entity != '',
+            (Report.is_deleted.is_(None)) | (Report.is_deleted.is_(False))
+        ).distinct().order_by(Report.entity).all()
+        available_entities = [r.entity for r in entity_rows if r.entity]
+
+    # Validate selected entity
+    selected_entity = requested_entity if requested_entity in available_entities else ''
+
+    # Determine if we should show entity column
+    show_entity_column = any(m in ENTITY_MODULES for m in selected_modules) if selected_modules else any(
+        m in ENTITY_MODULES for m in available_modules)
+
+    # Query goal vs output data for the selected shifts
+    goal_output_data = []
+    if selected_shifts:
+        # Query assembly modules
+        assembly_query = db.session.query(
+            Report.shift,
+            Report.module,
+            Report.prodgroup3,
+            Report.entity,
+            db.func.sum(
+                db.func.coalesce(Report.manual_adjusted_goal,
+                                 Report.system_suggested_goal, 0)
+            ).label('total_goal'),
+            db.func.sum(db.func.coalesce(Report.output, 0)
+                        ).label('total_output')
+        ).filter(
+            Report.shift.in_(selected_shifts),
+            Report.module.in_(ASSEMBLY_MODULES),
+            (Report.is_deleted.is_(None)) | (Report.is_deleted.is_(False))
+        )
+
+        # Query test modules
+        test_query = db.session.query(
+            TestReport.shift,
+            TestReport.module,
+            TestReport.prodgroup3,
+            db.literal(None).label('entity'),
+            db.func.sum(db.func.coalesce(TestReport.goal, 0)
+                        ).label('total_goal'),
+            db.func.sum(db.func.coalesce(TestReport.output, 0)
+                        ).label('total_output')
+        ).filter(
+            TestReport.shift.in_(selected_shifts),
+            TestReport.module.in_(TEST_MODULES),
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted.is_(False))
+        )
+
+        # Apply module filter if selected
+        if selected_modules:
+            assembly_modules_selected = [
+                m for m in selected_modules if m in ASSEMBLY_MODULES]
+            test_modules_selected = [
+                m for m in selected_modules if m in TEST_MODULES]
+
+            if assembly_modules_selected:
+                assembly_query = assembly_query.filter(
+                    Report.module.in_(assembly_modules_selected))
+            else:
+                assembly_query = assembly_query.filter(db.literal(False))
+
+            if test_modules_selected:
+                test_query = test_query.filter(
+                    TestReport.module.in_(test_modules_selected))
+            else:
+                test_query = test_query.filter(db.literal(False))
+
+            # Apply entity filter if selected
+            if selected_entity and entity_modules_selected:
+                assembly_query = assembly_query.filter(
+                    Report.entity == selected_entity)
+
+        # Group and execute queries
+        assembly_rows = assembly_query.group_by(
+            Report.shift,
+            Report.module,
+            Report.prodgroup3,
+            Report.entity
+        ).all()
+
+        test_rows = test_query.group_by(
+            TestReport.shift,
+            TestReport.module,
+            TestReport.prodgroup3
+        ).all()
+
+        # Process assembly rows
+        for row in assembly_rows:
+            goal = row.total_goal or 0
+            output = row.total_output or 0
+
+            if goal == 0 and output == 0:
+                continue
+
+            achievement = (output / goal * 100) if goal > 0 else 0
+
+            goal_output_data.append({
+                'shift': row.shift or '',
+                'module': row.module or 'Unknown',
+                'prodgroup3': row.prodgroup3 or '',
+                'entity': row.entity if row.module in ENTITY_MODULES else '',
+                'goal': goal,
+                'output': output,
+                'achievement': round(achievement, 1),
+            })
+
+        # Process test rows
+        for row in test_rows:
+            goal = row.total_goal or 0
+            output = row.total_output or 0
+
+            if goal == 0 and output == 0:
+                continue
+
+            achievement = (output / goal * 100) if goal > 0 else 0
+
+            goal_output_data.append({
+                'shift': row.shift or '',
+                'module': row.module or 'Unknown',
+                'prodgroup3': row.prodgroup3 or '',
+                'entity': '',
+                'goal': goal,
+                'output': output,
+                'achievement': round(achievement, 1),
+            })
+
+    # Sort by shift (desc), module, prodgroup3, entity
+    goal_output_data.sort(key=lambda x: (
+        x['shift'], x['module'], x['prodgroup3'], x['entity']), reverse=False)
+
+    return render_template(
+        'goal_output.html',
+        current_user=user,
+        available_shifts=available_shifts,
+        selected_shifts=selected_shifts,
+        available_modules=available_modules,
+        selected_modules=selected_modules,
+        available_entities=available_entities,
+        selected_entity=selected_entity,
+        show_entity_dropdown=show_entity_dropdown,
+        show_entity_column=show_entity_column,
+        goal_output_data=goal_output_data,
+    )
 
 
 if __name__ == '__main__':

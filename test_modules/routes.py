@@ -24,7 +24,6 @@ def register_test_routes(app) -> None:
             get_latest_test_report_ids_for_shift_and_page,
             get_recent_test_database_shifts_for_page,
             test_report_to_dict,
-            TEST_OPERATION_GROUPS,
             json_error,
         )
 
@@ -33,7 +32,7 @@ def register_test_routes(app) -> None:
 
         # Test pages are partitioned by module.
         # Only expose enabled modules as tabs.
-        tabs = ['BI', 'V8', 'HDMx', 'STHI']
+        tabs = ['BI', 'V8', 'HDMx', 'PHVI', 'STHI']
 
         page_name = (request.args.get('page') or (
             tabs[0] if tabs else '')).strip()
@@ -97,18 +96,18 @@ def register_test_routes(app) -> None:
             return json_error(str(e))
 
         # Last refresh contract:
-        # - Always use the local log file mtime as the primary source.
+        # - Always use the calendar.csv file mtime as the primary source.
         #   (This reflects when the upstream output/source last refreshed.)
-        # - Fall back to the DB timestamp only if the log file doesn't exist.
+        # - Fall back to the DB timestamp only if the file doesn't exist.
         last_refresh_at = None
         last_refresh_source = None
         try:
-            log_path = Path(__file__).resolve(
-            ).parents[1] / 'data' / 'GoalingRefreshWIP.log2'
-            if log_path.exists():
+            calendar_path = Path(__file__).resolve(
+            ).parents[1] / 'data' / 'calendar.csv'
+            if calendar_path.exists():
                 last_refresh_at = datetime.fromtimestamp(
-                    log_path.stat().st_mtime)
-                last_refresh_source = 'log'
+                    calendar_path.stat().st_mtime)
+                last_refresh_source = 'calendar'
         except Exception:
             last_refresh_at = None
             last_refresh_source = None
