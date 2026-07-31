@@ -779,157 +779,6 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
         db.session.rollback()
 
 
-def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
-    """Sync OLB goal when V8 or HDMx goal changes.
-
-    Formula: OLB goal = (V8 goal + HDMx goal) * 0.8 + OLB.shift_start_wip
-
-    - V8 is already at prodgroup3 level
-    - HDMx needs to be summed across all DLCPs for the same prodgroup3
-    - If OLB row doesn't exist, create it with defaults
-    - If both V8 and HDMx are deleted AND OLB shift_start_wip = 0, soft-delete OLB row
-    """
-    try:
-        # Check if any active V8 rows exist for this prodgroup3
-        v8_exists = db.session.query(TestReport.id).filter(
-            TestReport.year == year,
-            TestReport.shift == shift,
-            TestReport.prodgroup3 == prodgroup3,
-            TestReport.module == 'V8',
-            (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
-        ).first() is not None
-
-        # Check if any active HDMx rows exist for this prodgroup3
-        hdmx_exists = db.session.query(TestReport.id).filter(
-            TestReport.year == year,
-            TestReport.shift == shift,
-            TestReport.prodgroup3 == prodgroup3,
-            TestReport.module == 'HDMx',
-            (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
-        ).first() is not None
-
-        # Find existing OLB row for this shift + prodgroup3
-        olb_row = db.session.query(TestReport).filter(
-            TestReport.year == year,
-            TestReport.shift == shift,
-            TestReport.prodgroup3 == prodgroup3,
-            TestReport.module == 'OLB',
-            (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
-        ).first()
-
-        # If neither V8 nor HDMx exists, check if we should delete OLB
-        if not v8_exists and not hdmx_exists:
-            if olb_row:
-                shift_start_wip = float(olb_row.shift_start_wip or 0)
-                if shift_start_wip == 0:
-                    # No V8/HDMx and no WIP - soft delete OLB
-                    olb_row.is_deleted = True
-                    olb_row.goal_adjusted_at = datetime.now()
-                    olb_row.goal_adjusted_by = user
-                    db.session.commit()
-                    app.logger.info(
-                        f"OLB goal synced (deleted): shift={shift}, prodgroup3={prodgroup3}, "
-                        f"reason=no active V8/HDMx rows and shift_start_wip=0"
-                    )
-                else:
-                    # No V8/HDMx but has WIP - keep OLB with goal = shift_start_wip
-                    olb_goal = round(shift_start_wip, 1)
-                    mor_val = float(olb_row.mor) if olb_row.mor else None
-                    calculated_tr = compute_tr_from_goal_and_mor(
-                        olb_goal, mor_val) if mor_val else None
-                    olb_row.goal = olb_goal
-                    olb_row.tr = calculated_tr
-                    olb_row.goal_adjusted_at = datetime.now()
-                    olb_row.goal_adjusted_by = user
-                    db.session.commit()
-                    app.logger.info(
-                        f"OLB goal synced (update, WIP only): shift={shift}, prodgroup3={prodgroup3}, "
-                        f"V8=0, HDMx=0, shift_start_wip={shift_start_wip}, OLB_goal={olb_goal}"
-                    )
-            return
-
-        # Get V8 goal for this shift + prodgroup3 (already at prodgroup3 level)
-        v8_goal = db.session.query(
-            db.func.sum(db.func.coalesce(TestReport.goal, 0))
-        ).filter(
-            TestReport.year == year,
-            TestReport.shift == shift,
-            TestReport.prodgroup3 == prodgroup3,
-            TestReport.module == 'V8',
-            (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
-        ).scalar() or 0
-
-        # Get HDMx goal for this shift + prodgroup3 (sum across all DLCPs)
-        hdmx_goal = db.session.query(
-            db.func.sum(db.func.coalesce(TestReport.goal, 0))
-        ).filter(
-            TestReport.year == year,
-            TestReport.shift == shift,
-            TestReport.prodgroup3 == prodgroup3,
-            TestReport.module == 'HDMx',
-            (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
-        ).scalar() or 0
-
-        # Get shift_start_wip from existing OLB row, or default to 0
-        shift_start_wip = float(
-            olb_row.shift_start_wip or 0) if olb_row else 0
-
-        # Calculate OLB goal: (V8 + HDMx) * 0.8 + shift_start_wip
-        olb_goal = round((float(v8_goal) + float(hdmx_goal))
-                         * 0.8 + shift_start_wip, 1)
-
-        # Calculate TR (use existing MOR if available, otherwise no TR calculation for new rows)
-        mor_val = float(olb_row.mor) if olb_row and olb_row.mor else None
-        calculated_tr = compute_tr_from_goal_and_mor(
-            olb_goal, mor_val) if mor_val else None
-
-        if olb_row:
-            # Update existing OLB row
-            olb_row.goal = olb_goal
-            olb_row.tr = calculated_tr
-            olb_row.goal_adjusted_at = datetime.now()
-            olb_row.goal_adjusted_by = user
-            db.session.commit()
-            app.logger.info(
-                f"OLB goal synced (update): shift={shift}, prodgroup3={prodgroup3}, "
-                f"V8={v8_goal}, HDMx={hdmx_goal}, OLB_goal={olb_goal}"
-            )
-        else:
-            # Create new OLB row with defaults (no MOR set)
-            new_olb = TestReport(
-                year=year,
-                shift=shift,
-                prodgroup3=prodgroup3,
-                operation='6379',
-                module='OLB',
-                mor=None,
-                goal=olb_goal,
-                tr=None,
-                dlcp=None,
-                capacity=0,
-                link_cell_qty=0,
-                shift_start_wip=0,
-                goal_adjusted_at=datetime.now(),
-                goal_adjusted_by=user,
-            )
-            db.session.add(new_olb)
-            db.session.commit()
-            app.logger.info(
-                f"OLB goal synced (insert): shift={shift}, prodgroup3={prodgroup3}, "
-                f"V8={v8_goal}, HDMx={hdmx_goal}, OLB_goal={olb_goal}"
-            )
-
-    except Exception as e:
-        # Log error but don't fail the main operation
-        app.logger.warning(f"OLB sync failed for {shift}/{prodgroup3}: {e}")
-        db.session.rollback()
-
-
 def persist_report_version(old_report, **updates):
     new_entry = clone_report_with_updates(old_report, **updates)
     db.session.add(new_entry)
@@ -1451,7 +1300,6 @@ def test_update_goal():
         # Sync PHVI goal if V8 or HDMx goal was updated
         if old.module in ('V8', 'HDMx'):
             sync_phvi_goal(old.year, old.shift, old.prodgroup3, user)
-            sync_olb_goal(old.year, old.shift, old.prodgroup3, user)
 
         return json_success(new_id=old.id, tr=calculated_tr, goal=new_goal)
     except Exception as e:
@@ -1636,7 +1484,6 @@ def test_add_new_goal():
         # Sync PHVI goal if V8 or HDMx goal was added
         if module_val in ('V8', 'HDMx'):
             sync_phvi_goal(default_year, default_shift, prodgroup3, user)
-            sync_olb_goal(default_year, default_shift, prodgroup3, user)
 
         return json_success(
             new_id=new_entry.id,
@@ -1722,7 +1569,6 @@ def test_update_goals_batch():
     # Sync PHVI goals for all affected prodgroup3s
     for year, shift, prodgroup3 in phvi_sync_contexts:
         sync_phvi_goal(year, shift, prodgroup3, user)
-        sync_olb_goal(year, shift, prodgroup3, user)
 
     return json_success(results=results)
 
@@ -1810,7 +1656,6 @@ def test_delete_row():
         # - Keep PHVI with goal = shift_start_wip if no V8/HDMx but WIP > 0
         if module in ('V8', 'HDMx'):
             sync_phvi_goal(year, shift, prodgroup3, user)
-            sync_olb_goal(year, shift, prodgroup3, user)
 
         return json_success(id=old.id, deleted_by=user)
     except Exception as e:
