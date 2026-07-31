@@ -441,8 +441,10 @@
             <td data-col="sfgi_wip">{{ r.sfgi_wip or 0 }}</td>
             <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{ r.commit1|int
               }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
-            <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
-            <td data-col="stg1">{{ r.stg1 or 0 }}</td>
+            <td data-col="qtg1">{% if r.qtg1 is none %}0{% elif r.qtg1 == (r.qtg1|int) %}{{ r.qtg1|int }}{% else %}{{
+              '%.3f'|format(r.qtg1) }}{% endif %}</td>
+            <td data-col="stg1">{% if r.stg1 is none %}0{% elif r.stg1 == (r.stg1|int) %}{{ r.stg1|int }}{% else %}{{
+              '%.1f'|format(r.stg1) }}{% endif %}</td>
             <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
             <td class="cell-pad-4" data-col="link_cell_qty">
               <div class="action-group" id="group-cellqty-{{ r.id }}">
@@ -456,7 +458,8 @@
             </td>
             <td data-col="qps1"
               class="{% if (r.qps1|default(0)|float) >= 0 and (r.goal|default(0)|float) < (r.qps1|default(0)|float) %}qps1-warning{% endif %}">
-              {{ r.qps1 or 0 }}</td>
+              {% if r.qps1 is none %}0{% elif r.qps1 == (r.qps1|int) %}{{ r.qps1|int }}{% else %}{{
+              '%.3f'|format(r.qps1) }}{% endif %}</td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">
                 <input type="number" step="0.1" class="table-input goal-input"
@@ -475,11 +478,16 @@
               }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
             <td data-col="commit2">{% if r.commit2 is none %}0{% elif r.commit2 == (r.commit2|int) %}{{ r.commit2|int
               }}{% else %}{{ '%.3f'|format(r.commit2) }}{% endif %}</td>
-            <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
-            <td data-col="stg1">{{ r.stg1 or 0 }}</td>
-            <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
-            <td data-col="qps2">{{ r.qps2 or 0 }}</td>
-            <td data-col="stg2">{{ r.stg2 or 0 }}</td>
+            <td data-col="qtg1">{% if r.qtg1 is none %}0{% elif r.qtg1 == (r.qtg1|int) %}{{ r.qtg1|int }}{% else %}{{
+              '%.3f'|format(r.qtg1) }}{% endif %}</td>
+            <td data-col="stg1">{% if r.stg1 is none %}0{% elif r.stg1 == (r.stg1|int) %}{{ r.stg1|int }}{% else %}{{
+              '%.1f'|format(r.stg1) }}{% endif %}</td>
+            <td data-col="qtg2">{% if r.qtg2 is none %}0{% elif r.qtg2 == (r.qtg2|int) %}{{ r.qtg2|int }}{% else %}{{
+              '%.3f'|format(r.qtg2) }}{% endif %}</td>
+            <td data-col="qps2">{% if r.qps2 is none %}0{% elif r.qps2 == (r.qps2|int) %}{{ r.qps2|int }}{% else %}{{
+              '%.3f'|format(r.qps2) }}{% endif %}</td>
+            <td data-col="stg2">{% if r.stg2 is none %}0{% elif r.stg2 == (r.stg2|int) %}{{ r.stg2|int }}{% else %}{{
+              '%.1f'|format(r.stg2) }}{% endif %}</td>
             <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
             <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
             <td class="cell-pad-4" data-col="link_cell_qty">
@@ -493,7 +501,8 @@
             </td>
             <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
             </td>
-            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+            <td data-col="qps1">{% if r.qps1 is none %}0{% elif r.qps1 == (r.qps1|int) %}{{ r.qps1|int }}{% else %}{{
+              '%.3f'|format(r.qps1) }}{% endif %}</td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">
                 <input type="number" step="0.1" class="table-input goal-input"
@@ -512,11 +521,16 @@
               }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
             <td data-col="commit2">{% if r.commit2 is none %}0{% elif r.commit2 == (r.commit2|int) %}{{ r.commit2|int
               }}{% else %}{{ '%.3f'|format(r.commit2) }}{% endif %}</td>
-            <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
-            <td data-col="stg1">{{ r.stg1 or 0 }}</td>
-            <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
-            <td data-col="qps2">{{ r.qps2 or 0 }}</td>
-            <td data-col="stg2">{{ r.stg2 or 0 }}</td>
+            <td data-col="qtg1">{% if r.qtg1 is none %}0{% elif r.qtg1 == (r.qtg1|int) %}{{ r.qtg1|int }}{% else %}{{
+              '%.3f'|format(r.qtg1) }}{% endif %}</td>
+            <td data-col="stg1">{% if r.stg1 is none %}0{% elif r.stg1 == (r.stg1|int) %}{{ r.stg1|int }}{% else %}{{
+              '%.1f'|format(r.stg1) }}{% endif %}</td>
+            <td data-col="qtg2">{% if r.qtg2 is none %}0{% elif r.qtg2 == (r.qtg2|int) %}{{ r.qtg2|int }}{% else %}{{
+              '%.3f'|format(r.qtg2) }}{% endif %}</td>
+            <td data-col="qps2">{% if r.qps2 is none %}0{% elif r.qps2 == (r.qps2|int) %}{{ r.qps2|int }}{% else %}{{
+              '%.3f'|format(r.qps2) }}{% endif %}</td>
+            <td data-col="stg2">{% if r.stg2 is none %}0{% elif r.stg2 == (r.stg2|int) %}{{ r.stg2|int }}{% else %}{{
+              '%.1f'|format(r.stg2) }}{% endif %}</td>
             <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
             <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
             <td class="cell-pad-4" data-col="link_cell_qty">
@@ -530,7 +544,8 @@
             </td>
             <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
             </td>
-            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+            <td data-col="qps1">{% if r.qps1 is none %}0{% elif r.qps1 == (r.qps1|int) %}{{ r.qps1|int }}{% else %}{{
+              '%.3f'|format(r.qps1) }}{% endif %}</td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">
                 <input type="number" step="0.1" class="table-input goal-input"

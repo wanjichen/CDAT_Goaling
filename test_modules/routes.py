@@ -32,11 +32,22 @@ def register_test_routes(app) -> None:
 
         # Test pages are partitioned by module.
         # Only expose enabled modules as tabs.
-        tabs = ['BI', 'V8', 'HDMx', 'PHVI', 'STHI']
+        # PHVI and OLB tabs are restricted to specific users.
+        RESTRICTED_TAB_USERS = ['wanjiche']
+        all_tabs = ['BI', 'V8', 'HDMx', 'PHVI', 'STHI', 'OLB']
+
+        if current_user in RESTRICTED_TAB_USERS:
+            tabs = all_tabs
+        else:
+            tabs = [t for t in all_tabs if t not in ('PHVI', 'OLB')]
 
         page_name = (request.args.get('page') or (
             tabs[0] if tabs else '')).strip()
-        if page_name not in tabs:
+
+        # If user tries to access PHVI or OLB without permission, redirect to first tab
+        if page_name in ('PHVI', 'OLB') and current_user not in RESTRICTED_TAB_USERS:
+            page_name = tabs[0] if tabs else 'BI'
+        elif page_name not in tabs:
             page_name = tabs[0] if tabs else page_name
 
         requested_shift = (request.args.get('shift') or '').strip()
