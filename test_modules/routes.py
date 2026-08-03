@@ -32,10 +32,12 @@ def register_test_routes(app) -> None:
 
         # Test pages are partitioned by module.
         # Only expose enabled modules as tabs.
-        tabs = ['BI', 'V8', 'HDMx', 'PHVI', 'STHI']
+        all_tabs = ['BI', 'V8', 'HDMx', 'PHVI', 'STHI', 'OLB']
+        tabs = all_tabs
 
         page_name = (request.args.get('page') or (
             tabs[0] if tabs else '')).strip()
+
         if page_name not in tabs:
             page_name = tabs[0] if tabs else page_name
 
