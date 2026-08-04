@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from threading import Lock
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import desc, inspect, text
 
@@ -119,6 +119,157 @@ def download_wip_goal_reckon_raw():
         mimetype='text/csv',
         conditional=False,
         max_age=0,
+    )
+
+
+@app.route('/api/download-goal-output')
+def download_goal_output():
+    """Download goal vs output table data as CSV (all recent shifts, all modules)."""
+    user = get_current_user()
+
+    # Get the most recent 14 shifts
+    latest_id = db.func.max(Report.id).label('latest_id')
+    shift_rows = db.session.query(Report.shift, latest_id).filter(
+        Report.shift.isnot(None),
+        db.func.trim(db.cast(Report.shift, db.String)) != ''
+    ).group_by(Report.shift).order_by(desc(latest_id)).limit(14).all()
+
+    shifts = [row.shift for row in shift_rows if row.shift]
+    if not shifts:
+        return json_error('No data available', 404)
+
+    shifts = sorted(shifts, reverse=False)  # Ascending order (oldest first)
+
+    # Build data: query assembly and test modules
+    rows_data = []
+
+    # Query assembly modules
+    assembly_query = db.session.query(
+        Report.shift,
+        Report.module,
+        Report.prodgroup3,
+        Report.entity,
+        db.func.sum(
+            db.func.coalesce(Report.manual_adjusted_goal,
+                             Report.system_suggested_goal, 0)
+        ).label('total_goal'),
+        db.func.sum(db.func.coalesce(Report.output, 0)).label('total_output')
+    ).filter(
+        Report.shift.in_(shifts),
+        (Report.is_deleted.is_(None)) | (Report.is_deleted.is_(False))
+    ).group_by(
+        Report.shift,
+        Report.module,
+        Report.prodgroup3,
+        Report.entity
+    ).all()
+
+    # Query test modules
+    test_query = db.session.query(
+        TestReport.shift,
+        TestReport.module,
+        TestReport.prodgroup3,
+        db.literal(None).label('entity'),
+        db.func.sum(db.func.coalesce(TestReport.goal, 0)).label('total_goal'),
+        db.func.sum(db.func.coalesce(TestReport.output, 0)
+                    ).label('total_output')
+    ).filter(
+        TestReport.shift.in_(shifts),
+        (TestReport.is_deleted.is_(None)) | (TestReport.is_deleted.is_(False))
+    ).group_by(
+        TestReport.shift,
+        TestReport.module,
+        TestReport.prodgroup3
+    ).all()
+
+    # Process assembly rows
+    for row in assembly_query:
+        goal = row.total_goal or 0
+        output = row.total_output or 0
+        if goal == 0:  # Skip rows with no goal
+            continue
+        achievement = (output / goal * 100) if goal > 0 else 0
+        rows_data.append({
+            'shift': row.shift or '',
+            'module': row.module or '',
+            'prodgroup3': row.prodgroup3 or '',
+            'entity': row.entity or '',
+            'goal': goal,
+            'output': output,
+            'achievement': round(achievement, 1),
+        })
+
+    # Process test rows
+    for row in test_query:
+        goal = row.total_goal or 0
+        output = row.total_output or 0
+        if goal == 0:  # Skip rows with no goal
+            continue
+        achievement = (output / goal * 100) if goal > 0 else 0
+        rows_data.append({
+            'shift': row.shift or '',
+            'module': row.module or '',
+            'prodgroup3': row.prodgroup3 or '',
+            'entity': '',
+            'goal': goal,
+            'output': output,
+            'achievement': round(achievement, 1),
+        })
+
+    # Sort by shift, module, prodgroup3, entity
+    rows_data.sort(key=lambda x: (
+        x['shift'], x['module'], x['prodgroup3'], x['entity']))
+
+    # Build CSV in memory
+    import io
+    csv_buffer = io.StringIO()
+    writer = csv.writer(csv_buffer)
+
+    # Write header
+    writer.writerow(['Shift', 'Module', 'Prodgroup3',
+                    'Entity', 'Goal', 'Output', 'Achievement %'])
+
+    # Helper function to format numbers: integer if whole, else 3 decimals
+    def format_number(val):
+        if isinstance(val, (int, float)):
+            if val == int(val):
+                return str(int(val))
+            else:
+                return f"{val:.3f}"
+        return str(val)
+
+    # Helper function to format achievement %: integer if whole, else 2 decimals
+    def format_achievement(val):
+        if isinstance(val, (int, float)):
+            if val == int(val):
+                return str(int(val))
+            else:
+                return f"{val:.2f}"
+        return str(val)
+
+    # Write data rows
+    for row in rows_data:
+        writer.writerow([
+            row['shift'],
+            row['module'],
+            row['prodgroup3'],
+            row['entity'],
+            format_number(row['goal']),
+            format_number(row['output']),
+            format_achievement(row['achievement']),
+        ])
+
+    # Create response
+    csv_str = csv_buffer.getvalue()
+    csv_bytes = csv_str.encode('utf-8-sig')  # BOM for Excel compatibility
+
+    ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'goal_output_{ts}.csv'
+
+    return Response(
+        csv_bytes,
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
     )
 
 
