@@ -143,7 +143,10 @@ def download_goal_output():
     # Build data: query assembly and test modules
     rows_data = []
 
-    # Query assembly modules
+    # Test modules (should only come from TestReport table, not Report)
+    test_modules = ['HDMx', 'PHVI', 'V8', 'OLB', 'BI', 'STHI']
+
+    # Query assembly modules (exclude test modules)
     assembly_query = db.session.query(
         Report.shift,
         Report.module,
@@ -157,6 +160,7 @@ def download_goal_output():
         db.func.sum(db.func.coalesce(Report.qps1, 0)).label('total_qps1')
     ).filter(
         Report.shift.in_(shifts),
+        Report.module.notin_(test_modules),
         (Report.is_deleted.is_(None)) | (Report.is_deleted.is_(False))
     ).group_by(
         Report.shift,
@@ -165,16 +169,10 @@ def download_goal_output():
         Report.entity
     ).all()
 
-    # Query test modules
-    test_query = db.session.query(
-        TestReport.shift,
-        TestReport.module,
-        TestReport.prodgroup3,
-        db.literal(None).label('entity'),
-        db.func.sum(db.func.coalesce(TestReport.goal, 0)).label('total_goal'),
-        db.func.sum(db.func.coalesce(TestReport.output, 0)
-                    ).label('total_output'),
-        db.func.sum(db.func.coalesce(TestReport.qps1, 0)).label('total_qps1')
+    # Query test modules: get the LATEST row per (shift, module, prodgroup3) using MAX(id)
+    # First, get the max IDs for each group
+    test_max_ids_query = db.session.query(
+        db.func.max(TestReport.id).label('max_id')
     ).filter(
         TestReport.shift.in_(shifts),
         (TestReport.is_deleted.is_(None)) | (TestReport.is_deleted.is_(False))
@@ -182,6 +180,21 @@ def download_goal_output():
         TestReport.shift,
         TestReport.module,
         TestReport.prodgroup3
+    ).subquery()
+
+    # Now get the actual rows using those max IDs
+    test_query = db.session.query(
+        TestReport.shift,
+        TestReport.module,
+        TestReport.prodgroup3,
+        db.literal(None).label('entity'),
+        TestReport.goal.label('total_goal'),
+        TestReport.output.label('total_output'),
+        TestReport.qps1.label('total_qps1')
+    ).filter(
+        TestReport.id.in_(
+            db.session.query(test_max_ids_query.c.max_id)
+        )
     ).all()
 
     # Process assembly rows
@@ -917,16 +930,25 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
     - If OLB row doesn't exist, create it with defaults
     - If both V8 and HDMx are deleted AND OLB shift_start_wip = 0, soft-delete OLB row
     - Uses MAX(id) to find OLB row, matching how UI fetches the latest row
+    - Special case: V8 with prodgroup3='CFLH62' and operation='7757' is excluded from OLB calculation
     """
     try:
-        # Check if any active V8 rows exist for this prodgroup3
-        v8_exists = db.session.query(TestReport.id).filter(
+        # Build V8 base filter
+        v8_base_filter = [
             TestReport.year == year,
             TestReport.shift == shift,
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'V8',
             (TestReport.is_deleted.is_(None)) | (
                 TestReport.is_deleted == False)
+        ]
+        # Exclude CFLH62 operation 7757 from V8 calculations
+        if prodgroup3 == 'CFLH62':
+            v8_base_filter.append(TestReport.operation != '7757')
+
+        # Check if any active V8 rows exist (excluding special case)
+        v8_exists = db.session.query(TestReport.id).filter(
+            *v8_base_filter
         ).first() is not None
 
         # Check if any active HDMx rows exist for this prodgroup3
@@ -976,16 +998,11 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
                     db.session.commit()
             return
 
-        # Get V8 goal sum for this shift + prodgroup3
+        # Get V8 goal sum (excluding special case CFLH62 + 7757)
         v8_goal = db.session.query(
             db.func.sum(db.func.coalesce(TestReport.goal, 0))
         ).filter(
-            TestReport.year == year,
-            TestReport.shift == shift,
-            TestReport.prodgroup3 == prodgroup3,
-            TestReport.module == 'V8',
-            (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted == False)
+            *v8_base_filter
         ).scalar() or 0
 
         # Get HDMx goal sum for this shift + prodgroup3 (across all DLCPs)
