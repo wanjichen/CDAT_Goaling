@@ -1,0 +1,450 @@
+/* finish.css - Styling for Finish Modules Page (mirrors test.css structure) */
+
+/* Match Assembly table container behavior so sticky columns work reliably. */
+.table-container {
+  background: var(--bg-surface, #ffffff);
+  border-radius: 6px;
+  overflow: auto;
+  flex: 1;
+  width: 100%;
+  border: 1px solid var(--ios-separator, var(--border-color, #cbd5e1));
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Pinned (sticky) left columns for the finish table --- */
+#finishTable {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  min-width: max-content;
+  table-layout: auto;
+}
+
+:root {
+  --finish-header-height: 36px;
+  --finish-filter-height: 30px;
+}
+
+#finishTable th.pinned-col,
+#finishTable td.pinned-col {
+  position: sticky !important;
+  left: 0;
+  z-index: 2;
+  background-clip: padding-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#finishTable th,
+#finishTable td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Compact Finish table sizing (no header wrapping) --- */
+#finishTable {
+  font-size: 11px;
+}
+
+#finishTable th,
+#finishTable td {
+  padding: 2px 4px;
+  white-space: nowrap;
+}
+
+#finishTable thead tr:first-child th {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+#finishTable thead tr.filter-row th {
+  padding: 2px 4px;
+}
+
+#finishTable tbody td,
+#finishTable tfoot td {
+  height: 24px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+#finishTable .table-input {
+  padding: 1px 3px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+#finishTable textarea.table-input {
+  min-height: 20px;
+}
+
+#finishTable .sort-icon {
+  margin-left: 3px;
+  min-width: 12px;
+  height: 12px;
+  line-height: 12px;
+}
+
+/* Make filter inputs as compact as possible. */
+#finishTable thead tr.filter-row input.filter-input-field {
+  padding: 1px 2px;
+  font-size: 11px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+  display: block;
+  margin: 0;
+  border: 1px solid var(--ios-separator, var(--border-color, #cbd5e1));
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+#finishTable thead tr.filter-row input.filter-input-field:focus {
+  border-color: var(--ios-blue, var(--primary, #2563eb));
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.20);
+  outline: none;
+}
+
+#finishTable th[data-col="operation"],
+#finishTable td[data-col="operation"] {
+  padding: 1px 2px;
+  min-width: 110px;
+}
+
+#finishTable td.pinned-col.pinned-2,
+#finishTable th.pinned-col.pinned-2 {
+  background-color: var(--bg-surface, #ffffff) !important;
+}
+
+#finishTable thead th.pinned-col {
+  background: linear-gradient(180deg, var(--table-head-bg, #f8fafc) 0%, var(--table-head-bg-strong, #edf2f7) 100%) !important;
+}
+
+#finishTable thead tr.filter-row th.pinned-col {
+  background: var(--table-head-bg, #f8fafc) !important;
+}
+
+#finishTable td.pinned-col.pinned-1 { z-index: 12; }
+#finishTable td.pinned-col.pinned-2 { z-index: 13; }
+#finishTable td.pinned-col.pinned-3 { z-index: 14; }
+
+#finishTable td.pinned-col {
+  background-color: var(--bg-surface, #ffffff) !important;
+}
+
+#finishTable tbody tr:hover td.pinned-col {
+  background-color: var(--table-hover-bg, #e8f0ff) !important;
+}
+
+#finishTable td.pinned-col {
+  background: var(--bg-surface, #ffffff);
+}
+
+/* Sticky headers */
+#finishTable thead th {
+  position: sticky !important;
+  top: 0;
+  border-bottom: 1px solid var(--ios-separator, var(--table-head-border, #d7dfe8));
+}
+
+#finishTable thead tr:first-child th {
+  height: var(--finish-header-height, 44px);
+  vertical-align: middle;
+}
+
+#finishTable thead tr.filter-row th {
+  position: sticky !important;
+  top: var(--finish-header-height, 44px);
+  height: var(--finish-filter-height, 34px);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--ios-separator, var(--table-head-border, #d7dfe8));
+}
+
+#finishTable thead th.pinned-col {
+  z-index: 60;
+}
+
+#finishTable thead tr.filter-row th.pinned-col {
+  z-index: 55;
+}
+
+#finishTable .pinned-col.pinned-1 { left: var(--finish-pinned-left-1, 0px); }
+#finishTable .pinned-col.pinned-2 { left: var(--finish-pinned-left-2, 0px); }
+#finishTable .pinned-col.pinned-3 { left: var(--finish-pinned-left-3, 0px); }
+
+#finishTable th.pinned-last,
+#finishTable td.pinned-last {
+  box-shadow:
+    1px 0 0 rgba(148, 163, 184, 0.95),
+    6px 0 10px rgba(15, 23, 42, 0.10);
+  position: relative;
+}
+
+#finishTable td.pinned-last::after,
+#finishTable th.pinned-last::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -14px;
+  width: 14px;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0));
+}
+
+#finishTable th.pinned-last,
+#finishTable td.pinned-last {
+  padding-right: 16px;
+}
+
+.finish-page {
+  padding: 12px 20px;
+}
+
+.finish-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 12px;
+}
+
+.finish-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 999px;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.finish-tab:hover {
+  background: #f1f5f9;
+}
+
+.finish-tab.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+/* --- Modal drawer (match Assembly look/behavior) --- */
+#finishModalOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 2000;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#finishModalOverlay.active {
+  display: flex;
+  opacity: 1;
+}
+
+#finishModalOverlay .modal-card {
+  background: var(--bg-surface, #ffffff);
+  width: 420px;
+  height: 100%;
+  padding: 32px;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-sizing: border-box;
+}
+
+#finishModalOverlay.active .modal-card {
+  transform: translateX(0);
+}
+
+/* Finish edits are auto-saved; hide per-row Save/Cancel buttons. */
+#finishTable .action-group .btn-mini {
+  display: none !important;
+}
+
+#finishTable th,
+#finishTable td {
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#finishTable thead th.header-wrap {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.05;
+}
+
+#finishTable td[data-col="comment"] {
+  white-space: normal;
+}
+
+/* --- Column widths for finish modules (no DLCP) --- */
+#finishTable th[data-col="prodgroup3"],
+#finishTable td[data-col="prodgroup3"] {
+  width: 110px;
+  min-width: 110px;
+}
+
+#finishTable th[data-col="operation"],
+#finishTable td[data-col="operation"] {
+  width: 110px;
+  min-width: 110px;
+}
+
+#finishTable th[data-col="mor"],
+#finishTable td[data-col="mor"],
+#finishTable th[data-col="tr"],
+#finishTable td[data-col="tr"] {
+  width: 70px;
+  min-width: 70px;
+}
+
+#finishTable th[data-col="goal"],
+#finishTable td[data-col="goal"] { width: 95px; }
+
+#finishTable th[data-col="output"],
+#finishTable td[data-col="output"] { width: 95px; }
+
+#finishTable th[data-col="comment"],
+#finishTable td[data-col="comment"] { width: 220px; }
+
+/* --- Input styling --- */
+#finishTable input.table-input,
+#finishTable textarea.table-input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  padding: 3px 4px;
+  cursor: text;
+  background: transparent;
+}
+
+/* MOR input styling */
+#finishTable input.mor-input {
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+#finishTable input.mor-input:focus {
+  outline: none;
+  border-color: rgba(100, 116, 139, 0.9);
+  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.12);
+}
+
+/* Goal input styling */
+#finishTable input.goal-input {
+  border: 1px solid rgba(29, 78, 216, 0.55);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+#finishTable input.goal-input:focus {
+  outline: none;
+  border-color: rgba(29, 78, 216, 0.95);
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18);
+}
+
+/* Comment input styling */
+#finishTable textarea.comment-input {
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+#finishTable textarea.comment-input:focus {
+  outline: none;
+  border-color: rgba(100, 116, 139, 0.9);
+  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.12);
+}
+
+/* Row action buttons (Delete) */
+#finishTable td[data-col="actions"] {
+  text-align: center;
+}
+
+#finishTable td[data-col="actions"].cell-pad-4 {
+  text-align: center;
+}
+
+#finishTable td[data-col="actions"] .btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(220, 38, 38, 0.65);
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  font-weight: 650;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+}
+
+#finishTable td[data-col="actions"] .btn-delete .trash-icon {
+  font-size: 14px;
+  line-height: 1;
+  color: #dc2626;
+}
+
+#finishTable td[data-col="actions"] .btn-delete:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(220, 38, 38, 0.9);
+}
+
+#finishTable td[data-col="actions"] .btn-delete:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+#finishTable td[data-col="actions"] .btn-delete:disabled,
+#finishTable td[data-col="actions"] .btn-delete[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- Alternating row colors (zebra striping) --- */
+#finishTable tbody tr:nth-child(even) td {
+  background-color: var(--ios-table-stripe, #e9edf5);
+}
+
+#finishTable tbody tr:nth-child(even) td.pinned-col {
+  background-color: var(--ios-table-stripe, #e9edf5) !important;
+}
+
+/* Footer (Total row) should scroll with the table. */
+#finishTable tfoot td {
+  position: static;
+}
+
+#finishTable tfoot td.pinned-col {
+  position: sticky !important;
+  left: 0;
+  z-index: 20;
+  background: #f8f9fa !important;
+  background-clip: padding-box;
+}

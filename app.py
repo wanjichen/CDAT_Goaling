@@ -1963,6 +1963,166 @@ def test_delete_row():
         return json_error(str(e))
 
 
+# ============================================================================
+# Finish Modules API Routes (/api/finish/*)
+# ============================================================================
+
+@app.route('/api/finish/update-goal', methods=['POST'])
+def finish_update_goal():
+    """Update goal field for a finish module row."""
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(TestReport, data.get('id'))
+
+    if not old:
+        return json_error('Record not found', 404)
+
+    raw_goal = data.get('goal')
+
+    try:
+        # Finish modules: TR is always derived from the goal column.
+        if raw_goal is None or str(raw_goal).strip() == '':
+            new_goal = 0.0
+        else:
+            new_goal = float(raw_goal)
+
+        calculated_tr = compute_tr_from_goal_and_mor(new_goal, old.mor)
+
+        apply_test_report_updates_in_place(
+            old,
+            goal=new_goal,
+            tr=calculated_tr,
+            goal_adjusted_at=datetime.now(),
+            goal_adjusted_by=user
+        )
+
+        return json_success(new_id=old.id, tr=calculated_tr, goal=new_goal)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
+@app.route('/api/finish/update-comment', methods=['POST'])
+def finish_update_comment():
+    """Update comment field for a finish module row."""
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(TestReport, data.get('id'))
+
+    if not old:
+        return json_error('Record not found', 404)
+
+    try:
+        apply_test_report_updates_in_place(
+            old,
+            comment=data.get('comment') or None,
+            goal_adjusted_at=datetime.now(),
+            goal_adjusted_by=user
+        )
+        return json_success(new_id=old.id, comment=old.comment)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
+@app.route('/api/finish/update-cellqty', methods=['POST'])
+def finish_update_cellqty():
+    """Update link_cell_qty field for a finish module row."""
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(TestReport, data.get('id'))
+
+    if not old:
+        return json_error('Record not found', 404)
+
+    try:
+        link_cell_qty = data.get('link_cell_qty')
+        apply_test_report_updates_in_place(
+            old,
+            link_cell_qty=link_cell_qty,
+            goal_adjusted_at=datetime.now(),
+            goal_adjusted_by=user
+        )
+        return json_success(new_id=old.id, link_cell_qty=link_cell_qty)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
+@app.route('/api/finish/add-new-goal', methods=['POST'])
+def finish_add_new_goal():
+    """Add a new finish module goal row."""
+    data = get_request_payload()
+    user = get_current_user()
+
+    try:
+        default_year, default_shift = get_current_year_and_shift_from_calendar()
+        page = (data.get('page') or '').strip()
+
+        # Use page (tab name) directly as module - matches database module values
+        module_val = page if page else 'Unknown'
+
+        new_entry = TestReport(
+            year=default_year,
+            shift=default_shift,
+            prodgroup3=data.get('prodgroup3'),
+            operation=data.get('operation'),
+            module=module_val,
+            mor=data.get('mor'),
+            goal=data.get('goal'),
+            dlcp=None,
+            capacity=0,
+            link_cell_qty=0,
+            shift_start_wip=0,
+            comment=data.get('comment'),
+            goal_adjusted_at=datetime.now(),
+            goal_adjusted_by=user,
+        )
+
+        # Compute TR if MOR is provided
+        if new_entry.mor:
+            new_entry.tr = compute_tr_from_goal_and_mor(
+                new_entry.goal, new_entry.mor)
+
+        db.session.add(new_entry)
+        db.session.commit()
+
+        return json_success(
+            id=new_entry.id,
+            prodgroup3=new_entry.prodgroup3,
+            operation=new_entry.operation,
+            goal=new_entry.goal
+        )
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
+@app.route('/api/finish/delete-row', methods=['POST'])
+def finish_delete_row():
+    """Soft-delete a finish module row in-place by setting is_deleted=True."""
+    data = get_request_payload()
+    user = get_current_user()
+    old = db.session.get(TestReport, data.get('id'))
+
+    if not old:
+        return json_error('Record not found', 404)
+
+    # Safety guard: only allow deleting rows from the current calendar shift.
+    current_shift = get_current_shift_from_calendar()
+    if current_shift and old.shift and str(old.shift).strip() != str(current_shift).strip():
+        return json_error('Delete is only allowed for the current shift', 403)
+
+    try:
+        old.is_deleted = True
+        db.session.commit()
+
+        return json_success(id=old.id, deleted_by=user)
+    except Exception as e:
+        db.session.rollback()
+        return json_error(str(e))
+
+
 if __name__ == '__main__':
     app.run(
         debug=env_flag('FLASK_DEBUG', 'true'),

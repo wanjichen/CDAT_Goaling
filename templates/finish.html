@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goaling Report - Finish Modules</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260708b">
+</head>
+
+<body>
+    <div id="toast-container"></div>
+
+    <div class="header">
+        <div class="header-left">
+            <h2><a class="header-home-link" href="{{ url_for('index') }}">CDAT MFG Goaling Report</a></h2>
+            <div class="header-meta-banner">
+                <span class="meta-chip">
+                    <span class="icon" aria-hidden="true">
+                        <!-- iOS-style: clock -->
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 1.75a10.25 10.25 0 1 0 10.25 10.25A10.262 10.262 0 0 0 12 1.75Zm0 19a8.75 8.75 0 1 1 8.75-8.75A8.76 8.76 0 0 1 12 20.75Zm.75-13.5a.75.75 0 0 0-1.5 0v5a.75.75 0 0 0 .33.62l3.5 2.33a.75.75 0 1 0 .84-1.24l-3.17-2.11Z" />
+                        </svg>
+                    </span>
+                    <span class="value">{{ current_shift or 'N/A' }}</span>
+                </span>
+                <span class="meta-chip">
+                    <span class="icon" aria-hidden="true">
+                        <!-- iOS-style: person.crop.circle -->
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 2.25A9.75 9.75 0 1 0 21.75 12 9.76 9.76 0 0 0 12 2.25Zm0 18A8.25 8.25 0 1 1 20.25 12 8.26 8.26 0 0 1 12 20.25Z" />
+                            <path
+                                d="M12 12.25a3.5 3.5 0 1 0-3.5-3.5 3.5 3.5 0 0 0 3.5 3.5Zm0-5.5a2 2 0 1 1-2 2 2 2 0 0 1 2-2Z" />
+                            <path
+                                d="M12 13.75c-3.6 0-6.25 1.76-6.25 4.25a.75.75 0 0 0 1.5 0c0-1.48 1.88-2.75 4.75-2.75s4.75 1.27 4.75 2.75a.75.75 0 0 0 1.5 0c0-2.49-2.65-4.25-6.25-4.25Z" />
+                        </svg>
+                    </span>
+                    <span class="value">{{ current_user or 'N/A' }}</span>
+                </span>
+
+                <span class="meta-chip">
+                    <span class="icon" aria-hidden="true">
+                        <!-- iOS-style: refresh -->
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 4.2a7.8 7.8 0 0 1 6.9 4.2.75.75 0 1 0 1.33-.7A9.3 9.3 0 0 0 3.6 11a.75.75 0 1 0 1.5 0A7.8 7.8 0 0 1 12 4.2Zm0 15.6a7.8 7.8 0 0 1-6.9-4.2.75.75 0 1 0-1.33.7A9.3 9.3 0 0 0 20.4 13a.75.75 0 1 0-1.5 0 7.8 7.8 0 0 1-6.9 6.8Z" />
+                            <path
+                                d="M20.3 5.8a.75.75 0 0 0-1.06 0l-1.2 1.2a.75.75 0 1 0 1.06 1.06l.67-.67.67.67A.75.75 0 0 0 21.5 7l-1.2-1.2Zm-16.6 12.4a.75.75 0 0 0 1.06 0l1.2-1.2A.75.75 0 0 0 4.93 16l-.67.67-.67-.67A.75.75 0 0 0 2.5 17l1.2 1.2Z" />
+                        </svg>
+                    </span>
+                    <span class="value"
+                        title="{% if last_refresh_source and last_refresh_source != 'unavailable' %}Source: {{ last_refresh_source }}{% else %}Source: N/A{% endif %}">Last
+                        refresh: {{ last_refresh_at.strftime('%Y-%m-%d %H:%M:%S') if last_refresh_at else 'N/A'
+                        }}</span>
+                </span>
+
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="tab-link btn-primary" onclick="openFinishModal()">
+                <span class="btn-icon" aria-hidden="true">
+                    <!-- iOS-style: plus -->
+                    <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                        <path
+                            d="M12 4.5a.75.75 0 0 1 .75.75v6h6a.75.75 0 0 1 0 1.5h-6v6a.75.75 0 0 1-1.5 0v-6h-6a.75.75 0 0 1 0-1.5h6v-6A.75.75 0 0 1 12 4.5Z" />
+                    </svg>
+                </span>
+                Add New Goal
+            </button>
+            <a class="tab-link btn-secondary btn-issue" href="mailto:wanji.chen@intel.com"
+                onclick="return confirmReportIssue(event)">
+                <span class="btn-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                        <path
+                            d="M5.5 5.25A2.25 2.25 0 0 0 3.25 7.5v9A2.25 2.25 0 0 0 5.5 18.75h13A2.25 2.25 0 0 0 20.75 16.5v-9A2.25 2.25 0 0 0 18.5 5.25h-13Zm-.2 2.28a.75.75 0 0 1 1.02-.27L12 10.4l5.68-3.14a.75.75 0 1 1 .72 1.32l-6.04 3.34a.75.75 0 0 1-.72 0L5.57 8.55a.75.75 0 0 1-.27-1.02Z" />
+                    </svg>
+                </span>Report Issue
+            </a>
+        </div>
+    </div>
+
+    <div class="shift-filter-bar" role="region" aria-label="Shift data filter">
+        <div class="shift-filter-controls">
+            <form class="shift-filter-form" method="get" action="{{ url_for('finish_home') }}">
+                <input type="hidden" name="page" value="{{ current_page }}">
+                <input type="hidden" id="shift_chosen" name="shift_chosen" value="0">
+                <label for="shift_select">Shift View</label>
+                <select id="shift_select" name="shift"
+                    onchange="document.getElementById('shift_chosen').value='1'; this.form.submit()">
+                    {% for shift_item in (available_shifts or []) %}
+                    <option value="{{ shift_item }}" {% if selected_shift==shift_item %}selected{% endif %}>{{
+                        shift_item }}</option>
+                    {% else %}
+                    <option value="" selected disabled>No shift data</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <div class="shift-filter-note" role="note" aria-label="Data refresh schedule">
+                * Goaling data refreshes around 07:30/19:30 every shift. Please verify after these times for the current
+                shift.
+            </div>
+            {% if not selected_shift or (shift_mismatch and selected_shift == latest_db_shift) %}
+            <div class="shift-filter-status{% if shift_mismatch %} is-warning{% endif %}">
+                {% if shift_mismatch %}
+                Data is not refreshed yet: calendar shift is {{ current_shift }}, but latest shift available is {{
+                latest_db_shift
+                }}.
+                {% elif not selected_shift %}
+                No shift data is available.
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if selected_shift and current_shift and selected_shift != current_shift %}
+            <div class="shift-filter-status is-warning">
+                Reminder: you are viewing shift {{ selected_shift }}, not the latest calendar shift ({{ current_shift
+                }}).
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Navigation tabs -->
+        <div class="nav-tabs">
+            <div class="nav-tabs-links">
+                {% for tab in (tabs or []) %}
+                <a href="{{ url_for('finish_home', page=tab) }}"
+                    class="tab-link{% if tab == current_page %} active{% endif %}">{{
+                    tab }}</a>
+                {% endfor %}
+            </div>
+            <a class="tab-link copy-tab-btn quick-link-btn" href="{{ url_for('test_home') }}" title="Go to Test Modules"
+                aria-label="Go to Test Modules" target="_blank" rel="noopener noreferrer">
+                <span class="btn-icon ios-link-icon" aria-hidden="true">
+                    <!-- iOS-style: rectangle.2.swap -->
+                    <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                        <path
+                            d="M7.25 6.25h6.5c1.24 0 2.25 1.01 2.25 2.25v5.75c0 1.24-1.01 2.25-2.25 2.25h-6.5C6.01 16.75 5 15.74 5 14.5V8.5c0-1.24 1.01-2.25 2.25-2.25Zm0 1.5c-.41 0-.75.34-.75.75v6c0 .41.34.75.75.75h6.5c.41 0 .75-.34.75-.75v-6c0-.41-.34-.75-.75-.75h-6.5Z" />
+                        <path
+                            d="M10.25 4.5h6.5c1.24 0 2.25 1.01 2.25 2.25V12a.75.75 0 0 1-1.5 0V6.75c0-.41-.34-.75-.75-.75h-6.5a.75.75 0 0 1 0-1.5Z" />
+                        <path
+                            d="M9.5 11.25h5.19l-1.22-1.22a.75.75 0 1 1 1.06-1.06l2.5 2.5a.75.75 0 0 1 0 1.06l-2.5 2.5a.75.75 0 1 1-1.06-1.06l1.22-1.22H9.5a.75.75 0 0 1 0-1.5Z" />
+                        <path
+                            d="M14.5 12.75H9.31l1.22 1.22a.75.75 0 1 1-1.06 1.06l-2.5-2.5a.75.75 0 0 1 0-1.06l2.5-2.5a.75.75 0 1 1 1.06 1.06l-1.22 1.22H14.5a.75.75 0 0 1 0 1.5Z" />
+                    </svg>
+                </span>
+                Test Modules
+            </a>
+            <a class="tab-link copy-tab-btn quick-link-btn" href="{{ url_for('index') }}" title="Go to Assembly Modules"
+                aria-label="Go to Assembly Modules" target="_blank" rel="noopener noreferrer">
+                <span class="btn-icon ios-link-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                        <path
+                            d="M7.25 6.25h6.5c1.24 0 2.25 1.01 2.25 2.25v5.75c0 1.24-1.01 2.25-2.25 2.25h-6.5C6.01 16.75 5 15.74 5 14.5V8.5c0-1.24 1.01-2.25 2.25-2.25Zm0 1.5c-.41 0-.75.34-.75.75v6c0 .41.34.75.75.75h6.5c.41 0 .75-.34.75-.75v-6c0-.41-.34-.75-.75-.75h-6.5Z" />
+                        <path
+                            d="M10.25 4.5h6.5c1.24 0 2.25 1.01 2.25 2.25V12a.75.75 0 0 1-1.5 0V6.75c0-.41-.34-.75-.75-.75h-6.5a.75.75 0 0 1 0-1.5Z" />
+                    </svg>
+                </span>
+                Assembly Modules
+            </a>
+        </div>
+    </div>
+
+    <!-- Modal Form (Finish Modules) -->
+    <div id="testModalOverlay" onclick="if(event.target==this) closeFinishModal()">
+        <div class="modal-card">
+            <h3>New Finish Goal</h3>
+            <div class="modal-body-scroll" onkeypress="if(event.key === 'Enter') submitNewFinishGoal()">
+                <label>PRODGROUP3 *</label>
+                <input type="text" id="f_pg3" class="form-input" placeholder="e.g. ADLP282">
+                <label>OPERATION *</label>
+                <input type="text" id="f_oper" class="form-input" placeholder="e.g. 2171">
+                <label>GOAL *</label>
+                <input type="number" id="f_goal" class="form-input" placeholder="Must enter a number > 0">
+                <label>LINK QTY *</label>
+                <input type="number" id="f_cellqty" class="form-input" placeholder="Must enter an integer >= 0" step="1"
+                    min="0" inputmode="numeric" pattern="\d*">
+            </div>
+            <div class="modal-footer-actions">
+                <button class="tab-link modal-action-btn" id="btn-finish-modal-submit"
+                    onclick="submitNewFinishGoal()">Save
+                    Goal</button>
+                <button class="tab-link modal-action-btn" onclick="closeFinishModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="table-container" style="max-height: 70vh;">
+            <table id="testTable">
+                <thead>
+                    <tr>
+                        <th class="pinned-col pinned-1 sortable" data-col="prodgroup3"
+                            onclick="sortFinishTable(this, 'prodgroup3')">
+                            Prodgroup3 <span class="sort-icon">⇕</span></th>
+                        <th class="pinned-col pinned-2 pinned-last sortable" data-col="operation"
+                            onclick="sortFinishTable(this, 'operation')">
+                            Operation <span class="sort-icon">⇕</span></th>
+                        <th class="sortable" data-col="shift_start_wip"
+                            onclick="sortFinishTable(this, 'shift_start_wip')">Start WIP
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="mor" onclick="sortFinishTable(this, 'mor')">MOR <span
+                                class="sort-icon">⇕</span></th>
+                        <th class="sortable" data-col="tr" onclick="sortFinishTable(this, 'tr')">TR <span
+                                class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="link_cell_qty" onclick="sortFinishTable(this, 'link_cell_qty')">
+                            Link Qty <span class="sort-icon">⇕</span></th>
+                        <th class="sortable" data-col="capacity" onclick="sortFinishTable(this, 'capacity')">Capacity
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable highlight-col" data-col="goal" onclick="sortFinishTable(this, 'goal')">Goal
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="output" onclick="sortFinishTable(this, 'output')">Output <span
+                                class="sort-icon">⇕</span></th>
+                        <th class="sortable" data-col="progress" onclick="sortFinishTable(this, 'progress')"
+                            title="Output / Goal">
+                            Progress <span class="sort-icon">⇕</span></th>
+                        <th data-col="miss_goal_comment">Miss Goal Comment</th>
+                        <th data-col="actions">Actions</th>
+                    </tr>
+
+                    <!-- Filter Row -->
+                    <tr class="filter-row">
+                        <th class="pinned-col pinned-1" data-col="prodgroup3"><input type="text"
+                                class="filter-input-field" data-filter-col="prodgroup3" oninput="applyFinishFilters()">
+                        </th>
+                        <th class="pinned-col pinned-2 pinned-last" data-col="operation"><input type="text"
+                                class="filter-input-field" data-filter-col="operation" oninput="applyFinishFilters()">
+                        </th>
+                        <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
+                                data-filter-col="shift_start_wip" oninput="applyFinishFilters()"></th>
+                        <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="link_cell_qty"><input type="text" class="filter-input-field"
+                                data-filter-col="link_cell_qty" oninput="applyFinishFilters()"></th>
+                        <th data-col="capacity"><input type="text" class="filter-input-field" data-filter-col="capacity"
+                                oninput="applyFinishFilters()"></th>
+                        <th class="highlight-col" data-col="goal"><input type="text" class="filter-input-field"
+                                data-filter-col="goal" oninput="applyFinishFilters()"></th>
+                        <th data-col="output"><input type="text" class="filter-input-field" data-filter-col="output"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="progress"></th>
+                        <th data-col="miss_goal_comment"><input type="text" class="filter-input-field"
+                                data-filter-col="miss_goal_comment" oninput="applyFinishFilters()"></th>
+                        <th data-col="actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if rows and rows|length > 0 %}
+                    {% for r in rows %}
+                    <tr data-id="{{ r.id }}">
+                        <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
+                        <td class="pinned-col pinned-2 pinned-last" data-col="operation">{{ r.operation }}</td>
+                        <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+                        <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
+                        <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
+                        <td class="cell-pad-4" data-col="link_cell_qty">
+                            <div class="action-group" id="group-cellqty-{{ r.id }}">
+                                <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*"
+                                    autocomplete="off" class="table-input cellqty-input"
+                                    value="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                                    data-original="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                                    oninput="handleFinishInput(this, 'cellqty')"
+                                    onblur="handleFinishInput(this, 'cellqty')">
+                            </div>
+                        </td>
+                        <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{%
+                            endif %}
+                        </td>
+                        <td class="cell-pad-4 highlight-col" data-col="goal">
+                            <div class="action-group" id="group-goal-{{ r.id }}">
+                                <input type="number" step="0.1" class="table-input goal-input"
+                                    value="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                                    data-original="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                                    oninput="handleFinishInput(this, 'goal')">
+                            </div>
+                        </td>
+                        <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{
+                            r.output|int }}{%
+                            else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
+                        <td class="progress-cell" data-col="progress">
+                            {% set goal_val = r.goal|default(0)|float %}
+                            {% set out_val = r.output|default(0)|float %}
+                            {% set pct = ((out_val / goal_val * 100)|round(1)) if goal_val > 0 else 0 %}
+                            <div class="progress-wrap">
+                                <div class="progress-track">
+                                    <div class="progress-fill{% if pct >= 100 %} is-ok{% elif pct >= 80 %} is-warn{% else %} is-bad{% endif %}"
+                                        style="width:{{ [pct, 100]|min }}%"></div>
+                                </div>
+                                <span class="progress-label">{{ pct }}%</span>
+                            </div>
+                        </td>
+                        <td class="cell-pad-4" data-col="miss_goal_comment">
+                            <div class="action-group" id="group-comment-{{ r.id }}">
+                                <textarea class="table-input comment-input" rows="1"
+                                    data-original="{{ r.comment or '' }}"
+                                    oninput="handleFinishInput(this, 'comment')">{{ r.comment or '' }}</textarea>
+                            </div>
+                        </td>
+                        <td class="cell-pad-4" data-col="actions">
+                            <button class="btn-delete" title="Delete row" onclick="deleteFinishRow({{ r.id }})">
+                                <span class="trash-icon">🗑️</span>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="12" style="text-align:center; padding:24px;">No data available for this shift.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const FINISH_PAGE = '{{ current_page }}';
+        const SELECTED_SHIFT = '{{ selected_shift }}';
+
+        // === Modal ===
+        function openFinishModal() {
+            document.getElementById('testModalOverlay').classList.add('active');
+            document.getElementById('f_pg3').value = '';
+            document.getElementById('f_oper').value = '';
+            document.getElementById('f_goal').value = '';
+            document.getElementById('f_cellqty').value = '';
+        }
+
+        function closeFinishModal() {
+            document.getElementById('testModalOverlay').classList.remove('active');
+        }
+
+        function submitNewFinishGoal() {
+            const pg3 = document.getElementById('f_pg3').value.trim();
+            const oper = document.getElementById('f_oper').value.trim();
+            const goal = parseFloat(document.getElementById('f_goal').value);
+            const cellqty = parseInt(document.getElementById('f_cellqty').value, 10);
+
+            if (!pg3 || !oper) {
+                showToast('PRODGROUP3 and OPERATION are required.', 'error');
+                return;
+            }
+            if (isNaN(goal) || goal <= 0) {
+                showToast('Goal must be a number > 0.', 'error');
+                return;
+            }
+            if (isNaN(cellqty) || cellqty < 0) {
+                showToast('Link Qty must be an integer >= 0.', 'error');
+                return;
+            }
+
+            fetch('/api/finish/add-new-goal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    page: FINISH_PAGE,
+                    prodgroup3: pg3,
+                    operation: oper,
+                    goal: goal,
+                    link_cell_qty: cellqty
+                })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Goal added successfully!', 'success');
+                        closeFinishModal();
+                        setTimeout(() => location.reload(), 600);
+                    } else {
+                        showToast(data.message || 'Failed to add goal.', 'error');
+                    }
+                })
+                .catch(err => showToast('Error: ' + err, 'error'));
+        }
+
+        // === Inline Input Handlers ===
+        function handleFinishInput(input, type) {
+            const row = input.closest('tr');
+            const id = row.dataset.id;
+            const original = input.dataset.original;
+            const current = input.value;
+
+            if (current === original) return;
+
+            let payload = { id: parseInt(id, 10) };
+            if (type === 'goal') {
+                payload.goal = current === '' ? null : parseFloat(current);
+                fetch('/api/finish/update-goal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            input.dataset.original = current;
+                            showToast('Goal updated.', 'success');
+                        } else {
+                            showToast(data.message || 'Update failed.', 'error');
+                        }
+                    })
+                    .catch(err => showToast('Error: ' + err, 'error'));
+            } else if (type === 'cellqty') {
+                payload.link_cell_qty = current === '' ? null : parseInt(current, 10);
+                fetch('/api/finish/update-cellqty', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            input.dataset.original = current;
+                            showToast('Link Qty updated.', 'success');
+                        } else {
+                            showToast(data.message || 'Update failed.', 'error');
+                        }
+                    })
+                    .catch(err => showToast('Error: ' + err, 'error'));
+            } else if (type === 'comment') {
+                payload.comment = current;
+                fetch('/api/finish/update-comment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            input.dataset.original = current;
+                            showToast('Comment updated.', 'success');
+                        } else {
+                            showToast(data.message || 'Update failed.', 'error');
+                        }
+                    })
+                    .catch(err => showToast('Error: ' + err, 'error'));
+            }
+        }
+
+        // === Delete Row ===
+        function deleteFinishRow(id) {
+            if (!confirm('Delete this row?')) return;
+            fetch('/api/finish/delete-row', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Row deleted.', 'success');
+                        document.querySelector(`tr[data-id="${id}"]`).remove();
+                    } else {
+                        showToast(data.message || 'Delete failed.', 'error');
+                    }
+                })
+                .catch(err => showToast('Error: ' + err, 'error'));
+        }
+
+        // === Sorting ===
+        let finishSortCol = null;
+        let finishSortAsc = true;
+
+        function sortFinishTable(th, col) {
+            const table = document.getElementById('testTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            if (finishSortCol === col) {
+                finishSortAsc = !finishSortAsc;
+            } else {
+                finishSortCol = col;
+                finishSortAsc = true;
+            }
+
+            rows.sort((a, b) => {
+                const aCell = a.querySelector(`td[data-col="${col}"]`);
+                const bCell = b.querySelector(`td[data-col="${col}"]`);
+                if (!aCell || !bCell) return 0;
+                let aVal = aCell.textContent.trim();
+                let bVal = bCell.textContent.trim();
+
+                const aNum = parseFloat(aVal);
+                const bNum = parseFloat(bVal);
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return finishSortAsc ? aNum - bNum : bNum - aNum;
+                }
+                return finishSortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+
+            // Update sort icons
+            table.querySelectorAll('th .sort-icon').forEach(icon => icon.textContent = '⇕');
+            th.querySelector('.sort-icon').textContent = finishSortAsc ? '↑' : '↓';
+        }
+
+        // === Filtering ===
+        function applyFinishFilters() {
+            const filters = {};
+            document.querySelectorAll('.filter-input-field').forEach(input => {
+                const col = input.dataset.filterCol;
+                const val = input.value.toLowerCase().trim();
+                if (val) filters[col] = val;
+            });
+
+            const rows = document.querySelectorAll('#testTable tbody tr');
+            rows.forEach(row => {
+                let visible = true;
+                for (const col in filters) {
+                    const cell = row.querySelector(`td[data-col="${col}"]`);
+                    if (cell) {
+                        const cellText = cell.textContent.toLowerCase();
+                        if (!cellText.includes(filters[col])) {
+                            visible = false;
+                            break;
+                        }
+                    }
+                }
+                row.style.display = visible ? '' : 'none';
+            });
+        }
+
+        // === Toast ===
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function confirmReportIssue(event) {
+            return confirm('This will open your email client to report an issue. Continue?');
+        }
+    </script>
+</body>
+
+</html>
