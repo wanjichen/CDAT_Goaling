@@ -153,7 +153,8 @@ def download_goal_output():
             db.func.coalesce(Report.manual_adjusted_goal,
                              Report.system_suggested_goal, 0)
         ).label('total_goal'),
-        db.func.sum(db.func.coalesce(Report.output, 0)).label('total_output')
+        db.func.sum(db.func.coalesce(Report.output, 0)).label('total_output'),
+        db.func.sum(db.func.coalesce(Report.qps1, 0)).label('total_qps1')
     ).filter(
         Report.shift.in_(shifts),
         (Report.is_deleted.is_(None)) | (Report.is_deleted.is_(False))
@@ -172,7 +173,8 @@ def download_goal_output():
         db.literal(None).label('entity'),
         db.func.sum(db.func.coalesce(TestReport.goal, 0)).label('total_goal'),
         db.func.sum(db.func.coalesce(TestReport.output, 0)
-                    ).label('total_output')
+                    ).label('total_output'),
+        db.func.sum(db.func.coalesce(TestReport.qps1, 0)).label('total_qps1')
     ).filter(
         TestReport.shift.in_(shifts),
         (TestReport.is_deleted.is_(None)) | (TestReport.is_deleted.is_(False))
@@ -186,6 +188,7 @@ def download_goal_output():
     for row in assembly_query:
         goal = row.total_goal or 0
         output = row.total_output or 0
+        qps1 = row.total_qps1 or 0
         if goal == 0:  # Skip rows with no goal
             continue
         achievement = (output / goal * 100) if goal > 0 else 0
@@ -196,6 +199,7 @@ def download_goal_output():
             'entity': row.entity or '',
             'goal': goal,
             'output': output,
+            'qps1': qps1,
             'achievement': round(achievement, 1),
         })
 
@@ -203,6 +207,7 @@ def download_goal_output():
     for row in test_query:
         goal = row.total_goal or 0
         output = row.total_output or 0
+        qps1 = row.total_qps1 or 0
         if goal == 0:  # Skip rows with no goal
             continue
         achievement = (output / goal * 100) if goal > 0 else 0
@@ -213,6 +218,7 @@ def download_goal_output():
             'entity': '',
             'goal': goal,
             'output': output,
+            'qps1': qps1,
             'achievement': round(achievement, 1),
         })
 
@@ -227,7 +233,7 @@ def download_goal_output():
 
     # Write header
     writer.writerow(['Shift', 'Module', 'Prodgroup3',
-                    'Entity', 'Goal', 'Output', 'Achievement %'])
+                    'Entity', 'Goal', 'Output', 'QPS1', 'Achievement %'])
 
     # Helper function to format numbers: integer if whole, else 3 decimals
     def format_number(val):
@@ -256,6 +262,7 @@ def download_goal_output():
             row['entity'],
             format_number(row['goal']),
             format_number(row['output']),
+            format_number(row['qps1']),
             format_achievement(row['achievement']),
         ])
 
@@ -789,16 +796,13 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
     - If PHVI row doesn't exist, create it with defaults
     - If HDMx is deleted AND PHVI shift_start_wip = 0, soft-delete PHVI row
     - Certain prodgroup3 values are excluded from PHVI calculation
+    - Uses MAX(id) to find PHVI row, matching how UI fetches the latest row
     """
-    # Prodgroup3 values that should NOT be included in PHVI goal calculation
+    # Prodgroup3 values excluded from PHVI goal calculation
     exclude_prod_list = ['ADP', 'ADPIOT', 'MTP', 'ARLS816L', 'ARLR816L',
                          'ARLS681', 'RPLS881', 'RPRS881', 'RPLS601', 'RPRS601']
 
-    # If this prodgroup3 is in the exclude list, skip PHVI sync
     if prodgroup3 in exclude_prod_list:
-        app.logger.info(
-            f"PHVI sync skipped: prodgroup3={prodgroup3} is in exclude list"
-        )
         return
 
     try:
@@ -809,20 +813,25 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'HDMx',
             (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
+                TestReport.is_deleted == False)
         ).first() is not None
 
-        # Find existing PHVI row for this shift + prodgroup3
-        phvi_row = db.session.query(TestReport).filter(
+        # Find existing PHVI row using MAX(id) to match UI's latest-row logic
+        phvi_max_id = db.session.query(
+            db.func.max(TestReport.id)
+        ).filter(
             TestReport.year == year,
             TestReport.shift == shift,
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'PHVI',
             (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
-        ).first()
+                TestReport.is_deleted == False)
+        ).scalar()
 
-        # If HDMx doesn't exist, check if we should delete PHVI
+        phvi_row = db.session.get(
+            TestReport, phvi_max_id) if phvi_max_id else None
+
+        # If HDMx doesn't exist, handle PHVI deletion or WIP-only update
         if not hdmx_exists:
             if phvi_row:
                 shift_start_wip = float(phvi_row.shift_start_wip or 0)
@@ -832,28 +841,19 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
                     phvi_row.goal_adjusted_at = datetime.now()
                     phvi_row.goal_adjusted_by = user
                     db.session.commit()
-                    app.logger.info(
-                        f"PHVI goal synced (deleted): shift={shift}, prodgroup3={prodgroup3}, "
-                        f"reason=no active HDMx rows and shift_start_wip=0"
-                    )
                 else:
-                    # No HDMx but has WIP - keep PHVI with goal = shift_start_wip
+                    # No HDMx but has WIP - set PHVI goal = shift_start_wip
                     phvi_goal = round(shift_start_wip, 1)
                     mor_val = float(phvi_row.mor or 30)
-                    calculated_tr = compute_tr_from_goal_and_mor(
-                        phvi_goal, mor_val)
                     phvi_row.goal = phvi_goal
-                    phvi_row.tr = calculated_tr
+                    phvi_row.tr = compute_tr_from_goal_and_mor(
+                        phvi_goal, mor_val)
                     phvi_row.goal_adjusted_at = datetime.now()
                     phvi_row.goal_adjusted_by = user
                     db.session.commit()
-                    app.logger.info(
-                        f"PHVI goal synced (update, WIP only): shift={shift}, prodgroup3={prodgroup3}, "
-                        f"HDMx=0, shift_start_wip={shift_start_wip}, PHVI_goal={phvi_goal}"
-                    )
             return
 
-        # Get HDMx goal for this shift + prodgroup3 (sum across all DLCPs)
+        # Get HDMx goal sum for this shift + prodgroup3 (across all DLCPs)
         hdmx_goal = db.session.query(
             db.func.sum(db.func.coalesce(TestReport.goal, 0))
         ).filter(
@@ -862,14 +862,12 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'HDMx',
             (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
+                TestReport.is_deleted == False)
         ).scalar() or 0
 
-        # Get shift_start_wip from existing PHVI row, or default to 0
+        # Calculate PHVI goal: HDMx * 0.9 + shift_start_wip
         shift_start_wip = float(
             phvi_row.shift_start_wip or 0) if phvi_row else 0
-
-        # Calculate PHVI goal: HDMx * 0.9 + shift_start_wip
         phvi_goal = round(float(hdmx_goal) * 0.9 + shift_start_wip, 1)
 
         # Calculate TR (MOR default is 30 for PHVI)
@@ -883,10 +881,6 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
             phvi_row.goal_adjusted_at = datetime.now()
             phvi_row.goal_adjusted_by = user
             db.session.commit()
-            app.logger.info(
-                f"PHVI goal synced (update): shift={shift}, prodgroup3={prodgroup3}, "
-                f"HDMx={hdmx_goal}, PHVI_goal={phvi_goal}"
-            )
         else:
             # Create new PHVI row with defaults
             new_phvi = TestReport(
@@ -907,13 +901,8 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
             )
             db.session.add(new_phvi)
             db.session.commit()
-            app.logger.info(
-                f"PHVI goal synced (insert): shift={shift}, prodgroup3={prodgroup3}, "
-                f"HDMx={hdmx_goal}, PHVI_goal={phvi_goal}"
-            )
 
     except Exception as e:
-        # Log error but don't fail the main operation
         app.logger.warning(f"PHVI sync failed for {shift}/{prodgroup3}: {e}")
         db.session.rollback()
 
@@ -927,6 +916,7 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
     - HDMx needs to be summed across all DLCPs for the same prodgroup3
     - If OLB row doesn't exist, create it with defaults
     - If both V8 and HDMx are deleted AND OLB shift_start_wip = 0, soft-delete OLB row
+    - Uses MAX(id) to find OLB row, matching how UI fetches the latest row
     """
     try:
         # Check if any active V8 rows exist for this prodgroup3
@@ -936,7 +926,7 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'V8',
             (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
+                TestReport.is_deleted == False)
         ).first() is not None
 
         # Check if any active HDMx rows exist for this prodgroup3
@@ -946,20 +936,25 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'HDMx',
             (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
+                TestReport.is_deleted == False)
         ).first() is not None
 
-        # Find existing OLB row for this shift + prodgroup3
-        olb_row = db.session.query(TestReport).filter(
+        # Find existing OLB row using MAX(id) to match UI's latest-row logic
+        olb_max_id = db.session.query(
+            db.func.max(TestReport.id)
+        ).filter(
             TestReport.year == year,
             TestReport.shift == shift,
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'OLB',
             (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
-        ).first()
+                TestReport.is_deleted == False)
+        ).scalar()
 
-        # If neither V8 nor HDMx exists, check if we should delete OLB
+        olb_row = db.session.get(
+            TestReport, olb_max_id) if olb_max_id else None
+
+        # If neither V8 nor HDMx exists, handle OLB deletion or WIP-only update
         if not v8_exists and not hdmx_exists:
             if olb_row:
                 shift_start_wip = float(olb_row.shift_start_wip or 0)
@@ -969,28 +964,19 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
                     olb_row.goal_adjusted_at = datetime.now()
                     olb_row.goal_adjusted_by = user
                     db.session.commit()
-                    app.logger.info(
-                        f"OLB goal synced (deleted): shift={shift}, prodgroup3={prodgroup3}, "
-                        f"reason=no active V8/HDMx rows and shift_start_wip=0"
-                    )
                 else:
-                    # No V8/HDMx but has WIP - keep OLB with goal = shift_start_wip
+                    # No V8/HDMx but has WIP - set OLB goal = shift_start_wip
                     olb_goal = round(shift_start_wip, 1)
                     mor_val = float(olb_row.mor) if olb_row.mor else None
-                    calculated_tr = compute_tr_from_goal_and_mor(
-                        olb_goal, mor_val) if mor_val else None
                     olb_row.goal = olb_goal
-                    olb_row.tr = calculated_tr
+                    olb_row.tr = compute_tr_from_goal_and_mor(
+                        olb_goal, mor_val) if mor_val else None
                     olb_row.goal_adjusted_at = datetime.now()
                     olb_row.goal_adjusted_by = user
                     db.session.commit()
-                    app.logger.info(
-                        f"OLB goal synced (update, WIP only): shift={shift}, prodgroup3={prodgroup3}, "
-                        f"V8=0, HDMx=0, shift_start_wip={shift_start_wip}, OLB_goal={olb_goal}"
-                    )
             return
 
-        # Get V8 goal for this shift + prodgroup3 (already at prodgroup3 level)
+        # Get V8 goal sum for this shift + prodgroup3
         v8_goal = db.session.query(
             db.func.sum(db.func.coalesce(TestReport.goal, 0))
         ).filter(
@@ -999,10 +985,10 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'V8',
             (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
+                TestReport.is_deleted == False)
         ).scalar() or 0
 
-        # Get HDMx goal for this shift + prodgroup3 (sum across all DLCPs)
+        # Get HDMx goal sum for this shift + prodgroup3 (across all DLCPs)
         hdmx_goal = db.session.query(
             db.func.sum(db.func.coalesce(TestReport.goal, 0))
         ).filter(
@@ -1011,18 +997,15 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'HDMx',
             (TestReport.is_deleted.is_(None)) | (
-                TestReport.is_deleted.is_(False))
+                TestReport.is_deleted == False)
         ).scalar() or 0
 
-        # Get shift_start_wip from existing OLB row, or default to 0
-        shift_start_wip = float(
-            olb_row.shift_start_wip or 0) if olb_row else 0
-
         # Calculate OLB goal: (V8 + HDMx) * 0.8 + shift_start_wip
+        shift_start_wip = float(olb_row.shift_start_wip or 0) if olb_row else 0
         olb_goal = round((float(v8_goal) + float(hdmx_goal))
                          * 0.8 + shift_start_wip, 1)
 
-        # Calculate TR (use existing MOR if available, otherwise no TR calculation for new rows)
+        # Calculate TR (use existing MOR if available)
         mor_val = float(olb_row.mor) if olb_row and olb_row.mor else None
         calculated_tr = compute_tr_from_goal_and_mor(
             olb_goal, mor_val) if mor_val else None
@@ -1034,10 +1017,6 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
             olb_row.goal_adjusted_at = datetime.now()
             olb_row.goal_adjusted_by = user
             db.session.commit()
-            app.logger.info(
-                f"OLB goal synced (update): shift={shift}, prodgroup3={prodgroup3}, "
-                f"V8={v8_goal}, HDMx={hdmx_goal}, OLB_goal={olb_goal}"
-            )
         else:
             # Create new OLB row with defaults (no MOR set)
             new_olb = TestReport(
@@ -1058,13 +1037,8 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
             )
             db.session.add(new_olb)
             db.session.commit()
-            app.logger.info(
-                f"OLB goal synced (insert): shift={shift}, prodgroup3={prodgroup3}, "
-                f"V8={v8_goal}, HDMx={hdmx_goal}, OLB_goal={olb_goal}"
-            )
 
     except Exception as e:
-        # Log error but don't fail the main operation
         app.logger.warning(f"OLB sync failed for {shift}/{prodgroup3}: {e}")
         db.session.rollback()
 
@@ -1589,10 +1563,12 @@ def test_update_goal():
 
         # Sync PHVI and OLB goals if HDMx goal was updated
         if old.module == 'HDMx':
+            db.session.flush()
             sync_phvi_goal(old.year, old.shift, old.prodgroup3, user)
             sync_olb_goal(old.year, old.shift, old.prodgroup3, user)
         # Sync only OLB if V8 goal was updated
         elif old.module == 'V8':
+            db.session.flush()
             sync_olb_goal(old.year, old.shift, old.prodgroup3, user)
 
         return json_success(new_id=old.id, tr=calculated_tr, goal=new_goal)
@@ -1864,6 +1840,9 @@ def test_update_goals_batch():
             db.session.rollback()
             results.append(
                 {'old_id': old_id_int, 'status': 'error', 'message': str(e)})
+
+    # Flush all updates to DB before syncing, so sync queries see new values
+    db.session.flush()
 
     # Sync PHVI goals for HDMx-affected prodgroup3s
     for year, shift, prodgroup3 in phvi_sync_contexts:
