@@ -145,10 +145,17 @@ window.submitNewTestGoal = async function submitNewTestGoal() {
     return;
   }
 
-  // integer-only (>= 0)
-  if (!/^\d+$/.test(cellQtyRaw)) {
-    showToast('Cell Qty must be an integer >= 0', 'error');
-    return;
+  // HDMx: integer-only (>= 0). STHI/BI/V8: allow up to 1 decimal place (>= 0).
+  if (page === 'HDMx') {
+    if (!/^\d+$/.test(cellQtyRaw)) {
+      showToast('Cell Qty must be an integer >= 0', 'error');
+      return;
+    }
+  } else {
+    if (!/^\d+(\.\d)?$/.test(cellQtyRaw) || Number(cellQtyRaw) < 0) {
+      showToast('Link Qty must be a number >= 0 (max 1 decimal place)', 'error');
+      return;
+    }
   }
 
   if (btn) { btn.innerText = '...'; btn.disabled = true; }
@@ -529,17 +536,17 @@ window.applyTestFilters = function applyTestFilters() {
 window.handleTestInput = function handleTestInput(input, type) {
   const row = input.closest('tr');
   const rowId = row.getAttribute('data-id');
-  // Enforce integer-only for Cell Qty at the UI level (HDMx only, STHI allows decimals).
+  // Enforce integer-only for Cell Qty at the UI level (HDMx only; STHI/BI/V8 allow decimals).
   if (type === 'cellqty') {
     const currentPage = getCurrentTestPageFromUrl();
     const raw = String(input.value ?? '');
-    if (currentPage === 'STHI') {
-      // Allow one decimal place for STHI Link Qty
-      const sanitized = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-      if (sanitized !== raw) input.value = sanitized;
-    } else {
+    if (currentPage === 'HDMx') {
       // Keep only digits (no decimals or negatives) for HDMx. Empty is allowed (means NULL).
       const sanitized = raw.replace(/[^0-9]/g, '');
+      if (sanitized !== raw) input.value = sanitized;
+    } else {
+      // Allow one decimal place for STHI, BI, V8 Link Qty
+      const sanitized = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
       if (sanitized !== raw) input.value = sanitized;
     }
   }
@@ -677,12 +684,13 @@ async function saveTestRowInternal(row, type, options = {}) {
         if (qtyVal === null || qtyVal === undefined) {
           qtyInput.value = '';
         } else {
-          // For STHI, format with 1 decimal place
+          // For STHI/BI/V8: show as integer if whole, else 1 decimal place.
           const currentPage = getCurrentTestPageFromUrl();
-          if (currentPage === 'STHI') {
-            qtyInput.value = Number(qtyVal).toFixed(1);
-          } else {
+          if (currentPage === 'HDMx') {
             qtyInput.value = String(qtyVal);
+          } else {
+            const n = Number(qtyVal);
+            qtyInput.value = Number.isInteger(n) ? String(n) : n.toFixed(1);
           }
         }
       }
@@ -775,18 +783,18 @@ window.saveTestRow = async function saveTestRow(btn, type) {
 
 document.addEventListener('DOMContentLoaded', () => {
   // Cell Qty: enforce integer-only even while typing (HDMx only).
-  // STHI allows one decimal place for Link Qty.
+  // STHI, BI, and V8 allow one decimal place for Link Qty.
   // Some browsers allow '.', 'e', '+', '-' temporarily on <input type="number">.
   const currentPage = getCurrentTestPageFromUrl();
   document.querySelectorAll('#testTable input.cellqty-input').forEach((el) => {
     el.addEventListener('keydown', (ev) => {
-      if (currentPage === 'STHI') {
-        // Allow decimal point for STHI, block others
-        const blocked = [',', 'e', 'E', '+', '-'];
-        if (blocked.includes(ev.key)) ev.preventDefault();
-      } else {
+      if (currentPage === 'HDMx') {
         // Block all non-integer characters for HDMx
         const blocked = ['.', ',', 'e', 'E', '+', '-'];
+        if (blocked.includes(ev.key)) ev.preventDefault();
+      } else {
+        // Allow decimal point for STHI, BI, V8; block others
+        const blocked = [',', 'e', 'E', '+', '-'];
         if (blocked.includes(ev.key)) ev.preventDefault();
       }
     });

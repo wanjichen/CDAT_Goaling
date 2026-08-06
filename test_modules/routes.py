@@ -172,7 +172,7 @@ def register_test_routes(app) -> None:
 
         # Finish pages are partitioned by module.
         # Only expose enabled modules as tabs.
-        all_tabs = ['MARK']
+        all_tabs = ['MARK', 'DVI']
         tabs = all_tabs
 
         page_name = (request.args.get('page') or (

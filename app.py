@@ -920,6 +920,241 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
         db.session.rollback()
 
 
+def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
+    """Sync MARK goal when STHI goal changes.
+
+    Formula: MARK goal = STHI_goal_sum * 0.9 + MARK.shift_start_wip
+
+    - STHI is summed across ALL rows (all operations + all dlcp) for the same prodgroup3
+    - MARK is matched at the prodgroup3 level only (operation is ignored)
+    - If MARK row doesn't exist, create it with all-zero defaults
+    - If STHI is deleted/absent AND MARK.shift_start_wip = 0, soft-delete MARK row
+    - No prodgroup3 exclusions
+    - Uses MAX(id) to find the MARK row, matching how the UI fetches the latest row
+    """
+    try:
+        # Check if any active STHI rows exist for this prodgroup3
+        sthi_exists = db.session.query(TestReport.id).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'STHI',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted == False)
+        ).first() is not None
+
+        # Find existing MARK row using MAX(id) to match UI's latest-row logic
+        mark_max_id = db.session.query(
+            db.func.max(TestReport.id)
+        ).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'MARK',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted == False)
+        ).scalar()
+
+        mark_row = db.session.get(
+            TestReport, mark_max_id) if mark_max_id else None
+
+        # If STHI doesn't exist, handle MARK deletion or WIP-only update
+        if not sthi_exists:
+            if mark_row:
+                shift_start_wip = float(mark_row.shift_start_wip or 0)
+                if shift_start_wip == 0:
+                    # No STHI and no WIP - soft delete MARK
+                    mark_row.is_deleted = True
+                    mark_row.goal_adjusted_at = datetime.now()
+                    mark_row.goal_adjusted_by = user
+                    db.session.commit()
+                else:
+                    # No STHI but has WIP - set MARK goal = shift_start_wip
+                    mark_goal = round(shift_start_wip, 1)
+                    mor_val = float(mark_row.mor or 0)
+                    mark_row.goal = mark_goal
+                    mark_row.tr = compute_tr_from_goal_and_mor(
+                        mark_goal, mor_val)
+                    mark_row.goal_adjusted_at = datetime.now()
+                    mark_row.goal_adjusted_by = user
+                    db.session.commit()
+                # Cascade: MARK changed (deleted or WIP-only goal) - sync DVI too.
+                db.session.flush()
+                sync_dvi_goal(year, shift, prodgroup3, user)
+            return
+
+        # Get STHI goal sum for this shift + prodgroup3 (across all operations/dlcp)
+        sthi_goal = db.session.query(
+            db.func.sum(db.func.coalesce(TestReport.goal, 0))
+        ).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'STHI',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted == False)
+        ).scalar() or 0
+
+        # Calculate MARK goal: STHI * 0.9 + shift_start_wip
+        shift_start_wip = float(
+            mark_row.shift_start_wip or 0) if mark_row else 0
+        mark_goal = round(float(sthi_goal) * 0.9 + shift_start_wip, 1)
+
+        # Calculate TR (default MOR is 0 for auto-created MARK rows)
+        mor_val = float(mark_row.mor or 0) if mark_row else 0
+        calculated_tr = compute_tr_from_goal_and_mor(mark_goal, mor_val)
+
+        if mark_row:
+            # Update existing MARK row
+            mark_row.goal = mark_goal
+            mark_row.tr = calculated_tr
+            mark_row.goal_adjusted_at = datetime.now()
+            mark_row.goal_adjusted_by = user
+            db.session.commit()
+        else:
+            # Create new MARK row with all-zero defaults
+            new_mark = TestReport(
+                year=year,
+                shift=shift,
+                prodgroup3=prodgroup3,
+                operation='7300',
+                module='MARK',
+                mor=0,
+                goal=mark_goal,
+                tr=calculated_tr,
+                dlcp=None,
+                capacity=0,
+                link_cell_qty=0,
+                shift_start_wip=0,
+                goal_adjusted_at=datetime.now(),
+                goal_adjusted_by=user,
+            )
+            db.session.add(new_mark)
+            db.session.commit()
+
+        # Cascade: MARK goal changed - keep DVI in sync too.
+        db.session.flush()
+        sync_dvi_goal(year, shift, prodgroup3, user)
+
+    except Exception as e:
+        app.logger.warning(f"MARK sync failed for {shift}/{prodgroup3}: {e}")
+        db.session.rollback()
+
+
+def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
+    """Sync DVI goal when MARK goal changes.
+
+    Formula: DVI goal = MARK_goal_sum * 0.9 + DVI.shift_start_wip
+
+    - MARK is summed across ALL rows (all operations) for the same prodgroup3
+    - DVI is matched at the prodgroup3 level only (operation is ignored)
+    - If DVI row doesn't exist, create it with all-zero defaults
+    - If MARK is deleted/absent AND DVI.shift_start_wip = 0, soft-delete DVI row
+    - No prodgroup3 exclusions
+    - Uses MAX(id) to find the DVI row, matching how the UI fetches the latest row
+    """
+    try:
+        # Check if any active MARK rows exist for this prodgroup3
+        mark_exists = db.session.query(TestReport.id).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'MARK',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted == False)
+        ).first() is not None
+
+        # Find existing DVI row using MAX(id) to match UI's latest-row logic
+        dvi_max_id = db.session.query(
+            db.func.max(TestReport.id)
+        ).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'DVI',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted == False)
+        ).scalar()
+
+        dvi_row = db.session.get(
+            TestReport, dvi_max_id) if dvi_max_id else None
+
+        # If MARK doesn't exist, handle DVI deletion or WIP-only update
+        if not mark_exists:
+            if dvi_row:
+                shift_start_wip = float(dvi_row.shift_start_wip or 0)
+                if shift_start_wip == 0:
+                    # No MARK and no WIP - soft delete DVI
+                    dvi_row.is_deleted = True
+                    dvi_row.goal_adjusted_at = datetime.now()
+                    dvi_row.goal_adjusted_by = user
+                    db.session.commit()
+                else:
+                    # No MARK but has WIP - set DVI goal = shift_start_wip
+                    dvi_goal = round(shift_start_wip, 1)
+                    mor_val = float(dvi_row.mor or 0)
+                    dvi_row.goal = dvi_goal
+                    dvi_row.tr = compute_tr_from_goal_and_mor(
+                        dvi_goal, mor_val)
+                    dvi_row.goal_adjusted_at = datetime.now()
+                    dvi_row.goal_adjusted_by = user
+                    db.session.commit()
+            return
+
+        # Get MARK goal sum for this shift + prodgroup3 (across all operations)
+        mark_goal_sum = db.session.query(
+            db.func.sum(db.func.coalesce(TestReport.goal, 0))
+        ).filter(
+            TestReport.year == year,
+            TestReport.shift == shift,
+            TestReport.prodgroup3 == prodgroup3,
+            TestReport.module == 'MARK',
+            (TestReport.is_deleted.is_(None)) | (
+                TestReport.is_deleted == False)
+        ).scalar() or 0
+
+        # Calculate DVI goal: MARK * 0.9 + shift_start_wip
+        shift_start_wip = float(
+            dvi_row.shift_start_wip or 0) if dvi_row else 0
+        dvi_goal = round(float(mark_goal_sum) * 0.9 + shift_start_wip, 1)
+
+        # Calculate TR (default MOR is 0 for auto-created DVI rows)
+        mor_val = float(dvi_row.mor or 0) if dvi_row else 0
+        calculated_tr = compute_tr_from_goal_and_mor(dvi_goal, mor_val)
+
+        if dvi_row:
+            # Update existing DVI row
+            dvi_row.goal = dvi_goal
+            dvi_row.tr = calculated_tr
+            dvi_row.goal_adjusted_at = datetime.now()
+            dvi_row.goal_adjusted_by = user
+            db.session.commit()
+        else:
+            # Create new DVI row with all-zero defaults
+            new_dvi = TestReport(
+                year=year,
+                shift=shift,
+                prodgroup3=prodgroup3,
+                operation='1007',
+                module='DVI',
+                mor=0,
+                goal=dvi_goal,
+                tr=calculated_tr,
+                dlcp=None,
+                capacity=0,
+                link_cell_qty=0,
+                shift_start_wip=0,
+                goal_adjusted_at=datetime.now(),
+                goal_adjusted_by=user,
+            )
+            db.session.add(new_dvi)
+            db.session.commit()
+
+    except Exception as e:
+        app.logger.warning(f"DVI sync failed for {shift}/{prodgroup3}: {e}")
+        db.session.rollback()
+
+
 def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
     """Sync OLB goal when V8 or HDMx goal changes.
 
@@ -1587,6 +1822,10 @@ def test_update_goal():
         elif old.module == 'V8':
             db.session.flush()
             sync_olb_goal(old.year, old.shift, old.prodgroup3, user)
+        # Sync MARK goal if STHI goal was updated
+        elif old.module == 'STHI':
+            db.session.flush()
+            sync_mark_goal(old.year, old.shift, old.prodgroup3, user)
 
         return json_success(new_id=old.id, tr=calculated_tr, goal=new_goal)
     except Exception as e:
@@ -1772,6 +2011,9 @@ def test_add_new_goal():
         if module_val in ('V8', 'HDMx'):
             sync_phvi_goal(default_year, default_shift, prodgroup3, user)
             sync_olb_goal(default_year, default_shift, prodgroup3, user)
+        # Sync MARK goal if STHI goal was added
+        elif module_val == 'STHI':
+            sync_mark_goal(default_year, default_shift, prodgroup3, user)
 
         return json_success(
             new_id=new_entry.id,
@@ -1956,6 +2198,9 @@ def test_delete_row():
         if module in ('V8', 'HDMx'):
             sync_phvi_goal(year, shift, prodgroup3, user)
             sync_olb_goal(year, shift, prodgroup3, user)
+        # Sync MARK goal if STHI row was deleted
+        elif module == 'STHI':
+            sync_mark_goal(year, shift, prodgroup3, user)
 
         return json_success(id=old.id, deleted_by=user)
     except Exception as e:
@@ -1995,6 +2240,11 @@ def finish_update_goal():
             goal_adjusted_at=datetime.now(),
             goal_adjusted_by=user
         )
+
+        # Sync DVI goal if MARK goal was updated
+        if old.module == 'MARK':
+            db.session.flush()
+            sync_dvi_goal(old.year, old.shift, old.prodgroup3, user)
 
         return json_success(new_id=old.id, tr=calculated_tr, goal=new_goal)
     except Exception as e:
@@ -2072,7 +2322,7 @@ def finish_add_new_goal():
             goal=data.get('goal'),
             dlcp=None,
             capacity=0,
-            link_cell_qty=0,
+            link_cell_qty=data.get('link_cell_qty') or 0,
             shift_start_wip=0,
             comment=data.get('comment'),
             goal_adjusted_at=datetime.now(),
@@ -2086,6 +2336,11 @@ def finish_add_new_goal():
 
         db.session.add(new_entry)
         db.session.commit()
+
+        # Sync DVI goal if a MARK goal was added
+        if module_val == 'MARK':
+            sync_dvi_goal(default_year, default_shift,
+                          new_entry.prodgroup3, user)
 
         return json_success(
             id=new_entry.id,
@@ -2113,9 +2368,19 @@ def finish_delete_row():
     if current_shift and old.shift and str(old.shift).strip() != str(current_shift).strip():
         return json_error('Delete is only allowed for the current shift', 403)
 
+    # Capture values before deletion for DVI sync
+    module = old.module
+    year = old.year
+    shift = old.shift
+    prodgroup3 = old.prodgroup3
+
     try:
         old.is_deleted = True
         db.session.commit()
+
+        # Sync DVI goal if a MARK row was deleted
+        if module == 'MARK':
+            sync_dvi_goal(year, shift, prodgroup3, user)
 
         return json_success(id=old.id, deleted_by=user)
     except Exception as e:

@@ -177,8 +177,8 @@
                 <label>GOAL *</label>
                 <input type="number" id="f_goal" class="form-input" placeholder="Must enter a number > 0">
                 <label>LINK QTY *</label>
-                <input type="number" id="f_cellqty" class="form-input" placeholder="Must enter an integer >= 0" step="1"
-                    min="0" inputmode="numeric" pattern="\d*">
+                <input type="number" id="f_cellqty" class="form-input" placeholder="Must enter a number >= 0 (e.g. 1.5)"
+                    step="0.1" min="0">
             </div>
             <div class="modal-footer-actions">
                 <button class="tab-link modal-action-btn" id="btn-finish-modal-submit"
@@ -202,6 +202,10 @@
                             Operation <span class="sort-icon">⇕</span></th>
                         <th class="sortable" data-col="shift_start_wip"
                             onclick="sortFinishTable(this, 'shift_start_wip')">Start WIP
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="start_wip_onhold"
+                            onclick="sortFinishTable(this, 'start_wip_onhold')">Start WIP Onhold
                             <span class="sort-icon">⇕</span>
                         </th>
                         <th class="sortable" data-col="mor" onclick="sortFinishTable(this, 'mor')">MOR <span
@@ -236,6 +240,8 @@
                         </th>
                         <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
                                 data-filter-col="shift_start_wip" oninput="applyFinishFilters()"></th>
+                        <th data-col="start_wip_onhold"><input type="text" class="filter-input-field"
+                                data-filter-col="start_wip_onhold" oninput="applyFinishFilters()"></th>
                         <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
                                 oninput="applyFinishFilters()"></th>
                         <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
@@ -261,14 +267,15 @@
                         <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
                         <td class="pinned-col pinned-2 pinned-last" data-col="operation">{{ r.operation }}</td>
                         <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+                        <td data-col="start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
                         <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
                         <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
                         <td class="cell-pad-4" data-col="link_cell_qty">
                             <div class="action-group" id="group-cellqty-{{ r.id }}">
-                                <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*"
-                                    autocomplete="off" class="table-input cellqty-input"
-                                    value="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
-                                    data-original="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                                <input type="number" step="0.1" min="0" autocomplete="off"
+                                    class="table-input cellqty-input"
+                                    value="{% if r.link_cell_qty is none %}{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
+                                    data-original="{% if r.link_cell_qty is none %}{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
                                     oninput="handleFinishInput(this, 'cellqty')"
                                     onblur="handleFinishInput(this, 'cellqty')">
                             </div>
@@ -307,18 +314,38 @@
                             </div>
                         </td>
                         <td class="cell-pad-4" data-col="actions">
-                            <button class="btn-delete" title="Delete row" onclick="deleteFinishRow({{ r.id }})">
-                                <span class="trash-icon">🗑️</span>
+                            <button type="button" class="tab-link btn-secondary btn-delete"
+                                onclick="confirmDeleteFinishRow(this)" title="Delete this row" aria-label="Delete" {% if
+                                selected_shift and current_shift and selected_shift !=current_shift %}disabled
+                                aria-disabled="true" {% endif %}>
+                                <span class="trash-icon" aria-hidden="true">🗑</span>
                             </button>
                         </td>
                     </tr>
                     {% endfor %}
                     {% else %}
-                    <tr>
-                        <td colspan="12" style="text-align:center; padding:24px;">No data available for this shift.</td>
+                    <tr class="empty-state-row">
+                        <td colspan="13" style="text-align:center; padding:24px;">No data available for this shift.</td>
                     </tr>
                     {% endif %}
                 </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td class="pinned-col pinned-1" data-col="prodgroup3"><strong>Total</strong></td>
+                        <td class="pinned-col pinned-2 pinned-last" data-col="operation"></td>
+                        <td data-col="shift_start_wip" id="finish-total-shift_start_wip"></td>
+                        <td data-col="start_wip_onhold" id="finish-total-start_wip_onhold"></td>
+                        <td data-col="mor"></td>
+                        <td data-col="tr" id="finish-total-tr"></td>
+                        <td data-col="link_cell_qty" id="finish-total-link_cell_qty"></td>
+                        <td data-col="capacity" id="finish-total-capacity"></td>
+                        <td class="highlight-col" data-col="goal" id="finish-total-goal"></td>
+                        <td data-col="output" id="finish-total-output"></td>
+                        <td class="progress-cell" data-col="progress" id="finish-total-progress"></td>
+                        <td data-col="miss_goal_comment"></td>
+                        <td data-col="actions"></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
@@ -326,6 +353,79 @@
     <script>
         const FINISH_PAGE = '{{ current_page }}';
         const SELECTED_SHIFT = '{{ selected_shift }}';
+
+        // === Totals ===
+        function getFinishDataRows() {
+            return Array.from(document.querySelectorAll('#testTable tbody tr[data-id]'));
+        }
+
+        function getFinishCellValue(td) {
+            if (!td) return '';
+            const input = td.querySelector('input.table-input, textarea.table-input');
+            return input ? String(input.value ?? '').trim() : String(td.textContent ?? '').trim();
+        }
+
+        function parseFinishNumber(raw) {
+            const s = String(raw ?? '').trim();
+            if (!s) return 0;
+            const n = parseFloat(s);
+            return Number.isNaN(n) ? 0 : n;
+        }
+
+        function setFinishTotalText(id, value, decimals = 1) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = value === 0 ? '' : String(Number(value.toFixed(decimals)));
+        }
+
+        function updateFinishTotalProgress(totalOutput, totalGoal) {
+            const el = document.getElementById('finish-total-progress');
+            if (!el) return;
+            if (totalGoal <= 0) {
+                el.innerHTML = '';
+                return;
+            }
+            const pct = Math.round((totalOutput / totalGoal * 100) * 10) / 10;
+            const clamped = Math.min(pct, 100);
+            const cls = pct >= 100 ? 'is-ok' : (pct >= 80 ? 'is-warn' : 'is-bad');
+            el.innerHTML = `<div class="progress-wrap">
+                <div class="progress-track">
+                    <div class="progress-fill ${cls}" style="width:${clamped}%"></div>
+                </div>
+                <span class="progress-label">${pct}%</span>
+            </div>`;
+        }
+
+        function calculateFinishTotals() {
+            const rows = getFinishDataRows();
+            let totalShiftStartWip = 0, totalStartWipOnhold = 0, totalTr = 0,
+                totalCellQty = 0, totalCapacity = 0, totalGoal = 0, totalOutput = 0;
+
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+                const getVal = (col) => {
+                    const td = row.querySelector(`td[data-col="${col}"]`);
+                    if (!td) return 0;
+                    return parseFinishNumber(getFinishCellValue(td));
+                };
+                totalShiftStartWip += getVal('shift_start_wip');
+                totalStartWipOnhold += getVal('start_wip_onhold');
+                totalTr += getVal('tr');
+                totalCellQty += getVal('link_cell_qty');
+                totalCapacity += getVal('capacity');
+                totalGoal += getVal('goal');
+                totalOutput += getVal('output');
+            });
+
+            setFinishTotalText('finish-total-shift_start_wip', totalShiftStartWip, 0);
+            setFinishTotalText('finish-total-start_wip_onhold', totalStartWipOnhold, 0);
+            setFinishTotalText('finish-total-tr', totalTr, 1);
+            setFinishTotalText('finish-total-link_cell_qty', totalCellQty, 1);
+            setFinishTotalText('finish-total-capacity', totalCapacity, 1);
+            setFinishTotalText('finish-total-goal', totalGoal, 1);
+            setFinishTotalText('finish-total-output', totalOutput, 1);
+            updateFinishTotalProgress(totalOutput, totalGoal);
+        }
 
         // === Modal ===
         function openFinishModal() {
@@ -344,7 +444,7 @@
             const pg3 = document.getElementById('f_pg3').value.trim();
             const oper = document.getElementById('f_oper').value.trim();
             const goal = parseFloat(document.getElementById('f_goal').value);
-            const cellqty = parseInt(document.getElementById('f_cellqty').value, 10);
+            const cellqty = parseFloat(document.getElementById('f_cellqty').value);
 
             if (!pg3 || !oper) {
                 showToast('PRODGROUP3 and OPERATION are required.', 'error');
@@ -355,7 +455,7 @@
                 return;
             }
             if (isNaN(cellqty) || cellqty < 0) {
-                showToast('Link Qty must be an integer >= 0.', 'error');
+                showToast('Link Qty must be a number >= 0.', 'error');
                 return;
             }
 
@@ -405,13 +505,14 @@
                         if (data.success) {
                             input.dataset.original = current;
                             showToast('Goal updated.', 'success');
+                            calculateFinishTotals();
                         } else {
                             showToast(data.message || 'Update failed.', 'error');
                         }
                     })
                     .catch(err => showToast('Error: ' + err, 'error'));
             } else if (type === 'cellqty') {
-                payload.link_cell_qty = current === '' ? null : parseInt(current, 10);
+                payload.link_cell_qty = current === '' ? null : parseFloat(current);
                 fetch('/api/finish/update-cellqty', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -422,6 +523,7 @@
                         if (data.success) {
                             input.dataset.original = current;
                             showToast('Link Qty updated.', 'success');
+                            calculateFinishTotals();
                         } else {
                             showToast(data.message || 'Update failed.', 'error');
                         }
@@ -448,23 +550,42 @@
         }
 
         // === Delete Row ===
-        function deleteFinishRow(id) {
-            if (!confirm('Delete this row?')) return;
-            fetch('/api/finish/delete-row', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id })
-            })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast('Row deleted.', 'success');
-                        document.querySelector(`tr[data-id="${id}"]`).remove();
-                    } else {
-                        showToast(data.message || 'Delete failed.', 'error');
-                    }
-                })
-                .catch(err => showToast('Error: ' + err, 'error'));
+        async function confirmDeleteFinishRow(btnEl) {
+            const row = btnEl && btnEl.closest ? btnEl.closest('tr') : null;
+            const id = row ? row.getAttribute('data-id') : null;
+            if (!row || !id) return;
+
+            const pg3 = (row.querySelector('td[data-col="prodgroup3"]')?.textContent || '').trim();
+            const oper = (row.querySelector('td[data-col="operation"]')?.textContent || '').trim();
+
+            const msg = `Delete this row?\n\nProdgroup3: ${pg3}\nOperation: ${oper}\n\nThis will delete the record.`;
+            if (!window.confirm(msg)) return;
+
+            btnEl.disabled = true;
+            try {
+                const res = await fetch('/api/finish/delete-row', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+
+                const raw = await res.text();
+                let data;
+                try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
+
+                if (!res.ok || !data || data.status !== 'success') {
+                    const errMsg = (data && data.message) ? data.message : (raw ? raw.slice(0, 240) : `HTTP ${res.status}`);
+                    throw new Error(errMsg);
+                }
+
+                row.remove();
+                showToast('Row deleted.', 'success');
+                calculateFinishTotals();
+            } catch (e) {
+                showToast(String(e.message || e), 'error');
+            } finally {
+                btnEl.disabled = false;
+            }
         }
 
         // === Sorting ===
@@ -529,6 +650,7 @@
                 }
                 row.style.display = visible ? '' : 'none';
             });
+            calculateFinishTotals();
         }
 
         // === Toast ===
@@ -548,6 +670,9 @@
         function confirmReportIssue(event) {
             return confirm('This will open your email client to report an issue. Continue?');
         }
+
+        // Initialize totals on page load
+        calculateFinishTotals();
     </script>
 </body>
 
