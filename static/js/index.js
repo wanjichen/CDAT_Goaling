@@ -495,9 +495,9 @@ function calculateTotals() {
 
     document.getElementById('total-shift_start_wip').textContent = totalShiftStartWip === 0 ? '' : parseFloat(totalShiftStartWip.toFixed(3));
     document.getElementById('total-tr').textContent = totalTr === 0 ? '' : parseFloat(totalTr.toFixed(1));
-    document.getElementById('total-output').textContent = totalOutput === 0 ? '' : parseFloat(totalOutput.toFixed(3));
-    document.getElementById('total-system_goal').textContent = totalSystem === 0 ? '' : parseFloat(totalSystem.toFixed(3));
-    document.getElementById('total-manual_goal').textContent = totalManual === 0 ? '' : parseFloat(totalManual.toFixed(3));
+    document.getElementById('total-output').textContent = totalOutput === 0 ? '' : parseFloat(totalOutput.toFixed(1));
+    document.getElementById('total-system_goal').textContent = totalSystem === 0 ? '' : parseFloat(totalSystem.toFixed(1));
+    document.getElementById('total-manual_goal').textContent = totalManual === 0 ? '' : parseFloat(totalManual.toFixed(1));
 
     updateMainProgressBars();
 }

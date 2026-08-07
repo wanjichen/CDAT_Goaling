@@ -327,9 +327,9 @@
                             (r.operation
                             is not none and (r.operation|string).endswith('.0')) else (r.operation if r.operation is not
                             none else '') }}</td>
-                        <td class="col-3 pinned-col pinned-3" data-col="shift_start_wip">{{ (r.shift_start_wip |
-                            round(3)) if
-                            r.shift_start_wip else '' }}</td>
+                        <td class="col-3 pinned-col pinned-3" data-col="shift_start_wip">{% if r.shift_start_wip is
+                            none %}0{% elif r.shift_start_wip == (r.shift_start_wip|int) %}{{
+                            r.shift_start_wip|int }}{% else %}{{ '%.3f'|format(r.shift_start_wip) }}{% endif %}</td>
                         <td class="cell-pad-4 pinned-col pinned-4 pinned-last" data-col="entity">
                             {% if current_page in ['EPX', 'TCB', 'HBC-JDC', 'DIA', 'BA'] %}
                             <input type="text" class="table-input entity-input" placeholder=""
@@ -340,37 +340,51 @@
                             {{ r.entity or '' }}
                             {% endif %}
                         </td>
-                        <td data-col="qtg1">{{ (r.qtg1 | round(3)) if r.qtg1 else '' }}</td>
-                        <td data-col="qps1">{{ (r.qps1 | round(3)) if r.qps1 else '' }}</td>
-                        <td data-col="stg1">{{ (r.stg1 | round(3)) if r.stg1 else '' }}</td>
-                        <td data-col="qtg2">{{ (r.qtg2 | round(3)) if r.qtg2 else '' }}</td>
-                        <td data-col="qps2">{{ (r.qps2 | round(3)) if r.qps2 else '' }}</td>
-                        <td data-col="stg2">{{ (r.stg2 | round(3)) if r.stg2 else '' }}</td>
-                        <td class="mor-val" data-col="mor">{{ (r.mor | round(3)) if r.mor else '' }}</td>
+                        <td data-col="qtg1">{% if r.qtg1 is none %}0{% elif r.qtg1 == (r.qtg1|int) %}{{ r.qtg1|int
+                            }}{% else %}{{ '%.3f'|format(r.qtg1) }}{% endif %}</td>
+                        <td data-col="qps1">{% if r.qps1 is none %}0{% elif r.qps1 == (r.qps1|int) %}{{ r.qps1|int
+                            }}{% else %}{{ '%.3f'|format(r.qps1) }}{% endif %}</td>
+                        <td data-col="stg1">{% if r.stg1 is none %}0{% elif r.stg1 == (r.stg1|int) %}{{ r.stg1|int
+                            }}{% else %}{{ '%.1f'|format(r.stg1) }}{% endif %}</td>
+                        <td data-col="qtg2">{% if r.qtg2 is none %}0{% elif r.qtg2 == (r.qtg2|int) %}{{ r.qtg2|int
+                            }}{% else %}{{ '%.3f'|format(r.qtg2) }}{% endif %}</td>
+                        <td data-col="qps2">{% if r.qps2 is none %}0{% elif r.qps2 == (r.qps2|int) %}{{ r.qps2|int
+                            }}{% else %}{{ '%.3f'|format(r.qps2) }}{% endif %}</td>
+                        <td data-col="stg2">{% if r.stg2 is none %}0{% elif r.stg2 == (r.stg2|int) %}{{ r.stg2|int
+                            }}{% else %}{{ '%.1f'|format(r.stg2) }}{% endif %}</td>
+                        <td class="mor-val" data-col="mor">{% if not r.mor %}{% elif r.mor == (r.mor|int) %}{{
+                            r.mor|int }}{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
                         <td class="tr-val" data-col="tr">
                             {% set _mor = (r.mor | float) if r.mor else 0 %}
                             {% set _goal = (r.manual_adjusted_goal | float) if (r.manual_adjusted_goal and
                             r.manual_adjusted_goal > 0) else ((r.system_suggested_goal | float) if
                             r.system_suggested_goal else 0) %}
                             {% if _mor and _mor != 0 and _goal and _goal != 0 %}
-                            {{ '%.1f'|format(_goal / _mor) }}
+                            {% set _tr = _goal / _mor %}
+                            {% if _tr == (_tr|int) %}{{ _tr|int }}{% else %}{{ '%.1f'|format(_tr) }}{% endif %}
                             {% else %}
 
                             {% endif %}
                         </td>
-                        <td data-col="output">{{ (r.output | round(3)) if r.output else '' }}</td>
+                        <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{
+                            r.output|int }}{% else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
                         <td data-col="progress" class="progress-cell"></td>
-                        <td class="highlight-col" data-col="system_goal">{{
-                            (r.system_suggested_goal | round(3)) if r.system_suggested_goal else '' }}</td>
+                        <td class="highlight-col" data-col="system_goal">{% if r.system_suggested_goal is none %}0{%
+                            elif r.system_suggested_goal == (r.system_suggested_goal|int) %}{{
+                            r.system_suggested_goal|int }}{% else %}{{ '%.1f'|format(r.system_suggested_goal) }}{%
+                            endif %}</td>
 
                         <td data-col="subcell_info" title="{{ r.subcell_info or '' }}">{{ r.subcell_info or '' }}</td>
 
                         <td class="cell-pad-4" data-col="manual_goal"
                             title="Adjusted by: {{ r.goal_adjusted_by or 'N/A' }}&#10;At: {{ r.goal_adjusted_at.strftime('%Y-%m-%d %H:%M:%S') if r.goal_adjusted_at else 'N/A' }}">
+                            {% set _mg = r.manual_adjusted_goal %}
+                            {% set _mg_shown = (_mg and _mg > 0) or (_mg == 0 and r.goal_adjusted_at) %}
+                            {% set _mg_disp = ((_mg|int) if _mg == (_mg|int) else ('%.1f'|format(_mg))) if _mg_shown
+                            else '' %}
                             <input type="number"
-                                class="table-input goal-input {% if (r.manual_adjusted_goal and r.manual_adjusted_goal > 0) or (r.manual_adjusted_goal == 0 and r.goal_adjusted_at) %}is-intervened{% endif %}"
-                                value="{{ (r.manual_adjusted_goal | round(3)) if (r.manual_adjusted_goal and r.manual_adjusted_goal > 0) or (r.manual_adjusted_goal == 0 and r.goal_adjusted_at) else '' }}"
-                                data-original="{{ (r.manual_adjusted_goal | round(3)) if (r.manual_adjusted_goal and r.manual_adjusted_goal > 0) or (r.manual_adjusted_goal == 0 and r.goal_adjusted_at) else '' }}"
+                                class="table-input goal-input {% if _mg_shown %}is-intervened{% endif %}"
+                                value="{{ _mg_disp }}" data-original="{{ _mg_disp }}"
                                 oninput="handleInput(this, 'goal')">
                         </td>
 

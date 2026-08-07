@@ -197,7 +197,7 @@
                         <th class="pinned-col pinned-1 sortable" data-col="prodgroup3"
                             onclick="sortFinishTable(this, 'prodgroup3')">
                             Prodgroup3 <span class="sort-icon">⇕</span></th>
-                        <th class="pinned-col pinned-2 pinned-last sortable" data-col="operation"
+                        <th class="pinned-col pinned-2 sortable" data-col="operation"
                             onclick="sortFinishTable(this, 'operation')">
                             Operation <span class="sort-icon">⇕</span></th>
                         <th class="sortable" data-col="shift_start_wip"
@@ -206,6 +206,32 @@
                         </th>
                         <th class="sortable" data-col="start_wip_onhold"
                             onclick="sortFinishTable(this, 'start_wip_onhold')">Start WIP Onhold
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="commit1" onclick="sortFinishTable(this, 'commit1')"
+                            title="prebuild included">Commit1
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="commit2" onclick="sortFinishTable(this, 'commit2')"
+                            title="prebuild included">Commit2
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="qtg1" onclick="sortFinishTable(this, 'qtg1')">QTG1
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="stg1" onclick="sortFinishTable(this, 'stg1')">STG1
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="qtg2" onclick="sortFinishTable(this, 'qtg2')">QTG2
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="qps2" onclick="sortFinishTable(this, 'qps2')">QPS2
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="stg2" onclick="sortFinishTable(this, 'stg2')">STG2
+                            <span class="sort-icon">⇕</span>
+                        </th>
+                        <th class="sortable" data-col="qps1" onclick="sortFinishTable(this, 'qps1')">QPS1
                             <span class="sort-icon">⇕</span>
                         </th>
                         <th class="sortable" data-col="mor" onclick="sortFinishTable(this, 'mor')">MOR <span
@@ -235,13 +261,29 @@
                         <th class="pinned-col pinned-1" data-col="prodgroup3"><input type="text"
                                 class="filter-input-field" data-filter-col="prodgroup3" oninput="applyFinishFilters()">
                         </th>
-                        <th class="pinned-col pinned-2 pinned-last" data-col="operation"><input type="text"
+                        <th class="pinned-col pinned-2" data-col="operation"><input type="text"
                                 class="filter-input-field" data-filter-col="operation" oninput="applyFinishFilters()">
                         </th>
                         <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
                                 data-filter-col="shift_start_wip" oninput="applyFinishFilters()"></th>
                         <th data-col="start_wip_onhold"><input type="text" class="filter-input-field"
                                 data-filter-col="start_wip_onhold" oninput="applyFinishFilters()"></th>
+                        <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="commit2"><input type="text" class="filter-input-field" data-filter-col="commit2"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="qps2"><input type="text" class="filter-input-field" data-filter-col="qps2"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2"
+                                oninput="applyFinishFilters()"></th>
+                        <th data-col="qps1"><input type="text" class="filter-input-field" data-filter-col="qps1"
+                                oninput="applyFinishFilters()"></th>
                         <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
                                 oninput="applyFinishFilters()"></th>
                         <th data-col="tr"><input type="text" class="filter-input-field" data-filter-col="tr"
@@ -265,47 +307,59 @@
                     {% for r in rows %}
                     <tr data-id="{{ r.id }}">
                         <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
-                        <td class="pinned-col pinned-2 pinned-last" data-col="operation">{{ r.operation }}</td>
-                        <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
-                        <td data-col="start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
-                        <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
-                        <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
+                        <td class="pinned-col pinned-2" data-col="operation">{{ r.operation }}</td>
+                        <td data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{% elif r.shift_start_wip
+                            == (r.shift_start_wip|int) %}{{ r.shift_start_wip|int }}{% else %}{{
+                            '%.3f'|format(r.shift_start_wip) }}{% endif %}</td>
+                        <td data-col="start_wip_onhold">{% if r.shift_start_wip_onhold is none %}0{% elif
+                            r.shift_start_wip_onhold == (r.shift_start_wip_onhold|int) %}{{
+                            r.shift_start_wip_onhold|int }}{% else %}{{ '%.3f'|format(r.shift_start_wip_onhold) }}{%
+                            endif %}</td>
+                        <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{
+                            r.commit1|int }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
+                        <td data-col="commit2">{% if r.commit2 is none %}0{% elif r.commit2 == (r.commit2|int) %}{{
+                            r.commit2|int }}{% else %}{{ '%.3f'|format(r.commit2) }}{% endif %}</td>
+                        <td data-col="qtg1">{% if r.qtg1 is none %}0{% elif r.qtg1 == (r.qtg1|int) %}{{ r.qtg1|int }}{%
+                            else %}{{ '%.3f'|format(r.qtg1) }}{% endif %}</td>
+                        <td data-col="stg1">{% if r.stg1 is none %}0{% elif r.stg1 == (r.stg1|int) %}{{ r.stg1|int }}{%
+                            else %}{{ '%.1f'|format(r.stg1) }}{% endif %}</td>
+                        <td data-col="qtg2">{% if r.qtg2 is none %}0{% elif r.qtg2 == (r.qtg2|int) %}{{ r.qtg2|int }}{%
+                            else %}{{ '%.3f'|format(r.qtg2) }}{% endif %}</td>
+                        <td data-col="qps2">{% if r.qps2 is none %}0{% elif r.qps2 == (r.qps2|int) %}{{ r.qps2|int }}{%
+                            else %}{{ '%.3f'|format(r.qps2) }}{% endif %}</td>
+                        <td data-col="stg2">{% if r.stg2 is none %}0{% elif r.stg2 == (r.stg2|int) %}{{ r.stg2|int }}{%
+                            else %}{{ '%.1f'|format(r.stg2) }}{% endif %}</td>
+                        <td data-col="qps1">{% if r.qps1 is none %}0{% elif r.qps1 == (r.qps1|int) %}{{ r.qps1|int }}{%
+                            else %}{{ '%.3f'|format(r.qps1) }}{% endif %}</td>
+                        <td data-col="mor">{% if not r.mor %}{% elif r.mor == (r.mor|int) %}{{ r.mor|int }}{% else %}{{
+                            '%.1f'|format(r.mor) }}{% endif %}</td>
+                        <td data-col="tr">{% if not r.tr %}{% elif r.tr == (r.tr|int) %}{{ r.tr|int }}{% else %}{{
+                            '%.1f'|format(r.tr) }}{% endif %}</td>
                         <td class="cell-pad-4" data-col="link_cell_qty">
                             <div class="action-group" id="group-cellqty-{{ r.id }}">
                                 <input type="number" step="0.1" min="0" autocomplete="off"
                                     class="table-input cellqty-input"
-                                    value="{% if r.link_cell_qty is none %}{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
-                                    data-original="{% if r.link_cell_qty is none %}{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
+                                    value="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
+                                    data-original="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
                                     oninput="handleFinishInput(this, 'cellqty')"
                                     onblur="handleFinishInput(this, 'cellqty')">
                             </div>
                         </td>
-                        <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{%
-                            endif %}
+                        <td data-col="capacity">{% if r.capacity is none %}0{% elif r.capacity == (r.capacity|int) %}{{
+                            r.capacity|int }}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
                         </td>
                         <td class="cell-pad-4 highlight-col" data-col="goal">
                             <div class="action-group" id="group-goal-{{ r.id }}">
                                 <input type="number" step="0.1" class="table-input goal-input"
-                                    value="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
-                                    data-original="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                                    value="{% if r.goal is none %}0{% elif r.goal == (r.goal|int) %}{{ r.goal|int }}{% else %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                                    data-original="{% if r.goal is none %}0{% elif r.goal == (r.goal|int) %}{{ r.goal|int }}{% else %}{{ '%.1f'|format(r.goal) }}{% endif %}"
                                     oninput="handleFinishInput(this, 'goal')">
                             </div>
                         </td>
                         <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{
                             r.output|int }}{%
-                            else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
-                        <td class="progress-cell" data-col="progress">
-                            {% set goal_val = r.goal|default(0)|float %}
-                            {% set out_val = r.output|default(0)|float %}
-                            {% set pct = ((out_val / goal_val * 100)|round(1)) if goal_val > 0 else 0 %}
-                            <div class="progress-wrap">
-                                <div class="progress-track">
-                                    <div class="progress-fill{% if pct >= 100 %} is-ok{% elif pct >= 80 %} is-warn{% else %} is-bad{% endif %}"
-                                        style="width:{{ [pct, 100]|min }}%"></div>
-                                </div>
-                                <span class="progress-label">{{ pct }}%</span>
-                            </div>
-                        </td>
+                            else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
+                        <td class="progress-cell" data-col="progress"></td>
                         <td class="cell-pad-4" data-col="miss_goal_comment">
                             <div class="action-group" id="group-comment-{{ r.id }}">
                                 <textarea class="table-input comment-input" rows="1"
@@ -325,16 +379,24 @@
                     {% endfor %}
                     {% else %}
                     <tr class="empty-state-row">
-                        <td colspan="13" style="text-align:center; padding:24px;">No data available for this shift.</td>
+                        <td colspan="21" style="text-align:center; padding:24px;">No data available for this shift.</td>
                     </tr>
                     {% endif %}
                 </tbody>
                 <tfoot>
                     <tr class="total-row">
                         <td class="pinned-col pinned-1" data-col="prodgroup3"><strong>Total</strong></td>
-                        <td class="pinned-col pinned-2 pinned-last" data-col="operation"></td>
+                        <td class="pinned-col pinned-2" data-col="operation"></td>
                         <td data-col="shift_start_wip" id="finish-total-shift_start_wip"></td>
                         <td data-col="start_wip_onhold" id="finish-total-start_wip_onhold"></td>
+                        <td data-col="commit1"></td>
+                        <td data-col="commit2"></td>
+                        <td data-col="qtg1"></td>
+                        <td data-col="stg1"></td>
+                        <td data-col="qtg2"></td>
+                        <td data-col="qps2"></td>
+                        <td data-col="stg2"></td>
+                        <td data-col="qps1"></td>
                         <td data-col="mor"></td>
                         <td data-col="tr" id="finish-total-tr"></td>
                         <td data-col="link_cell_qty" id="finish-total-link_cell_qty"></td>
@@ -350,6 +412,7 @@
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/progress_scale.js') }}?v=20260520"></script>
     <script>
         const FINISH_PAGE = '{{ current_page }}';
         const SELECTED_SHIFT = '{{ selected_shift }}';
@@ -378,22 +441,100 @@
             el.textContent = value === 0 ? '' : String(Number(value.toFixed(decimals)));
         }
 
-        function updateFinishTotalProgress(totalOutput, totalGoal) {
-            const el = document.getElementById('finish-total-progress');
-            if (!el) return;
-            if (totalGoal <= 0) {
-                el.innerHTML = '';
-                return;
+        function clampFinish(n, min, max) {
+            return Math.min(max, Math.max(min, n));
+        }
+
+        function formatFinishPercent(pct) {
+            if (!Number.isFinite(pct)) return '';
+            return `${Math.round(pct)}%`;
+        }
+
+        function ensureFinishProgressCell(td) {
+            if (!td) return null;
+            if (td.querySelector('.progress-wrap')) return td;
+
+            td.innerHTML = '';
+            const wrap = document.createElement('div');
+            wrap.className = 'progress-wrap';
+
+            const track = document.createElement('div');
+            track.className = 'progress-track';
+            const fill = document.createElement('div');
+            fill.className = 'progress-fill';
+            track.appendChild(fill);
+
+            const label = document.createElement('span');
+            label.className = 'progress-label';
+            label.textContent = '';
+
+            wrap.appendChild(track);
+            wrap.appendChild(label);
+            td.appendChild(wrap);
+            return td;
+        }
+
+        function setFinishProgress(td, outputVal, goalVal) {
+            if (!td) return;
+            ensureFinishProgressCell(td);
+
+            const fill = td.querySelector('.progress-fill');
+            const label = td.querySelector('.progress-label');
+            if (!fill || !label) return;
+
+            const outN = parseFinishNumber(outputVal);
+            const goalN = parseFinishNumber(goalVal);
+
+            let pct = 0;
+            if (goalN > 0) pct = (outN / goalN) * 100;
+
+            const pctClamped = (window.ProgressScale && window.ProgressScale.clamp)
+                ? window.ProgressScale.clamp(pct, 0, 200)
+                : clampFinish(pct, 0, 200);
+
+            const pctForWidth = (window.ProgressScale && window.ProgressScale.clamp)
+                ? window.ProgressScale.clamp(pctClamped, 0, 100)
+                : clampFinish(pctClamped, 0, 100);
+            fill.style.width = `${pctForWidth}%`;
+
+            if (window.ProgressScale && typeof window.ProgressScale.fillGradientCss === 'function') {
+                fill.style.background = window.ProgressScale.fillGradientCss(pct);
+            } else {
+                fill.style.background = '';
             }
-            const pct = Math.round((totalOutput / totalGoal * 100) * 10) / 10;
-            const clamped = Math.min(pct, 100);
-            const cls = pct >= 100 ? 'is-ok' : (pct >= 80 ? 'is-warn' : 'is-bad');
-            el.innerHTML = `<div class="progress-wrap">
-                <div class="progress-track">
-                    <div class="progress-fill ${cls}" style="width:${clamped}%"></div>
-                </div>
-                <span class="progress-label">${pct}%</span>
-            </div>`;
+
+            fill.classList.remove('is-ok', 'is-warn', 'is-bad');
+            const cls = (window.ProgressScale && window.ProgressScale.classifyProgress)
+                ? window.ProgressScale.classifyProgress(pct, outN, goalN)
+                : (goalN <= 0 && outN <= 0 ? '' : (pct >= 100 ? 'is-ok' : (pct >= 50 ? 'is-warn' : 'is-bad')));
+            if (cls) fill.classList.add(cls);
+
+            label.textContent = goalN > 0 ? formatFinishPercent(pct) : '';
+            td.title = goalN > 0 ? `${outN} / ${goalN} (${pct.toFixed(1)}%)` : `${outN} / ${goalN}`;
+        }
+
+        function updateFinishProgressBars() {
+            getFinishDataRows().forEach(row => {
+                const tdProgress = row.querySelector('td[data-col="progress"]');
+                if (!tdProgress) return;
+                const tdOut = row.querySelector('td[data-col="output"]');
+                const outVal = getFinishCellValue(tdOut);
+                const tdGoal = row.querySelector('td[data-col="goal"]');
+                const goalVal = getFinishCellValue(tdGoal);
+                setFinishProgress(tdProgress, outVal, goalVal);
+            });
+
+            const footerProgress = document.getElementById('finish-total-progress');
+            const footerOut = document.getElementById('finish-total-output');
+            const footerGoal = document.getElementById('finish-total-goal');
+            if (footerProgress && footerOut && footerGoal) {
+                setFinishProgress(footerProgress, footerOut.textContent, footerGoal.textContent);
+            }
+        }
+
+        function updateFinishTotalProgress(totalOutput, totalGoal) {
+            // Superseded by updateFinishProgressBars(); kept as no-op wrapper for compatibility.
+            updateFinishProgressBars();
         }
 
         function calculateFinishTotals() {
@@ -417,14 +558,14 @@
                 totalOutput += getVal('output');
             });
 
-            setFinishTotalText('finish-total-shift_start_wip', totalShiftStartWip, 0);
-            setFinishTotalText('finish-total-start_wip_onhold', totalStartWipOnhold, 0);
+            setFinishTotalText('finish-total-shift_start_wip', totalShiftStartWip, 3);
+            setFinishTotalText('finish-total-start_wip_onhold', totalStartWipOnhold, 3);
             setFinishTotalText('finish-total-tr', totalTr, 1);
             setFinishTotalText('finish-total-link_cell_qty', totalCellQty, 1);
             setFinishTotalText('finish-total-capacity', totalCapacity, 1);
             setFinishTotalText('finish-total-goal', totalGoal, 1);
             setFinishTotalText('finish-total-output', totalOutput, 1);
-            updateFinishTotalProgress(totalOutput, totalGoal);
+            updateFinishProgressBars();
         }
 
         // === Modal ===
@@ -624,6 +765,7 @@
             // Update sort icons
             table.querySelectorAll('th .sort-icon').forEach(icon => icon.textContent = '⇕');
             th.querySelector('.sort-icon').textContent = finishSortAsc ? '↑' : '↓';
+            updateFinishPinnedOffsets();
         }
 
         // === Filtering ===
@@ -651,6 +793,7 @@
                 row.style.display = visible ? '' : 'none';
             });
             calculateFinishTotals();
+            updateFinishPinnedOffsets();
         }
 
         // === Toast ===
@@ -671,8 +814,42 @@
             return confirm('This will open your email client to report an issue. Continue?');
         }
 
+        // === Sticky/pinned column offsets (mirrors test.js updateTestPinnedOffsets) ===
+        // finish.html only pins 2 columns (Prodgroup3, Operation) — there is no pinned-3.
+        function updateFinishPinnedOffsets() {
+            const table = document.getElementById('testTable');
+            if (!table) return;
+
+            const headerRow = table.querySelector('thead tr:first-child');
+            if (!headerRow) return;
+
+            const getWidth = (colName) => {
+                const th = headerRow.querySelector(`th[data-col="${colName}"]`);
+                if (!th) return 0;
+                if (th.style.display === 'none') return 0;
+                return th.offsetWidth || 0;
+            };
+
+            const w1 = getWidth('prodgroup3');
+
+            const left1 = 0;
+            const left2 = left1 + w1;
+
+            table.style.setProperty('--test-pinned-left-1', `${left1}px`);
+            table.style.setProperty('--test-pinned-left-2', `${left2}px`);
+        }
+
         // Initialize totals on page load
         calculateFinishTotals();
+
+        // Keep sticky pinned offsets correct.
+        // - Run once immediately
+        // - Run again after the browser has laid out fonts/styles
+        // - Run on resize
+        updateFinishPinnedOffsets();
+        requestAnimationFrame(() => updateFinishPinnedOffsets());
+        setTimeout(() => updateFinishPinnedOffsets(), 250);
+        window.addEventListener('resize', () => updateFinishPinnedOffsets());
     </script>
 </body>
 

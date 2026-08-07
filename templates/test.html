@@ -230,6 +230,12 @@
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="stg1" onclick="sortTestTable(this, 'stg1')">STG1 <span
                 class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qtg2" onclick="sortTestTable(this, 'qtg2')">QTG2 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="qps2" onclick="sortTestTable(this, 'qps2')">QPS2 <span
+                class="sort-icon">⇕</span></th>
+            <th class="sortable" data-col="stg2" onclick="sortTestTable(this, 'stg2')">STG2 <span
+                class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="mor" onclick="sortTestTable(this, 'mor')">MOR <span
                 class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="link_cell_qty" onclick="sortTestTable(this, 'link_cell_qty')">Link Qty <span
@@ -341,6 +347,12 @@
                 oninput="applyTestFilters()"></th>
             <th data-col="stg1"><input type="text" class="filter-input-field" data-filter-col="stg1"
                 oninput="applyTestFilters()"></th>
+            <th data-col="qtg2"><input type="text" class="filter-input-field" data-filter-col="qtg2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="qps2"><input type="text" class="filter-input-field" data-filter-col="qps2"
+                oninput="applyTestFilters()"></th>
+            <th data-col="stg2"><input type="text" class="filter-input-field" data-filter-col="stg2"
+                oninput="applyTestFilters()"></th>
             <th data-col="mor"><input type="text" class="filter-input-field" data-filter-col="mor"
                 oninput="applyTestFilters()"></th>
             <th data-col="link_cell_qty"><input type="text" class="filter-input-field" data-filter-col="link_cell_qty"
@@ -437,109 +449,148 @@
             <td class="pinned-col pinned-2" data-col="operation">{{ r.operation }}</td>
             {% if current_page == 'STHI' %}
             <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
-            <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
+            <td data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{% elif r.shift_start_wip ==
+              (r.shift_start_wip|int) %}{{ r.shift_start_wip|int }}{% else %}{{ '%.3f'|format(r.shift_start_wip)
+              }}{% endif %}</td>
             <td data-col="sfgi_wip">{{ r.sfgi_wip or 0 }}</td>
             <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{ r.commit1|int
               }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
-            <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
-            <td data-col="stg1">{{ r.stg1 or 0 }}</td>
-            <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
+            <td data-col="qtg1">{% if r.qtg1 is none %}0{% elif r.qtg1 == (r.qtg1|int) %}{{ r.qtg1|int }}{% else
+              %}{{ '%.3f'|format(r.qtg1) }}{% endif %}</td>
+            <td data-col="stg1">{% if r.stg1 is none %}0{% elif r.stg1 == (r.stg1|int) %}{{ r.stg1|int }}{% else
+              %}{{ '%.1f'|format(r.stg1) }}{% endif %}</td>
+            <td data-col="qtg2">{% if r.qtg2 is none %}0{% elif r.qtg2 == (r.qtg2|int) %}{{ r.qtg2|int }}{% else
+              %}{{ '%.3f'|format(r.qtg2) }}{% endif %}</td>
+            <td data-col="qps2">{% if r.qps2 is none %}0{% elif r.qps2 == (r.qps2|int) %}{{ r.qps2|int }}{% else
+              %}{{ '%.3f'|format(r.qps2) }}{% endif %}</td>
+            <td data-col="stg2">{% if r.stg2 is none %}0{% elif r.stg2 == (r.stg2|int) %}{{ r.stg2|int }}{% else
+              %}{{ '%.1f'|format(r.stg2) }}{% endif %}</td>
+            <td data-col="mor">{% if not r.mor %}{% elif r.mor == (r.mor|int) %}{{ r.mor|int }}{% else %}{{
+              '%.1f'|format(r.mor) }}{% endif %}</td>
             <td class="cell-pad-4" data-col="link_cell_qty">
               <div class="action-group" id="group-cellqty-{{ r.id }}">
                 <input type="number" step="0.1" min="0" autocomplete="off" class="table-input cellqty-input"
-                  value="{% if r.link_cell_qty is not none %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
-                  data-original="{% if r.link_cell_qty is not none %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
+                  value="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
+                  data-original="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
                   oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
               </div>
             </td>
-            <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
+            <td data-col="capacity">{% if r.capacity is none %}0{% elif r.capacity == (r.capacity|int) %}{{
+              r.capacity|int }}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
             </td>
             <td data-col="qps1"
               class="{% if (r.qps1|default(0)|float) >= 0 and (r.goal|default(0)|float) < (r.qps1|default(0)|float) %}qps1-warning{% endif %}">
-              {{ r.qps1 or 0 }}</td>
+              {% if r.qps1 is none %}0{% elif r.qps1 == (r.qps1|int) %}{{ r.qps1|int }}{% else %}{{
+              '%.3f'|format(r.qps1) }}{% endif %}</td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">
                 <input type="number" step="0.1" class="table-input goal-input"
-                  value="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
-                  data-original="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  value="{% if r.goal is none %}0{% elif r.goal == (r.goal|int) %}{{ r.goal|int }}{% else %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  data-original="{% if r.goal is none %}0{% elif r.goal == (r.goal|int) %}{{ r.goal|int }}{% else %}{{ '%.1f'|format(r.goal) }}{% endif %}"
                   oninput="handleTestInput(this, 'goal')">
               </div>
             </td>
             <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
-              else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
+              else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
             {% elif current_page == 'HDMx' %}
             <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
-            <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
-            <td data-col="start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
+            <td data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{% elif r.shift_start_wip ==
+              (r.shift_start_wip|int) %}{{ r.shift_start_wip|int }}{% else %}{{ '%.3f'|format(r.shift_start_wip)
+              }}{% endif %}</td>
+            <td data-col="start_wip_onhold">{% if r.shift_start_wip_onhold is none %}0{% elif
+              r.shift_start_wip_onhold == (r.shift_start_wip_onhold|int) %}{{ r.shift_start_wip_onhold|int }}{% else
+              %}{{ '%.3f'|format(r.shift_start_wip_onhold) }}{% endif %}</td>
             <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{ r.commit1|int
               }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
             <td data-col="commit2">{% if r.commit2 is none %}0{% elif r.commit2 == (r.commit2|int) %}{{ r.commit2|int
               }}{% else %}{{ '%.3f'|format(r.commit2) }}{% endif %}</td>
-            <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
-            <td data-col="stg1">{{ r.stg1 or 0 }}</td>
-            <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
-            <td data-col="qps2">{{ r.qps2 or 0 }}</td>
-            <td data-col="stg2">{{ r.stg2 or 0 }}</td>
-            <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
-            <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
+            <td data-col="qtg1">{% if r.qtg1 is none %}0{% elif r.qtg1 == (r.qtg1|int) %}{{ r.qtg1|int }}{% else
+              %}{{ '%.3f'|format(r.qtg1) }}{% endif %}</td>
+            <td data-col="stg1">{% if r.stg1 is none %}0{% elif r.stg1 == (r.stg1|int) %}{{ r.stg1|int }}{% else
+              %}{{ '%.1f'|format(r.stg1) }}{% endif %}</td>
+            <td data-col="qtg2">{% if r.qtg2 is none %}0{% elif r.qtg2 == (r.qtg2|int) %}{{ r.qtg2|int }}{% else
+              %}{{ '%.3f'|format(r.qtg2) }}{% endif %}</td>
+            <td data-col="qps2">{% if r.qps2 is none %}0{% elif r.qps2 == (r.qps2|int) %}{{ r.qps2|int }}{% else
+              %}{{ '%.3f'|format(r.qps2) }}{% endif %}</td>
+            <td data-col="stg2">{% if r.stg2 is none %}0{% elif r.stg2 == (r.stg2|int) %}{{ r.stg2|int }}{% else
+              %}{{ '%.1f'|format(r.stg2) }}{% endif %}</td>
+            <td data-col="mor">{% if not r.mor %}{% elif r.mor == (r.mor|int) %}{{ r.mor|int }}{% else %}{{
+              '%.1f'|format(r.mor) }}{% endif %}</td>
+            <td data-col="tr">{% if not r.tr %}{% elif r.tr == (r.tr|int) %}{{ r.tr|int }}{% else %}{{
+              '%.1f'|format(r.tr) }}{% endif %}</td>
             <td class="cell-pad-4" data-col="link_cell_qty">
               <div class="action-group" id="group-cellqty-{{ r.id }}">
                 <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
                   class="table-input cellqty-input"
-                  value="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
-                  data-original="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else '' }}"
+                  value="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else 0 }}"
+                  data-original="{{ (r.link_cell_qty|int) if r.link_cell_qty is not none else 0 }}"
                   oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
               </div>
             </td>
-            <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
+            <td data-col="capacity">{% if r.capacity is none %}0{% elif r.capacity == (r.capacity|int) %}{{
+              r.capacity|int }}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
             </td>
-            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+            <td data-col="qps1">{% if r.qps1 is none %}0{% elif r.qps1 == (r.qps1|int) %}{{ r.qps1|int }}{% else
+              %}{{ '%.3f'|format(r.qps1) }}{% endif %}</td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">
                 <input type="number" step="0.1" class="table-input goal-input"
-                  value="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
-                  data-original="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  value="{% if r.goal is none %}0{% elif r.goal == (r.goal|int) %}{{ r.goal|int }}{% else %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  data-original="{% if r.goal is none %}0{% elif r.goal == (r.goal|int) %}{{ r.goal|int }}{% else %}{{ '%.1f'|format(r.goal) }}{% endif %}"
                   oninput="handleTestInput(this, 'goal')">
               </div>
             </td>
             <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
-              else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
+              else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
             {% else %}
             {# BI and V8: like HDMx but without DLCP column #}
-            <td data-col="shift_start_wip">{{ r.shift_start_wip or 0 }}</td>
-            <td data-col="start_wip_onhold">{{ r.shift_start_wip_onhold or 0 }}</td>
+            <td data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{% elif r.shift_start_wip ==
+              (r.shift_start_wip|int) %}{{ r.shift_start_wip|int }}{% else %}{{ '%.3f'|format(r.shift_start_wip)
+              }}{% endif %}</td>
+            <td data-col="start_wip_onhold">{% if r.shift_start_wip_onhold is none %}0{% elif
+              r.shift_start_wip_onhold == (r.shift_start_wip_onhold|int) %}{{ r.shift_start_wip_onhold|int }}{% else
+              %}{{ '%.3f'|format(r.shift_start_wip_onhold) }}{% endif %}</td>
             <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{ r.commit1|int
               }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
             <td data-col="commit2">{% if r.commit2 is none %}0{% elif r.commit2 == (r.commit2|int) %}{{ r.commit2|int
               }}{% else %}{{ '%.3f'|format(r.commit2) }}{% endif %}</td>
-            <td data-col="qtg1">{{ r.qtg1 or 0 }}</td>
-            <td data-col="stg1">{{ r.stg1 or 0 }}</td>
-            <td data-col="qtg2">{{ r.qtg2 or 0 }}</td>
-            <td data-col="qps2">{{ r.qps2 or 0 }}</td>
-            <td data-col="stg2">{{ r.stg2 or 0 }}</td>
-            <td data-col="mor">{% if r.mor is none %}0.0{% else %}{{ '%.1f'|format(r.mor) }}{% endif %}</td>
-            <td data-col="tr">{% if r.tr is none %}0.0{% else %}{{ '%.1f'|format(r.tr) }}{% endif %}</td>
+            <td data-col="qtg1">{% if r.qtg1 is none %}0{% elif r.qtg1 == (r.qtg1|int) %}{{ r.qtg1|int }}{% else
+              %}{{ '%.3f'|format(r.qtg1) }}{% endif %}</td>
+            <td data-col="stg1">{% if r.stg1 is none %}0{% elif r.stg1 == (r.stg1|int) %}{{ r.stg1|int }}{% else
+              %}{{ '%.1f'|format(r.stg1) }}{% endif %}</td>
+            <td data-col="qtg2">{% if r.qtg2 is none %}0{% elif r.qtg2 == (r.qtg2|int) %}{{ r.qtg2|int }}{% else
+              %}{{ '%.3f'|format(r.qtg2) }}{% endif %}</td>
+            <td data-col="qps2">{% if r.qps2 is none %}0{% elif r.qps2 == (r.qps2|int) %}{{ r.qps2|int }}{% else
+              %}{{ '%.3f'|format(r.qps2) }}{% endif %}</td>
+            <td data-col="stg2">{% if r.stg2 is none %}0{% elif r.stg2 == (r.stg2|int) %}{{ r.stg2|int }}{% else
+              %}{{ '%.1f'|format(r.stg2) }}{% endif %}</td>
+            <td data-col="mor">{% if not r.mor %}{% elif r.mor == (r.mor|int) %}{{ r.mor|int }}{% else %}{{
+              '%.1f'|format(r.mor) }}{% endif %}</td>
+            <td data-col="tr">{% if not r.tr %}{% elif r.tr == (r.tr|int) %}{{ r.tr|int }}{% else %}{{
+              '%.1f'|format(r.tr) }}{% endif %}</td>
             <td class="cell-pad-4" data-col="link_cell_qty">
               <div class="action-group" id="group-cellqty-{{ r.id }}">
                 <input type="number" step="0.1" min="0" autocomplete="off" class="table-input cellqty-input"
-                  value="{% if r.link_cell_qty is none %}{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
-                  data-original="{% if r.link_cell_qty is none %}{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
+                  value="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
+                  data-original="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
                   oninput="handleTestInput(this, 'cellqty')" onblur="handleTestInput(this, 'cellqty')">
               </div>
             </td>
-            <td data-col="capacity">{% if r.capacity is none %}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
+            <td data-col="capacity">{% if r.capacity is none %}0{% elif r.capacity == (r.capacity|int) %}{{
+              r.capacity|int }}{% else %}{{ '%.1f'|format(r.capacity) }}{% endif %}
             </td>
-            <td data-col="qps1">{{ r.qps1 or 0 }}</td>
+            <td data-col="qps1">{% if r.qps1 is none %}0{% elif r.qps1 == (r.qps1|int) %}{{ r.qps1|int }}{% else
+              %}{{ '%.3f'|format(r.qps1) }}{% endif %}</td>
             <td class="cell-pad-4 highlight-col" data-col="goal">
               <div class="action-group" id="group-goal-{{ r.id }}">
                 <input type="number" step="0.1" class="table-input goal-input"
-                  value="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
-                  data-original="{% if r.goal is not none %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  value="{% if r.goal is none %}0{% elif r.goal == (r.goal|int) %}{{ r.goal|int }}{% else %}{{ '%.1f'|format(r.goal) }}{% endif %}"
+                  data-original="{% if r.goal is none %}0{% elif r.goal == (r.goal|int) %}{{ r.goal|int }}{% else %}{{ '%.1f'|format(r.goal) }}{% endif %}"
                   oninput="handleTestInput(this, 'goal')">
               </div>
             </td>
             <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
-              else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
+              else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
             {% endif %}
             <td data-col="progress" class="progress-cell"></td>
             <td class="cell-pad-4" data-col="miss_goal_comment"
@@ -576,6 +627,9 @@
             <td data-col="commit1" id="test-total-commit1"></td>
             <td data-col="qtg1"></td>
             <td data-col="stg1"></td>
+            <td data-col="qtg2"></td>
+            <td data-col="qps2"></td>
+            <td data-col="stg2"></td>
             <td data-col="mor"></td>
             <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
             <td data-col="capacity" id="test-total-capacity"></td>

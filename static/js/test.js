@@ -350,7 +350,8 @@ function updateQps1Warnings() {
 function setTotalText(id, value) {
   const el = document.getElementById(id);
   if (!el) return;
-  const decimals = (id === 'test-total-tr') ? 1 : 3;
+  const ONE_DECIMAL_IDS = ['test-total-tr', 'test-total-link_cell_qty', 'test-total-capacity', 'test-total-goal', 'test-total-output'];
+  const decimals = ONE_DECIMAL_IDS.includes(id) ? 1 : 3;
   el.textContent = value === 0 ? '' : String(Number(value.toFixed(decimals)));
 }
 
