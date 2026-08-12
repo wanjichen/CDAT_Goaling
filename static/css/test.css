@@ -129,14 +129,14 @@
 #testTable th[data-col="operation"],
 #testTable td[data-col="operation"] {
   padding: 1px 2px;
-  min-width: 110px;
+  min-width: 85px;
 }
 
 /* Keep long header labels readable (avoid wrapping after recent column width changes). */
 #testTable th[data-col="sfgi_wip"],
 #testTable td[data-col="sfgi_wip"] {
-  min-width: 120px;
-  width: 120px;
+  min-width: 85px;
+  width: 85px;
 }
 
 #testTable th[data-col="sfgi_wip"] {
@@ -149,7 +149,7 @@
 }
 
 #testTable th[data-col="sfgi_wip"] .sort-icon {
-  margin-left: 6px;
+  margin-left: 3px;
 }
 
 #testTable th[data-col="sfgi_wip"] .sort-icon {
@@ -183,6 +183,9 @@
 #testTable td.pinned-col.pinned-1 { z-index: 12; }
 #testTable td.pinned-col.pinned-2 { z-index: 13; }
 #testTable td.pinned-col.pinned-3 { z-index: 14; }
+#testTable td.pinned-col.pinned-4 { z-index: 15; }
+#testTable td.pinned-col.pinned-5 { z-index: 16; }
+#testTable td.pinned-col.pinned-6 { z-index: 17; }
 
 /* Pinned cells must always be opaque so the scrollable cells don't visually overlap. */
 #testTable td.pinned-col {
@@ -237,6 +240,9 @@
 #testTable .pinned-col.pinned-1 { left: var(--test-pinned-left-1, 0px); }
 #testTable .pinned-col.pinned-2 { left: var(--test-pinned-left-2, 0px); }
 #testTable .pinned-col.pinned-3 { left: var(--test-pinned-left-3, 0px); }
+#testTable .pinned-col.pinned-4 { left: var(--test-pinned-left-4, 0px); }
+#testTable .pinned-col.pinned-5 { left: var(--test-pinned-left-5, 0px); }
+#testTable .pinned-col.pinned-6 { left: var(--test-pinned-left-6, 0px); }
 
 /* Divider after the last pinned column (matches Assembly look) */
 #testTable th.pinned-last,
@@ -603,38 +609,41 @@
 /* Column width hints */
 #testTable th[data-col="prodgroup3"],
 #testTable td[data-col="prodgroup3"] {
-  width: 110px;
-  min-width: 110px;
+  width: 95px;
+  min-width: 95px;
 }
 
 #testTable th[data-col="operation"],
 #testTable td[data-col="operation"] {
-  width: 110px;
-  min-width: 110px;
+  width: 85px;
+  min-width: 85px;
 }
 
 #testTable th[data-col="dlcp"],
 #testTable td[data-col="dlcp"] {
-  width: 75px;
-  min-width: 75px;
-  max-width: 75px;
+  width: 70px;
+  min-width: 70px;
+  max-width: 70px;
 }
 
 #testTable th[data-col="shift_start_wip"],
 #testTable td[data-col="shift_start_wip"] {
-  width: 110px;
-  min-width: 110px;
+  width: 85px;
+  min-width: 85px;
 }
 
 #testTable th[data-col="sfgi_wip"],
-#testTable td[data-col="sfgi_wip"] { width: 120px; }
+#testTable td[data-col="sfgi_wip"] { 
+  width: 85px;
+  min-width: 85px;
+}
 
 #testTable th[data-col="commit1"],
 #testTable td[data-col="commit1"],
 #testTable th[data-col="commit2"],
 #testTable td[data-col="commit2"] {
-  width: 90px;
-  min-width: 90px;
+  width: 80px;
+  min-width: 80px;
 }
 
 /* Metric columns: keep a consistent width across the numeric KPI fields. */

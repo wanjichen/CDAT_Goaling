@@ -815,22 +815,73 @@ document.addEventListener('DOMContentLoaded', () => {
       return th.offsetWidth || 0;
     };
 
-  const w1 = getWidth('prodgroup3');
-  const w2 = getWidth('operation');
-  const w3 = getWidth('shift_start_wip');
+    const currentPage = getCurrentTestPageFromUrl();
 
-  const left1 = 0;
-  const left2 = left1 + w1;
-  const left3 = left2 + w2;
+    // Calculate offsets based on the current page
+    if (currentPage === 'STHI') {
+      // STHI has 6 pinned columns
+      const w1 = getWidth('prodgroup3');
+      const w2 = getWidth('operation');
+      const w3 = getWidth('dlcp');
+      const w4 = getWidth('shift_start_wip');
+      const w5 = getWidth('sfgi_wip');
+      const w6 = getWidth('commit1');
 
-  // Pinned-3 starts after col1+col2. (w3 is not needed for left3, but keep for debugging.)
-  void w3;
+      const left1 = 0;
+      const left2 = left1 + w1;
+      const left3 = left2 + w2;
+      const left4 = left3 + w3;
+      const left5 = left4 + w4;
+      const left6 = left5 + w5;
 
-  table.style.setProperty('--test-pinned-left-1', `${left1}px`);
-  table.style.setProperty('--test-pinned-left-2', `${left2}px`);
-  table.style.setProperty('--test-pinned-left-3', `${left3}px`);
+      table.style.setProperty('--test-pinned-left-1', `${left1}px`);
+      table.style.setProperty('--test-pinned-left-2', `${left2}px`);
+      table.style.setProperty('--test-pinned-left-3', `${left3}px`);
+      table.style.setProperty('--test-pinned-left-4', `${left4}px`);
+      table.style.setProperty('--test-pinned-left-5', `${left5}px`);
+      table.style.setProperty('--test-pinned-left-6', `${left6}px`);
+    } else if (currentPage === 'OLB') {
+      // OLB has 3 pinned columns: prodgroup3, operation, shift_start_wip
+      const w1 = getWidth('prodgroup3');
+      const w2 = getWidth('operation');
+      const w3 = getWidth('shift_start_wip');
 
-  updateTestPinnedLastDivider(table);
+      const left1 = 0;
+      const left2 = left1 + w1;
+      const left3 = left2 + w2;
+
+      table.style.setProperty('--test-pinned-left-1', `${left1}px`);
+      table.style.setProperty('--test-pinned-left-2', `${left2}px`);
+      table.style.setProperty('--test-pinned-left-3', `${left3}px`);
+    } else if (currentPage === 'PHVI') {
+      // PHVI has 3 pinned columns: prodgroup3, operation, shift_start_wip
+      const w1 = getWidth('prodgroup3');
+      const w2 = getWidth('operation');
+      const w3 = getWidth('shift_start_wip');
+
+      const left1 = 0;
+      const left2 = left1 + w1;
+      const left3 = left2 + w2;
+
+      table.style.setProperty('--test-pinned-left-1', `${left1}px`);
+      table.style.setProperty('--test-pinned-left-2', `${left2}px`);
+      table.style.setProperty('--test-pinned-left-3', `${left3}px`);
+    } else {
+      // Other tabs (HDMx, BI, V8) have 3 or 2 pinned columns
+      const w1 = getWidth('prodgroup3');
+      const w2 = getWidth('operation');
+      const w3 = getWidth('dlcp');
+
+      const left1 = 0;
+      const left2 = left1 + w1;
+      const left3 = left2 + w2;
+
+      table.style.setProperty('--test-pinned-left-1', `${left1}px`);
+      table.style.setProperty('--test-pinned-left-2', `${left2}px`);
+      table.style.setProperty('--test-pinned-left-3', `${left3}px`);
+    }
+
+    updateTestPinnedLastDivider(table);
   }
 
   function updateTestPinnedLastDivider(table) {
@@ -838,10 +889,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     table.querySelectorAll('.pinned-last').forEach(el => el.classList.remove('pinned-last'));
 
-  // Test table pins first three columns. Divider should always be after Shift Start WIP (pinned-3).
-  table.querySelectorAll('.pinned-col.pinned-3').forEach(el => {
-      el.classList.add('pinned-last');
-    });
+    const currentPage = getCurrentTestPageFromUrl();
+    
+    if (currentPage === 'STHI') {
+      // STHI: divider after the 6th pinned column (commit1)
+      table.querySelectorAll('.pinned-col.pinned-6').forEach(el => {
+        el.classList.add('pinned-last');
+      });
+    } else if (currentPage === 'OLB') {
+      // OLB: divider after the 3rd pinned column (shift_start_wip)
+      table.querySelectorAll('.pinned-col.pinned-3').forEach(el => {
+        el.classList.add('pinned-last');
+      });
+    } else if (currentPage === 'PHVI') {
+      // PHVI: divider after the 3rd pinned column (shift_start_wip)
+      table.querySelectorAll('.pinned-col.pinned-3').forEach(el => {
+        el.classList.add('pinned-last');
+      });
+    } else {
+      // Other tabs (HDMx, BI, V8): divider after the 3rd pinned column (dlcp for HDMx, or operation for BI/V8 if no dlcp)
+      table.querySelectorAll('.pinned-col.pinned-3').forEach(el => {
+        el.classList.add('pinned-last');
+      });
+    }
   }
 
   // Highlight active tab in the nav-tabs (same behavior as assembly).

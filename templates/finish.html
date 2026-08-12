@@ -210,7 +210,7 @@
                         <th class="pinned-col pinned-2 sortable" data-col="operation"
                             onclick="sortFinishTable(this, 'operation')">
                             Operation <span class="sort-icon">⇕</span></th>
-                        <th class="sortable" data-col="shift_start_wip"
+                        <th class="pinned-col pinned-3 sortable" data-col="shift_start_wip"
                             onclick="sortFinishTable(this, 'shift_start_wip')">Start WIP
                             <span class="sort-icon">⇕</span>
                         </th>
@@ -274,8 +274,9 @@
                         <th class="pinned-col pinned-2" data-col="operation"><input type="text"
                                 class="filter-input-field" data-filter-col="operation" oninput="applyFinishFilters()">
                         </th>
-                        <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
-                                data-filter-col="shift_start_wip" oninput="applyFinishFilters()"></th>
+                        <th class="pinned-col pinned-3" data-col="shift_start_wip"><input type="text"
+                                class="filter-input-field" data-filter-col="shift_start_wip"
+                                oninput="applyFinishFilters()"></th>
                         <th data-col="start_wip_onhold"><input type="text" class="filter-input-field"
                                 data-filter-col="start_wip_onhold" oninput="applyFinishFilters()"></th>
                         <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1"
@@ -318,7 +319,8 @@
                     <tr data-id="{{ r.id }}">
                         <td class="pinned-col pinned-1" data-col="prodgroup3">{{ r.prodgroup3 }}</td>
                         <td class="pinned-col pinned-2" data-col="operation">{{ r.operation }}</td>
-                        <td data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{% elif r.shift_start_wip
+                        <td class="pinned-col pinned-3" data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{%
+                            elif r.shift_start_wip
                             == (r.shift_start_wip|int) %}{{ r.shift_start_wip|int }}{% else %}{{
                             '%.3f'|format(r.shift_start_wip) }}{% endif %}</td>
                         <td data-col="start_wip_onhold">{% if r.shift_start_wip_onhold is none %}0{% elif
@@ -395,7 +397,8 @@
                     <tr class="total-row">
                         <td class="pinned-col pinned-1" data-col="prodgroup3"><strong>Total</strong></td>
                         <td class="pinned-col pinned-2" data-col="operation"></td>
-                        <td data-col="shift_start_wip" id="finish-total-shift_start_wip"></td>
+                        <td class="pinned-col pinned-3" data-col="shift_start_wip" id="finish-total-shift_start_wip">
+                        </td>
                         <td data-col="start_wip_onhold" id="finish-total-start_wip_onhold"></td>
                         <td data-col="commit1"></td>
                         <td data-col="commit2"></td>
@@ -830,7 +833,7 @@
         }
 
         // === Sticky/pinned column offsets (mirrors test.js updateTestPinnedOffsets) ===
-        // finish.html only pins 2 columns (Prodgroup3, Operation) — there is no pinned-3.
+        // finish.html pins 3 columns (Prodgroup3, Operation, shift_start_wip)
         function updateFinishPinnedOffsets() {
             const table = document.getElementById('testTable');
             if (!table) return;
@@ -846,12 +849,15 @@
             };
 
             const w1 = getWidth('prodgroup3');
+            const w2 = getWidth('operation');
 
             const left1 = 0;
             const left2 = left1 + w1;
+            const left3 = left2 + w2;
 
             table.style.setProperty('--test-pinned-left-1', `${left1}px`);
             table.style.setProperty('--test-pinned-left-2', `${left2}px`);
+            table.style.setProperty('--test-pinned-left-3', `${left3}px`);
         }
 
         // Initialize totals on page load
