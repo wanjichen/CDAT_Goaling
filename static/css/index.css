@@ -623,6 +623,10 @@ body {
             letter-spacing: 0;
         }
 
+        .shift-filter-bar .nav-tabs .quick-link-btn:visited {
+            color: var(--ios-blue);
+        }
+
         .shift-filter-bar .nav-tabs .quick-link-btn:hover {
             background: rgba(0, 122, 255, 0.08);
             color: var(--ios-blue);

@@ -277,21 +277,21 @@ def download_goal_output():
 
     # Helper function to format numbers: integer if whole, else 3 decimals
     def format_number(val):
-        if isinstance(val, (int, float)):
+        if isinstance(val, (int, float)) and math.isfinite(val):
             if val == int(val):
                 return str(int(val))
             else:
                 return f"{val:.3f}"
-        return str(val)
+        return ''
 
     # Helper function to format achievement %: integer if whole, else 2 decimals
     def format_achievement(val):
-        if isinstance(val, (int, float)):
+        if isinstance(val, (int, float)) and math.isfinite(val):
             if val == int(val):
                 return str(int(val))
             else:
                 return f"{val:.2f}"
-        return str(val)
+        return ''
 
     # Write data rows
     for row in rows_data:
@@ -476,7 +476,8 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
         TestReport.prodgroup3,
         TestReport.operation,
     ).filter(
-        TestReport.shift == latest_shift
+        TestReport.shift == latest_shift,
+        (TestReport.is_deleted.is_(None)) | (TestReport.is_deleted == False)
     )
     filtered = apply_test_operation_group_filter(filtered, page_name)
 
