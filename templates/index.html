@@ -367,7 +367,7 @@
                             {% endif %}
                         </td>
                         <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{
-                            r.output|int }}{% else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
+                            r.output|int }}{% else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
                         <td data-col="progress" class="progress-cell"></td>
                         <td class="highlight-col" data-col="system_goal">{% if r.system_suggested_goal is none %}0{%
                             elif r.system_suggested_goal == (r.system_suggested_goal|int) %}{{

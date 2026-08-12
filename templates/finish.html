@@ -358,7 +358,7 @@
                         </td>
                         <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{
                             r.output|int }}{%
-                            else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
+                            else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
                         <td class="progress-cell" data-col="progress"></td>
                         <td class="cell-pad-4" data-col="miss_goal_comment">
                             <div class="action-group" id="group-comment-{{ r.id }}">
@@ -369,9 +369,7 @@
                         </td>
                         <td class="cell-pad-4" data-col="actions">
                             <button type="button" class="tab-link btn-secondary btn-delete"
-                                onclick="confirmDeleteFinishRow(this)" title="Delete this row" aria-label="Delete" {% if
-                                selected_shift and current_shift and selected_shift !=current_shift %}disabled
-                                aria-disabled="true" {% endif %}>
+                                onclick="confirmDeleteFinishRow(this)" title="Delete this row" aria-label="Delete">
                                 <span class="trash-icon" aria-hidden="true">🗑</span>
                             </button>
                         </td>
@@ -416,6 +414,13 @@
     <script>
         const FINISH_PAGE = '{{ current_page }}';
         const SELECTED_SHIFT = '{{ selected_shift }}';
+
+        // === URL helpers (handles IIS sub-application prefix e.g. /CDAT_Goaling) ===
+        // Base path is injected server-side by Flask so it's always correct.
+        const _API_BASE = '{{ url_for("finish_add_new_goal") }}'.replace('/api/finish/add-new-goal', '');
+        function apiUrl(path) {
+            return _API_BASE + path;
+        }
 
         // === Totals ===
         function getFinishDataRows() {
@@ -600,7 +605,7 @@
                 return;
             }
 
-            fetch('/api/finish/add-new-goal', {
+            fetch(apiUrl('/api/finish/add-new-goal'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -613,7 +618,7 @@
             })
                 .then(r => r.json())
                 .then(data => {
-                    if (data.success) {
+                    if (data.status === 'success') {
                         showToast('Goal added successfully!', 'success');
                         closeFinishModal();
                         setTimeout(() => location.reload(), 600);
@@ -636,14 +641,14 @@
             let payload = { id: parseInt(id, 10) };
             if (type === 'goal') {
                 payload.goal = current === '' ? null : parseFloat(current);
-                fetch('/api/finish/update-goal', {
+                fetch(apiUrl('/api/finish/update-goal'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 })
                     .then(r => r.json())
                     .then(data => {
-                        if (data.success) {
+                        if (data.status === 'success') {
                             input.dataset.original = current;
                             showToast('Goal updated.', 'success');
                             calculateFinishTotals();
@@ -654,14 +659,14 @@
                     .catch(err => showToast('Error: ' + err, 'error'));
             } else if (type === 'cellqty') {
                 payload.link_cell_qty = current === '' ? null : parseFloat(current);
-                fetch('/api/finish/update-cellqty', {
+                fetch(apiUrl('/api/finish/update-cellqty'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 })
                     .then(r => r.json())
                     .then(data => {
-                        if (data.success) {
+                        if (data.status === 'success') {
                             input.dataset.original = current;
                             showToast('Link Qty updated.', 'success');
                             calculateFinishTotals();
@@ -672,14 +677,14 @@
                     .catch(err => showToast('Error: ' + err, 'error'));
             } else if (type === 'comment') {
                 payload.comment = current;
-                fetch('/api/finish/update-comment', {
+                fetch(apiUrl('/api/finish/update-comment'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 })
                     .then(r => r.json())
                     .then(data => {
-                        if (data.success) {
+                        if (data.status === 'success') {
                             input.dataset.original = current;
                             showToast('Comment updated.', 'success');
                         } else {
@@ -704,7 +709,7 @@
 
             btnEl.disabled = true;
             try {
-                const res = await fetch('/api/finish/delete-row', {
+                const res = await fetch(apiUrl('/api/finish/delete-row'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: id })

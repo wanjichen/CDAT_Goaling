@@ -491,7 +491,7 @@
               </div>
             </td>
             <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
-              else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
+              else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
             {% elif current_page == 'HDMx' %}
             <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
             <td data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{% elif r.shift_start_wip ==
@@ -541,7 +541,7 @@
               </div>
             </td>
             <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
-              else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
+              else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
             {% else %}
             {# BI and V8: like HDMx but without DLCP column #}
             <td data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{% elif r.shift_start_wip ==
@@ -590,7 +590,7 @@
               </div>
             </td>
             <td data-col="output">{% if r.output is none %}0{% elif r.output == (r.output|int) %}{{ r.output|int }}{%
-              else %}{{ '%.1f'|format(r.output) }}{% endif %}</td>
+              else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
             {% endif %}
             <td data-col="progress" class="progress-cell"></td>
             <td class="cell-pad-4" data-col="miss_goal_comment"

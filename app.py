@@ -1,5 +1,6 @@
 import urllib.parse
 import csv
+import math
 import os
 import re
 import time
@@ -96,6 +97,32 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = _engine_opts
 
 db = SQLAlchemy(app)
 
+
+# ---------------------------------------------------------------------------
+# OLB goal-factor configuration
+# ---------------------------------------------------------------------------
+# prodgroup3 values that belong to the DT (Desktop) product family.
+# These use OLB_GOAL_FACTOR_DT (0.8).
+# All other prodgroup3 values use OLB_GOAL_FACTOR_NON_DT (0.8 * 0.8 = 0.64).
+#
+# To add or remove a product, edit DT_PRODUCTS below.
+DT_PRODUCTS: set[str] = {
+    'ADP',
+    'ADPIOT',
+    'MTP',
+    'ARLS816L',
+    'ARLR816L',
+    'ARLS681',
+    'RPLS881',
+    'RPRS881',
+    'RPLS601',
+    'RPRS601',
+}
+
+OLB_GOAL_FACTOR_DT: float = 0.8          # prodgroup3 IN DT_PRODUCTS
+# prodgroup3 NOT IN DT_PRODUCTS (0.64)
+OLB_GOAL_FACTOR_NON_DT: float = 0.8 * 0.8
+# ---------------------------------------------------------------------------
 
 # Register isolated areas (kept separate from production assembly modules).
 register_test_routes(app)
@@ -440,7 +467,9 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
     """Mirror the assembly latest-per-group logic for the test table.
 
     For STHI and HDMx, rows are uniquely identified by (prodgroup3, operation, dlcp).
-    For BI, V8, and other modules, rows are uniquely identified by (prodgroup3, operation).
+    For MARK, DVI, and PHVI, rows are uniquely identified by prodgroup3 only
+      (operation is irrelevant - sync functions treat these modules at prodgroup3 level).
+    For BI, V8, OLB, and other modules, rows are uniquely identified by (prodgroup3, operation).
     """
     filtered = db.session.query(
         TestReport.id,
@@ -453,7 +482,6 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
 
     # STHI and HDMx use dlcp as an additional grouping key to distinguish rows
     # (e.g., same prodgroup3+operation but different dlcp values like UX vs FF)
-    # BI and V8 do not use dlcp
     if page_name in ('STHI', 'HDMx'):
         latest_ids = filtered.with_entities(
             db.func.max(TestReport.id).label('id')
@@ -461,6 +489,13 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
             TestReport.prodgroup3,
             TestReport.operation,
             TestReport.dlcp,
+        ).subquery()
+    # MARK, DVI, PHVI: one row per prodgroup3 - operation is ignored by sync logic
+    elif page_name in ('MARK', 'DVI', 'PHVI'):
+        latest_ids = filtered.with_entities(
+            db.func.max(TestReport.id).label('id')
+        ).group_by(
+            TestReport.prodgroup3,
         ).subquery()
     else:
         latest_ids = filtered.with_entities(
@@ -486,6 +521,19 @@ def get_recent_test_database_shifts_for_page(page_name, limit=5):
     return sorted(shifts, reverse=True)
 
 
+def _safe_float(value):
+    """Return value unchanged unless it's a non-finite float (inf/-inf/nan),
+    in which case return None.
+
+    Non-finite floats can appear from bad upstream data or division-by-zero
+    calculations. Templates that do `{{ x|int }}` will raise an unhandled
+    OverflowError/ValueError on inf/nan, so we sanitize at the source.
+    """
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
+
+
 def test_report_to_dict(r: TestReport):
     return {
         'id': r.id,
@@ -495,31 +543,31 @@ def test_report_to_dict(r: TestReport):
         'operation': r.operation,
         'operation_desc': r.operation_desc,
         'module': r.module,
-        'mor': r.mor,
-        'tr': r.tr,
-        'shift_start_wip': r.shift_start_wip,
-        'shift_start_wip_onhold': r.shift_start_wip_onhold,
-        'sfgi_wip': r.sfgi_wip,
-        'link_cell_qty': r.link_cell_qty,
-        'capacity': r.capacity,
-        'system_suggested_goal': r.system_suggested_goal,
+        'mor': _safe_float(r.mor),
+        'tr': _safe_float(r.tr),
+        'shift_start_wip': _safe_float(r.shift_start_wip),
+        'shift_start_wip_onhold': _safe_float(r.shift_start_wip_onhold),
+        'sfgi_wip': _safe_float(r.sfgi_wip),
+        'link_cell_qty': _safe_float(r.link_cell_qty),
+        'capacity': _safe_float(r.capacity),
+        'system_suggested_goal': _safe_float(r.system_suggested_goal),
         'system_suggested_goal_created_at': r.system_suggested_goal_created_at.strftime('%Y-%m-%d %H:%M:%S') if r.system_suggested_goal_created_at else None,
-        'goal': r.goal,
-        'output': r.output,
-        'qtg1': r.qtg1,
-        'qps1': r.qps1,
-        'stg1': r.stg1,
-        'qtg2': r.qtg2,
-        'qps2': r.qps2,
-        'stg2': r.stg2,
+        'goal': _safe_float(r.goal),
+        'output': _safe_float(r.output),
+        'qtg1': _safe_float(r.qtg1),
+        'qps1': _safe_float(r.qps1),
+        'stg1': _safe_float(r.stg1),
+        'qtg2': _safe_float(r.qtg2),
+        'qps2': _safe_float(r.qps2),
+        'stg2': _safe_float(r.stg2),
         'goal_adjusted_at': r.goal_adjusted_at.strftime('%Y-%m-%d %H:%M:%S') if r.goal_adjusted_at else None,
         'goal_adjusted_by': r.goal_adjusted_by,
         'miss_goal_comment': r.miss_goal_comment,
         'miss_goal_comment_updated_at': r.miss_goal_comment_updated_at.strftime('%Y-%m-%d %H:%M:%S') if r.miss_goal_comment_updated_at else None,
         'miss_goal_comment_updated_by': r.miss_goal_comment_updated_by,
-        'commit1': r.commit1,
-        'commit2': r.commit2,
-        'prebuild1': r.prebuild1,
+        'commit1': _safe_float(r.commit1),
+        'commit2': _safe_float(r.commit2),
+        'prebuild1': _safe_float(r.prebuild1),
         'dlcp': r.dlcp,
     }
 
@@ -624,15 +672,15 @@ def report_to_dict(r: Report):
         "operation": r.operation,
         "module": r.module,
         "entity": r.entity,
-        "qtg1": r.qtg1,
-        "qps1": r.qps1,
-        "mor": r.mor,
-        "tr": r.tr,
-        "output": r.output,
-        "shift_start_wip": r.shift_start_wip,
-        "system_suggested_goal": r.system_suggested_goal,
+        "qtg1": _safe_float(r.qtg1),
+        "qps1": _safe_float(r.qps1),
+        "mor": _safe_float(r.mor),
+        "tr": _safe_float(r.tr),
+        "output": _safe_float(r.output),
+        "shift_start_wip": _safe_float(r.shift_start_wip),
+        "system_suggested_goal": _safe_float(r.system_suggested_goal),
         "subcell_info": r.subcell_info,
-        "manual_adjusted_goal": r.manual_adjusted_goal,
+        "manual_adjusted_goal": _safe_float(r.manual_adjusted_goal),
         "goal_adjusted_reason": r.goal_adjusted_reason,
         "miss_goal_comment": r.miss_goal_comment,
         "goal_adjusted_by": r.goal_adjusted_by,
@@ -888,6 +936,16 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
         calculated_tr = compute_tr_from_goal_and_mor(phvi_goal, mor_val)
 
         if phvi_row:
+            # Soft-delete any duplicate active PHVI rows (same shift/prodgroup3, lower id)
+            db.session.query(TestReport).filter(
+                TestReport.year == year,
+                TestReport.shift == shift,
+                TestReport.prodgroup3 == prodgroup3,
+                TestReport.module == 'PHVI',
+                TestReport.id != phvi_row.id,
+                (TestReport.is_deleted.is_(None)) | (
+                    TestReport.is_deleted == False)
+            ).update({TestReport.is_deleted: True}, synchronize_session='fetch')
             # Update existing PHVI row
             phvi_row.goal = phvi_goal
             phvi_row.tr = calculated_tr
@@ -1005,6 +1063,16 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
         calculated_tr = compute_tr_from_goal_and_mor(mark_goal, mor_val)
 
         if mark_row:
+            # Soft-delete any duplicate active MARK rows (same shift/prodgroup3, lower id)
+            db.session.query(TestReport).filter(
+                TestReport.year == year,
+                TestReport.shift == shift,
+                TestReport.prodgroup3 == prodgroup3,
+                TestReport.module == 'MARK',
+                TestReport.id != mark_row.id,
+                (TestReport.is_deleted.is_(None)) | (
+                    TestReport.is_deleted == False)
+            ).update({TestReport.is_deleted: True}, synchronize_session='fetch')
             # Update existing MARK row
             mark_row.goal = mark_goal
             mark_row.tr = calculated_tr
@@ -1123,6 +1191,16 @@ def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
         calculated_tr = compute_tr_from_goal_and_mor(dvi_goal, mor_val)
 
         if dvi_row:
+            # Soft-delete any duplicate active DVI rows (same shift/prodgroup3, lower id)
+            db.session.query(TestReport).filter(
+                TestReport.year == year,
+                TestReport.shift == shift,
+                TestReport.prodgroup3 == prodgroup3,
+                TestReport.module == 'DVI',
+                TestReport.id != dvi_row.id,
+                (TestReport.is_deleted.is_(None)) | (
+                    TestReport.is_deleted == False)
+            ).update({TestReport.is_deleted: True}, synchronize_session='fetch')
             # Update existing DVI row
             dvi_row.goal = dvi_goal
             dvi_row.tr = calculated_tr
@@ -1164,7 +1242,8 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
     - HDMx needs to be summed across all DLCPs for the same prodgroup3
     - If OLB row doesn't exist, create it with defaults
     - If both V8 and HDMx are deleted AND OLB shift_start_wip = 0, soft-delete OLB row
-    - Uses MAX(id) to find OLB row, matching how UI fetches the latest row
+    - Prefers the operation='7571' row when updating; falls back to MAX(id) if none exists
+    - When creating a new row, always uses operation='7571'
     - Special case: V8 with prodgroup3='CFLH62' and operation='7757' is excluded from OLB calculation
     """
     try:
@@ -1196,20 +1275,31 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
                 TestReport.is_deleted == False)
         ).first() is not None
 
-        # Find existing OLB row using MAX(id) to match UI's latest-row logic
-        olb_max_id = db.session.query(
-            db.func.max(TestReport.id)
-        ).filter(
+        # Find existing OLB row at operation 7571; if not found, check any operation via MAX(id)
+        olb_row = db.session.query(TestReport).filter(
             TestReport.year == year,
             TestReport.shift == shift,
             TestReport.prodgroup3 == prodgroup3,
             TestReport.module == 'OLB',
+            TestReport.operation == '7571',
             (TestReport.is_deleted.is_(None)) | (
                 TestReport.is_deleted == False)
-        ).scalar()
+        ).order_by(desc(TestReport.id)).first()
 
-        olb_row = db.session.get(
-            TestReport, olb_max_id) if olb_max_id else None
+        if olb_row is None:
+            # No 7571 row exists - fall back to MAX(id) across all operations
+            olb_max_id = db.session.query(
+                db.func.max(TestReport.id)
+            ).filter(
+                TestReport.year == year,
+                TestReport.shift == shift,
+                TestReport.prodgroup3 == prodgroup3,
+                TestReport.module == 'OLB',
+                (TestReport.is_deleted.is_(None)) | (
+                    TestReport.is_deleted == False)
+            ).scalar()
+            olb_row = db.session.get(
+                TestReport, olb_max_id) if olb_max_id else None
 
         # If neither V8 nor HDMx exists, handle OLB deletion or WIP-only update
         if not v8_exists and not hdmx_exists:
@@ -1252,10 +1342,12 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
                 TestReport.is_deleted == False)
         ).scalar() or 0
 
-        # Calculate OLB goal: (V8 + HDMx) * 0.8 + shift_start_wip
+        # Calculate OLB goal: (V8 + HDMx) * goal_factor + shift_start_wip
+        # Factor depends on whether prodgroup3 belongs to the DT product family.
+        goal_factor = OLB_GOAL_FACTOR_DT if prodgroup3 in DT_PRODUCTS else OLB_GOAL_FACTOR_NON_DT
         shift_start_wip = float(olb_row.shift_start_wip or 0) if olb_row else 0
         olb_goal = round((float(v8_goal) + float(hdmx_goal))
-                         * 0.8 + shift_start_wip, 1)
+                         * goal_factor + shift_start_wip, 1)
 
         # Calculate TR (use existing MOR if available)
         mor_val = float(olb_row.mor) if olb_row and olb_row.mor else None
@@ -1263,6 +1355,16 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
             olb_goal, mor_val) if mor_val else None
 
         if olb_row:
+            # Soft-delete any duplicate active OLB rows (same shift/prodgroup3, lower id)
+            db.session.query(TestReport).filter(
+                TestReport.year == year,
+                TestReport.shift == shift,
+                TestReport.prodgroup3 == prodgroup3,
+                TestReport.module == 'OLB',
+                TestReport.id != olb_row.id,
+                (TestReport.is_deleted.is_(None)) | (
+                    TestReport.is_deleted == False)
+            ).update({TestReport.is_deleted: True}, synchronize_session='fetch')
             # Update existing OLB row
             olb_row.goal = olb_goal
             olb_row.tr = calculated_tr
@@ -1275,7 +1377,7 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
                 year=year,
                 shift=shift,
                 prodgroup3=prodgroup3,
-                operation='6379',
+                operation='7571',
                 module='OLB',
                 mor=None,
                 goal=olb_goal,
@@ -2362,11 +2464,6 @@ def finish_delete_row():
 
     if not old:
         return json_error('Record not found', 404)
-
-    # Safety guard: only allow deleting rows from the current calendar shift.
-    current_shift = get_current_shift_from_calendar()
-    if current_shift and old.shift and str(old.shift).strip() != str(current_shift).strip():
-        return json_error('Delete is only allowed for the current shift', 403)
 
     # Capture values before deletion for DVI sync
     module = old.module
