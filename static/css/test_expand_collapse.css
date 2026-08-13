@@ -1,0 +1,119 @@
+/* CSS for Test module expand/collapse aggregation functionality */
+
+/* Group header row styling */
+tr.group-header-row {
+  background-color: #f0f4f8 !important;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+tr.group-header-row:hover {
+  background-color: #e2e8f0 !important;
+}
+
+tr.group-header-row td {
+  border-bottom: 2px solid #cbd5e1;
+}
+
+/* Expand/collapse icon in the first cell */
+.expand-collapse-icon {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  transition: transform 0.2s ease;
+  font-size: 10px;
+  vertical-align: middle;
+}
+
+.expand-collapse-icon.expanded {
+  transform: rotate(90deg);
+}
+
+/* Child rows (DLCP detail rows) */
+tr.child-row {
+  transition: opacity 0.2s ease;
+}
+
+tr.child-row.collapsed {
+  display: none;
+}
+
+/* Indent the DLCP column slightly for visual hierarchy */
+tr.child-row td.pinned-col.pinned-3 {
+  padding-left: 28px;
+}
+
+/* Summary values in group header - make them visually distinct */
+tr.group-header-row .summary-value {
+  color: #1e40af;
+  font-weight: 500;
+}
+
+/* Optional: Add a subtle border to separate groups */
+tr.group-header-row td:first-child {
+  border-left: 4px solid #3b82f6;
+}
+
+/* Style for the operation cell in group header (now shows count) */
+tr.group-header-row td[data-col="operation"] {
+  font-size: 0.9em;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Progress bar in group header rows - use same compact format as detail rows */
+tr.group-header-row td[data-col="progress"] .progress-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+tr.group-header-row td[data-col="progress"] .progress-track {
+  flex: 0 0 60px;  /* Fixed shorter width instead of flex: 1 */
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.35);
+  overflow: hidden;
+}
+
+tr.group-header-row td[data-col="progress"] .progress-label {
+  flex: 0 0 auto;
+  min-width: 44px;
+  text-align: left;  /* Left align for group headers */
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+  font-weight: 600;  /* Slightly bolder for headers */
+  white-space: nowrap;
+}
+
+/* Hide progress bar when group is expanded (detail rows show individual progress) */
+tr.group-header-row[data-expanded="true"] td[data-col="progress"] .progress-wrap,
+tr.group-header-row[data-expanded="true"] td[data-col="progress"] .progress-label {
+  display: none !important;
+}
+
+/* Expand/Collapse tab buttons styling */
+.expand-collapse-tab-btn {
+  font-size: 0.8rem !important;
+  color: #64748b !important;
+  padding: 8px 12px !important;
+}
+
+.expand-collapse-tab-btn:hover {
+  color: #475569 !important;
+  background-color: #f8fafc !important;
+}
+
+/* Separator before expand/collapse buttons */
+.expand-collapse-separator {
+  display: inline-block;
+  width: 1px;
+  height: 24px;
+  background-color: #cbd5e1;
+  margin: 0 16px;
+  vertical-align: middle;
+}

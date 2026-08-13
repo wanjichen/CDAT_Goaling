@@ -2368,11 +2368,11 @@ def finish_update_comment():
     try:
         apply_test_report_updates_in_place(
             old,
-            comment=data.get('comment') or None,
-            goal_adjusted_at=datetime.now(),
-            goal_adjusted_by=user
+            miss_goal_comment=data.get('comment'),
+            miss_goal_comment_updated_at=datetime.now(),
+            miss_goal_comment_updated_by=user
         )
-        return json_success(new_id=old.id, comment=old.comment)
+        return json_success(new_id=old.id, comment=old.miss_goal_comment)
     except Exception as e:
         db.session.rollback()
         return json_error(str(e))
@@ -2380,7 +2380,11 @@ def finish_update_comment():
 
 @app.route('/api/finish/update-cellqty', methods=['POST'])
 def finish_update_cellqty():
-    """Update link_cell_qty field for a finish module row."""
+    """Update link_cell_qty field for a finish module row.
+
+    Finish modules (MARK, DVI):
+      - capacity = mor * link_cell_qty
+    """
     data = get_request_payload()
     user = get_current_user()
     old = db.session.get(TestReport, data.get('id'))
@@ -2389,14 +2393,34 @@ def finish_update_cellqty():
         return json_error('Record not found', 404)
 
     try:
-        link_cell_qty = data.get('link_cell_qty')
+        raw_qty = data.get('link_cell_qty')
+
+        if raw_qty is None or str(raw_qty).strip() == '':
+            qty_val = None
+        else:
+            qty_val = float(raw_qty)
+            if qty_val < 0:
+                return json_error('Link Qty must be >= 0', 400)
+
+        mor_val = float(old.mor or 0)
+        capacity_val = None
+
+        if qty_val is not None:
+            # Finish modules use capacity = mor * link_cell_qty
+            capacity_val = round(mor_val * float(qty_val), 1)
+
         apply_test_report_updates_in_place(
             old,
-            link_cell_qty=link_cell_qty,
+            link_cell_qty=qty_val,
+            capacity=capacity_val,
             goal_adjusted_at=datetime.now(),
             goal_adjusted_by=user
         )
-        return json_success(new_id=old.id, link_cell_qty=link_cell_qty)
+        return json_success(
+            new_id=old.id,
+            link_cell_qty=qty_val,
+            capacity=capacity_val
+        )
     except Exception as e:
         db.session.rollback()
         return json_error(str(e))

@@ -188,7 +188,7 @@
                 <input type="number" id="f_goal" class="form-input" placeholder="Must enter a number > 0">
                 <label>LINK QTY *</label>
                 <input type="number" id="f_cellqty" class="form-input" placeholder="Must enter a number >= 0 (e.g. 1.5)"
-                    step="0.1" min="0">
+                    step="0.01" min="0">
             </div>
             <div class="modal-footer-actions">
                 <button class="tab-link modal-action-btn" id="btn-finish-modal-submit"
@@ -346,13 +346,13 @@
                         <td data-col="mor">{% if not r.mor %}{% elif r.mor == (r.mor|int) %}{{ r.mor|int }}{% else %}{{
                             '%.1f'|format(r.mor) }}{% endif %}</td>
                         <td data-col="tr">{% if not r.tr %}{% elif r.tr == (r.tr|int) %}{{ r.tr|int }}{% else %}{{
-                            '%.1f'|format(r.tr) }}{% endif %}</td>
+                            '%.2f'|format(r.tr) }}{% endif %}</td>
                         <td class="cell-pad-4" data-col="link_cell_qty">
                             <div class="action-group" id="group-cellqty-{{ r.id }}">
-                                <input type="number" step="0.1" min="0" autocomplete="off"
+                                <input type="number" step="0.01" min="0" autocomplete="off"
                                     class="table-input cellqty-input"
-                                    value="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
-                                    data-original="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.1f'|format(r.link_cell_qty) }}{% endif %}"
+                                    value="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.2f'|format(r.link_cell_qty) }}{% endif %}"
+                                    data-original="{% if r.link_cell_qty is none %}0{% elif r.link_cell_qty == (r.link_cell_qty|int) %}{{ r.link_cell_qty|int }}{% else %}{{ '%.2f'|format(r.link_cell_qty) }}{% endif %}"
                                     oninput="handleFinishInput(this, 'cellqty')"
                                     onblur="handleFinishInput(this, 'cellqty')">
                             </div>
@@ -372,11 +372,12 @@
                             r.output|int }}{%
                             else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
                         <td class="progress-cell" data-col="progress"></td>
-                        <td class="cell-pad-4" data-col="miss_goal_comment">
+                        <td class="cell-pad-4" data-col="miss_goal_comment"
+                            title="Comment by: {{ r.miss_goal_comment_updated_by or 'N/A' }}&#10;At: {{ r.miss_goal_comment_updated_at or 'N/A' }}">
                             <div class="action-group" id="group-comment-{{ r.id }}">
                                 <textarea class="table-input comment-input" rows="1"
-                                    data-original="{{ r.comment or '' }}"
-                                    oninput="handleFinishInput(this, 'comment')">{{ r.comment or '' }}</textarea>
+                                    data-original="{{ r.miss_goal_comment or '' }}"
+                                    onblur="handleFinishInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
                             </div>
                         </td>
                         <td class="cell-pad-4" data-col="actions">
@@ -664,6 +665,22 @@
                         if (data.status === 'success') {
                             input.dataset.original = current;
                             showToast('Goal updated.', 'success');
+
+                            // Update the TR display if returned from API
+                            if (data.tr !== undefined) {
+                                const trCell = row.querySelector('td[data-col="tr"]');
+                                if (trCell) {
+                                    const trVal = data.tr;
+                                    if (trVal === null || trVal === 0 || !trVal) {
+                                        trCell.textContent = '';
+                                    } else if (trVal === Math.floor(trVal)) {
+                                        trCell.textContent = String(Math.floor(trVal));
+                                    } else {
+                                        trCell.textContent = trVal.toFixed(2);
+                                    }
+                                }
+                            }
+
                             calculateFinishTotals();
                         } else {
                             showToast(data.message || 'Update failed.', 'error');
@@ -682,6 +699,22 @@
                         if (data.status === 'success') {
                             input.dataset.original = current;
                             showToast('Link Qty updated.', 'success');
+
+                            // Update the capacity display if returned from API
+                            if (data.capacity !== undefined) {
+                                const capacityCell = row.querySelector('td[data-col="capacity"]');
+                                if (capacityCell) {
+                                    const capacityVal = data.capacity;
+                                    if (capacityVal === null || capacityVal === 0) {
+                                        capacityCell.textContent = '0';
+                                    } else if (capacityVal === Math.floor(capacityVal)) {
+                                        capacityCell.textContent = String(Math.floor(capacityVal));
+                                    } else {
+                                        capacityCell.textContent = capacityVal.toFixed(1);
+                                    }
+                                }
+                            }
+
                             calculateFinishTotals();
                         } else {
                             showToast(data.message || 'Update failed.', 'error');

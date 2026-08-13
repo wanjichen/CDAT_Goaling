@@ -363,7 +363,7 @@ function calculateTestTotals() {
   let totalStartWipOnhold = 0;
   let totalCommit1 = 0;
   let totalCommit2 = 0;
-  // QPS totals intentionally not displayed.
+  let totalQps1 = 0;
   let totalMor = 0;
   // TR is display-only (DB value). We still sum the displayed TR values for the footer.
   let totalTr = 0;
@@ -386,9 +386,9 @@ function calculateTestTotals() {
     totalStartWipOnhold += getVal('start_wip_onhold');
     totalCommit1 += getVal('commit1');
     totalCommit2 += getVal('commit2');
-  // QPS totals intentionally not displayed.
-  totalMor += getVal('mor');
-  totalTr += getVal('tr');
+    totalQps1 += getVal('qps1');
+    totalMor += getVal('mor');
+    totalTr += getVal('tr');
     totalCellQty += getVal('link_cell_qty');
     totalCapacity += getVal('capacity');
 
@@ -409,8 +409,19 @@ function calculateTestTotals() {
   setTotalText('test-total-tr', totalTr);
   setTotalText('test-total-link_cell_qty', totalCellQty);
   setTotalText('test-total-capacity', totalCapacity);
+  setTotalText('test-total-qps1', totalQps1);
   setTotalText('test-total-goal', totalGoal);
   setTotalText('test-total-output', totalOutput);
+
+  // Highlight total QPS1 in red if it exceeds total Goal (STHI only)
+  if (getCurrentTestPageFromUrl() === 'STHI') {
+    const qps1TotalEl = document.getElementById('test-total-qps1');
+    if (qps1TotalEl && totalQps1 > 0 && totalGoal > 0 && totalQps1 > totalGoal) {
+      qps1TotalEl.classList.add('qps1-warning');
+    } else if (qps1TotalEl) {
+      qps1TotalEl.classList.remove('qps1-warning');
+    }
+  }
 
   updateTestProgressBars();
 }
@@ -530,6 +541,11 @@ window.applyTestFilters = function applyTestFilters() {
   // Filtering can change scrollbar presence and widths.
   const evt = new Event('resize');
   window.dispatchEvent(evt);
+  
+  // Reapply row striping after filtering (for grouped views)
+  if (typeof window.applyRowStriping === 'function') {
+    window.applyRowStriping();
+  }
 };
 
 // Shift View dropdown uses a GET form submit (same as assembly), so no JS is needed.
@@ -866,8 +882,27 @@ document.addEventListener('DOMContentLoaded', () => {
       table.style.setProperty('--test-pinned-left-1', `${left1}px`);
       table.style.setProperty('--test-pinned-left-2', `${left2}px`);
       table.style.setProperty('--test-pinned-left-3', `${left3}px`);
+    } else if (currentPage === 'HDMx') {
+      // HDMx has 5 pinned columns: prodgroup3, operation, dlcp, shift_start_wip, commit1
+      const w1 = getWidth('prodgroup3');
+      const w2 = getWidth('operation');
+      const w3 = getWidth('dlcp');
+      const w4 = getWidth('shift_start_wip');
+      const w6 = getWidth('commit1');
+
+      const left1 = 0;
+      const left2 = left1 + w1;
+      const left3 = left2 + w2;
+      const left4 = left3 + w3;
+      const left6 = left4 + w4;
+
+      table.style.setProperty('--test-pinned-left-1', `${left1}px`);
+      table.style.setProperty('--test-pinned-left-2', `${left2}px`);
+      table.style.setProperty('--test-pinned-left-3', `${left3}px`);
+      table.style.setProperty('--test-pinned-left-4', `${left4}px`);
+      table.style.setProperty('--test-pinned-left-6', `${left6}px`);
     } else {
-      // Other tabs (HDMx, BI, V8) have 3 or 2 pinned columns
+      // Other tabs (BI, V8) have 3 or 2 pinned columns
       const w1 = getWidth('prodgroup3');
       const w2 = getWidth('operation');
       const w3 = getWidth('dlcp');
@@ -906,8 +941,13 @@ document.addEventListener('DOMContentLoaded', () => {
       table.querySelectorAll('.pinned-col.pinned-3').forEach(el => {
         el.classList.add('pinned-last');
       });
+    } else if (currentPage === 'HDMx') {
+      // HDMx: divider after the 5th pinned column (commit1, which is pinned-6)
+      table.querySelectorAll('.pinned-col.pinned-6').forEach(el => {
+        el.classList.add('pinned-last');
+      });
     } else {
-      // Other tabs (HDMx, BI, V8): divider after the 3rd pinned column (dlcp for HDMx, or operation for BI/V8 if no dlcp)
+      // Other tabs (BI, V8): divider after the 3rd pinned column (dlcp or operation if no dlcp)
       table.querySelectorAll('.pinned-col.pinned-3').forEach(el => {
         el.classList.add('pinned-last');
       });

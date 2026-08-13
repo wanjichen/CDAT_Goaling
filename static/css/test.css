@@ -187,18 +187,9 @@
 #testTable td.pinned-col.pinned-5 { z-index: 16; }
 #testTable td.pinned-col.pinned-6 { z-index: 17; }
 
-/* Pinned cells must always be opaque so the scrollable cells don't visually overlap. */
+/* Pinned cells default background (can be overridden by striping rules) */
 #testTable td.pinned-col {
-  background-color: var(--bg-surface, #ffffff) !important;
-}
-
-/* Keep hover background on pinned data cells too. */
-#testTable tbody tr:hover td.pinned-col {
-  background-color: var(--table-hover-bg, #e8f0ff) !important;
-}
-
-#testTable td.pinned-col {
-  background: var(--bg-surface, #ffffff);
+  background-color: var(--bg-surface, #ffffff);
 }
 
 /* Sticky headers */
@@ -494,13 +485,38 @@
 /* Keep Goal header text clean (no extra appended text). */
 
 /* --- Alternating row colors (zebra striping) --- */
-/* Match the Assembly page striping for consistency. */
-#testTable tbody tr:nth-child(even) td {
+/* Use class-based striping (applied via JavaScript) to handle group headers correctly */
+#testTable tbody tr.stripe-odd td {
+  background-color: var(--bg-surface, #ffffff);
+}
+
+#testTable tbody tr.stripe-odd td.pinned-col {
+  background-color: var(--bg-surface, #ffffff) !important;
+}
+
+#testTable tbody tr.stripe-even td {
   background-color: var(--ios-table-stripe, #e9edf5);
 }
 
 /* Ensure pinned columns match the row stripe color (they have their own solid background). */
-#testTable tbody tr:nth-child(even) td.pinned-col {
+#testTable tbody tr.stripe-even td.pinned-col {
+  background-color: var(--ios-table-stripe, #e9edf5) !important;
+}
+
+/* Fallback: Legacy nth-child striping for non-grouped views (OLB, PHVI, BI, V8) */
+#testTable tbody tr:not(.child-row):not(.group-header-row):nth-child(odd) td {
+  background-color: var(--bg-surface, #ffffff);
+}
+
+#testTable tbody tr:not(.child-row):not(.group-header-row):nth-child(odd) td.pinned-col {
+  background-color: var(--bg-surface, #ffffff) !important;
+}
+
+#testTable tbody tr:not(.child-row):not(.group-header-row):nth-child(even) td {
+  background-color: var(--ios-table-stripe, #e9edf5);
+}
+
+#testTable tbody tr:not(.child-row):not(.group-header-row):nth-child(even) td.pinned-col {
   background-color: var(--ios-table-stripe, #e9edf5) !important;
 }
 
@@ -621,9 +637,9 @@
 
 #testTable th[data-col="dlcp"],
 #testTable td[data-col="dlcp"] {
-  width: 70px;
-  min-width: 70px;
-  max-width: 70px;
+  width: 85px;
+  min-width: 85px;
+  max-width: 85px;
 }
 
 #testTable th[data-col="shift_start_wip"],

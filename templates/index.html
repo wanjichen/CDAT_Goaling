@@ -411,7 +411,7 @@
                             <div class="action-group" id="group-comment-{{ r.id }}">
                                 <textarea class="table-input comment-input comment-textarea" rows="2"
                                     data-original="{{ r.miss_goal_comment or '' }}"
-                                    oninput="handleInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
+                                    onblur="handleInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
                             </div>
                         </td>
                         <td class="cell-pad-4" data-col="actions">

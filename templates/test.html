@@ -8,7 +8,8 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260708b">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260813">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/test_expand_collapse.css') }}?v=20260813h">
 </head>
 
 <body>
@@ -140,6 +141,13 @@
         <a href="{{ url_for('test_home', page=tab) }}" class="tab-link{% if tab == current_page %} active{% endif %}">{{
           tab }}</a>
         {% endfor %}
+        {% if current_page in ['STHI', 'HDMx'] %}
+        <span class="expand-collapse-separator"></span>
+        <a href="javascript:void(0)" onclick="expandAllGroups()" class="tab-link expand-collapse-tab-btn"
+          title="Expand all Prodgroup3 groups">➕ Expand All</a>
+        <a href="javascript:void(0)" onclick="collapseAllGroups()" class="tab-link expand-collapse-tab-btn"
+          title="Collapse all Prodgroup3 groups">➖ Collapse All</a>
+        {% endif %}
       </div>
       <a class="tab-link copy-tab-btn quick-link-btn" href="{{ url_for('index') }}" title="Go to Assembly Modules"
         aria-label="Go to Assembly Modules" target="_blank" rel="noopener noreferrer">
@@ -260,13 +268,15 @@
             {% elif current_page == 'HDMx' %}
             <th class="pinned-col pinned-3 sortable" data-col="dlcp" onclick="sortTestTable(this, 'dlcp')">
               DLCP <span class="sort-icon">⇕</span></th>
-            <th class="sortable" data-col="shift_start_wip" onclick="sortTestTable(this, 'shift_start_wip')">Start WIP
+            <th class="pinned-col pinned-4 sortable" data-col="shift_start_wip"
+              onclick="sortTestTable(this, 'shift_start_wip')">Start WIP
               <span class="sort-icon">⇕</span>
             </th>
             <th class="sortable" data-col="start_wip_onhold" onclick="sortTestTable(this, 'start_wip_onhold')">Start WIP
               Onhold <span class="sort-icon">⇕</span>
             </th>
-            <th class="sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')" title="prebuild included">
+            <th class="pinned-col pinned-6 sortable" data-col="commit1" onclick="sortTestTable(this, 'commit1')"
+              title="prebuild included">
               Commit1 <span class="sort-icon">⇕</span></th>
             <th class="sortable" data-col="commit2" onclick="sortTestTable(this, 'commit2')" title="prebuild included">
               Commit2 <span class="sort-icon">⇕</span></th>
@@ -451,12 +461,12 @@
             {% elif current_page == 'HDMx' %}
             <th class="pinned-col pinned-3" data-col="dlcp"><input type="text" class="filter-input-field"
                 data-filter-col="dlcp" oninput="applyTestFilters()"></th>
-            <th data-col="shift_start_wip"><input type="text" class="filter-input-field"
+            <th class="pinned-col pinned-4" data-col="shift_start_wip"><input type="text" class="filter-input-field"
                 data-filter-col="shift_start_wip" oninput="applyTestFilters()"></th>
             <th data-col="start_wip_onhold"><input type="text" class="filter-input-field"
                 data-filter-col="start_wip_onhold" oninput="applyTestFilters()"></th>
-            <th data-col="commit1"><input type="text" class="filter-input-field" data-filter-col="commit1"
-                oninput="applyTestFilters()"></th>
+            <th class="pinned-col pinned-6" data-col="commit1"><input type="text" class="filter-input-field"
+                data-filter-col="commit1" oninput="applyTestFilters()"></th>
             <th data-col="commit2"><input type="text" class="filter-input-field" data-filter-col="commit2"
                 oninput="applyTestFilters()"></th>
             <th data-col="qtg1"><input type="text" class="filter-input-field" data-filter-col="qtg1"
@@ -647,13 +657,15 @@
               else %}{{ '%.3f'|format(r.output) }}{% endif %}</td>
             {% elif current_page == 'HDMx' %}
             <td class="pinned-col pinned-3" data-col="dlcp">{{ r.dlcp or '' }}</td>
-            <td data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{% elif r.shift_start_wip ==
+            <td class="pinned-col pinned-4" data-col="shift_start_wip">{% if r.shift_start_wip is none %}0{% elif
+              r.shift_start_wip ==
               (r.shift_start_wip|int) %}{{ r.shift_start_wip|int }}{% else %}{{ '%.3f'|format(r.shift_start_wip)
               }}{% endif %}</td>
             <td data-col="start_wip_onhold">{% if r.shift_start_wip_onhold is none %}0{% elif
               r.shift_start_wip_onhold == (r.shift_start_wip_onhold|int) %}{{ r.shift_start_wip_onhold|int }}{% else
               %}{{ '%.3f'|format(r.shift_start_wip_onhold) }}{% endif %}</td>
-            <td data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 == (r.commit1|int) %}{{ r.commit1|int
+            <td class="pinned-col pinned-6" data-col="commit1">{% if r.commit1 is none %}0{% elif r.commit1 ==
+              (r.commit1|int) %}{{ r.commit1|int
               }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
             <td data-col="commit2">{% if r.commit2 is none %}0{% elif r.commit2 == (r.commit2|int) %}{{ r.commit2|int
               }}{% else %}{{ '%.3f'|format(r.commit2) }}{% endif %}</td>
@@ -851,7 +863,7 @@
               <div class="action-group" id="group-comment-{{ r.id }}">
                 <textarea class="table-input comment-input comment-textarea" rows="2"
                   data-original="{{ r.miss_goal_comment or '' }}"
-                  oninput="handleTestInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
+                  onblur="handleTestInput(this, 'comment')">{{ r.miss_goal_comment or '' }}</textarea>
               </div>
             </td>
             <td class="cell-pad-4" data-col="actions">
@@ -886,14 +898,14 @@
             <td data-col="mor"></td>
             <td data-col="link_cell_qty" id="test-total-link_cell_qty"></td>
             <td data-col="capacity" id="test-total-capacity"></td>
-            <td data-col="qps1"></td>
+            <td data-col="qps1" id="test-total-qps1"></td>
             <td class="highlight-col" data-col="goal" id="test-total-goal"></td>
             <td data-col="output" id="test-total-output"></td>
             {% elif current_page == 'HDMx' %}
             <td class="pinned-col pinned-3" data-col="dlcp"></td>
-            <td data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
+            <td class="pinned-col pinned-4" data-col="shift_start_wip" id="test-total-shift_start_wip"></td>
             <td data-col="start_wip_onhold" id="test-total-start_wip_onhold"></td>
-            <td data-col="commit1" id="test-total-commit1"></td>
+            <td class="pinned-col pinned-6" data-col="commit1" id="test-total-commit1"></td>
             <td data-col="commit2" id="test-total-commit2"></td>
             <td data-col="qtg1"></td>
             <td data-col="stg1"></td>
@@ -974,6 +986,7 @@
 
   <script src="{{ url_for('static', filename='js/progress_scale.js') }}?v=20260520"></script>
   <script src="{{ url_for('static', filename='js/test.js') }}?v=20260715b"></script>
+  <script src="{{ url_for('static', filename='js/test_demo.js') }}?v=20260813h"></script>
 
   <script>
     // Lightweight layout debug (no DevTools needed).
