@@ -55,11 +55,6 @@ body {
     background: var(--table-head-bg) !important;
 }
 
-/* Keep hover background on pinned data cells too. */
-#mainTable tbody tr:hover td.pinned-col {
-    background: var(--table-hover-bg) !important;
-}
-
 /* --- Alternating row colors (zebra striping) --- */
 /* Minimal change: stripe only tbody rows; keep hover styling on top. */
 #mainTable tbody tr:nth-child(even) td {
@@ -983,10 +978,6 @@ body {
             z-index: 20;
             font-weight: 700;
             border-top: 2px solid var(--border-color);
-        }
-
-        tr:hover td {
-            background-color: var(--table-hover-bg) !important;
         }
 
         /* --- Highlighted Goal Column --- */

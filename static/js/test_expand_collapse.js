@@ -28,7 +28,7 @@ function initGrouping() {
   // For each group, create a header row and child rows
   Object.keys(groups).sort().forEach((prodgroup3, index) => {
     const childRows = groups[prodgroup3];
-    const isExpanded = true; // Start expanded by default
+    const isExpanded = false; // Start collapsed by default
     
     // Create group header row with aggregated data
     const headerRow = createGroupHeaderRow(prodgroup3, childRows, isExpanded);
@@ -336,6 +336,66 @@ function drawGroupHeaderProgressBars() {
     }
   });
 }
+
+// Recalculate and refresh a single group header row's aggregated values
+// (summary values + progress) from its current child rows. Call this
+// whenever an editable value inside a child row (goal, cell qty, etc.)
+// changes, so the group header stays in sync without a full re-group.
+function updateGroupHeaderRow(prodgroup3) {
+  if (!prodgroup3) return;
+  const headerRow = document.querySelector(`tr.group-header-row[data-group="${prodgroup3}"]`);
+  if (!headerRow) return;
+
+  const childRows = Array.from(document.querySelectorAll(`tr.child-row[data-group="${prodgroup3}"]`));
+  if (childRows.length === 0) return;
+
+  const aggregatedData = calculateAggregatedData(childRows);
+
+  headerRow.querySelectorAll('td[data-col]').forEach(headerCell => {
+    const dataCol = headerCell.getAttribute('data-col');
+
+    // First column (prodgroup3 name/icon) and second column (row count) are not sums.
+    if (dataCol === 'prodgroup3' || dataCol === 'operation') {
+      return;
+    }
+
+    if (dataCol === 'progress') {
+      const goal = aggregatedData.goal || 0;
+      const output = aggregatedData.output || 0;
+      const progressPercent = goal > 0 ? Math.round((output / goal) * 100) : 0;
+      headerCell.setAttribute('data-progress', progressPercent);
+      headerCell.setAttribute('data-output', output);
+      headerCell.setAttribute('data-goal', goal);
+      return;
+    }
+
+    if (aggregatedData[dataCol] !== undefined) {
+      let span = headerCell.querySelector('.summary-value');
+      if (!span) {
+        span = document.createElement('span');
+        span.className = 'summary-value';
+        headerCell.innerHTML = '';
+        headerCell.appendChild(span);
+      }
+      span.textContent = formatNumber(aggregatedData[dataCol]);
+    }
+  });
+
+  // Redraw progress bars so the new goal/output percentage is reflected visually.
+  drawGroupHeaderProgressBars();
+}
+
+// Convenience helper: given a child row that was just edited, find its
+// group and refresh that group's header aggregates.
+function refreshGroupAggregatesForRow(row) {
+  if (!row) return;
+  const prodgroup3 = row.getAttribute('data-group');
+  if (!prodgroup3) return;
+  updateGroupHeaderRow(prodgroup3);
+}
+
+window.updateGroupHeaderRow = updateGroupHeaderRow;
+window.refreshGroupAggregatesForRow = refreshGroupAggregatesForRow;
 
 // Apply zebra striping to visible child rows only
 function applyRowStriping() {

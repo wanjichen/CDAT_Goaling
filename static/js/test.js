@@ -53,6 +53,14 @@ function apiUrl(path) {
   return `${getAppBasePath()}${path}`;
 }
 
+// If this row belongs to a collapsed/expanded group (STHI/HDMx grouping view),
+// recalculate that group's header aggregates so they stay in sync with edits.
+function refreshGroupHeaderIfNeeded(row) {
+  if (typeof window.refreshGroupAggregatesForRow === 'function') {
+    window.refreshGroupAggregatesForRow(row);
+  }
+}
+
 function getCurrentTestPageFromUrl() {
   const u = new URL(window.location.href);
   return (u.searchParams.get('page') || 'BI').trim();
@@ -374,6 +382,11 @@ function calculateTestTotals() {
 
   rows.forEach(row => {
     if (row.style.display === 'none') return;
+    // Skip group header rows (STHI/HDMx grouping view) - they only display
+    // aggregated summary values, not real data. Their child rows are still
+    // included below (even collapsed ones), so counting the header too
+    // would double-count every group's totals.
+    if (row.classList.contains('group-header-row')) return;
 
     const getVal = (col) => {
       const td = row.querySelector(`td[data-col="${col}"]`);
@@ -582,6 +595,7 @@ window.handleTestInput = function handleTestInput(input, type) {
 
   // Keep totals live as the user types.
   calculateTestTotals();
+  refreshGroupHeaderIfNeeded(row);
   // Update QPS1 warning highlight when goal changes (STHI only)
   updateQps1Warnings();
   scheduleTestAutoSave(row, 'goal');
@@ -601,6 +615,7 @@ window.handleTestInput = function handleTestInput(input, type) {
     else hideActions(actionGroup);
 
     calculateTestTotals();
+    refreshGroupHeaderIfNeeded(row);
   scheduleTestAutoSave(row, 'cellqty');
   }
 };
@@ -613,6 +628,7 @@ window.cancelTestRow = function cancelTestRow(btn, type) {
     setInputDirtyState(goalInput, false);
     hideActions(document.getElementById(`group-goal-${row.getAttribute('data-id')}`));
   calculateTestTotals();
+  refreshGroupHeaderIfNeeded(row);
   } else if (type === 'comment') {
     const c = row.querySelector('.comment-input');
     c.value = c.getAttribute('data-original') || '';
@@ -624,6 +640,7 @@ window.cancelTestRow = function cancelTestRow(btn, type) {
     setInputDirtyState(qty, false);
     hideActions(document.getElementById(`group-cellqty-${row.getAttribute('data-id')}`));
     calculateTestTotals();
+    refreshGroupHeaderIfNeeded(row);
   }
 };
 
@@ -693,6 +710,7 @@ async function saveTestRowInternal(row, type, options = {}) {
 
   if (!silent) showToast('Saved.', 'success');
   calculateTestTotals();
+  refreshGroupHeaderIfNeeded(row);
     } else if (type === 'cellqty') {
       const qtyInput = row.querySelector('.cellqty-input');
       // Sync from server in case the backend coerces/normalizes the value.
@@ -737,6 +755,7 @@ async function saveTestRowInternal(row, type, options = {}) {
         showToast(`Saved. (module=${debugModule}, capacity=${data.capacity})`, 'success');
       }
       calculateTestTotals();
+      refreshGroupHeaderIfNeeded(row);
     } else {
       const c = row.querySelector('.comment-input');
       c.setAttribute('data-original', c.value);

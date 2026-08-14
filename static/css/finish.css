@@ -134,10 +134,6 @@
   background-color: var(--bg-surface, #ffffff) !important;
 }
 
-#finishTable tbody tr:hover td.pinned-col {
-  background-color: var(--table-hover-bg, #e8f0ff) !important;
-}
-
 #finishTable td.pinned-col {
   background: var(--bg-surface, #ffffff);
 }

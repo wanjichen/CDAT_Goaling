@@ -8,10 +8,6 @@ tr.group-header-row {
   user-select: none;
 }
 
-tr.group-header-row:hover {
-  background-color: #e2e8f0 !important;
-}
-
 tr.group-header-row td {
   border-bottom: 2px solid #cbd5e1;
 }
@@ -64,6 +60,15 @@ tr.group-header-row td[data-col="operation"] {
 }
 
 /* Progress bar in group header rows - use same compact format as detail rows */
+/* The bar (.progress-wrap) and percentage (.progress-label) are appended as
+   separate sibling elements directly inside this td (not nested), so the td
+   itself must be a flex row to keep them side-by-side instead of stacking. */
+tr.group-header-row td[data-col="progress"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 tr.group-header-row td[data-col="progress"] .progress-wrap {
   display: flex;
   flex-direction: row;

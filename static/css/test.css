@@ -165,11 +165,6 @@
 
 
 
-#testTable td.pinned-col.pinned-2,
-#testTable th.pinned-col.pinned-2 {
-  background-color: var(--bg-surface, #ffffff) !important;
-}
-
 /* Ensure pinned headers have opaque backgrounds so underlying cells don't show through. */
 #testTable thead th.pinned-col {
   background: linear-gradient(180deg, var(--table-head-bg, #f8fafc) 0%, var(--table-head-bg-strong, #edf2f7) 100%) !important;
