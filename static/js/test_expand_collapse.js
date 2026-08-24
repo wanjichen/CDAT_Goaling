@@ -202,7 +202,14 @@ function calculateAggregatedData(childRows) {
         } else {
           value = parseFloat(cell.textContent) || 0;
         }
-        aggregated[col] += value;
+        
+        // Commit1 and Commit2 should be aggregated as MAX across the group,
+        // not summed like the other columns.
+        if (col === 'commit1' || col === 'commit2') {
+          aggregated[col] = Math.max(aggregated[col], value);
+        } else {
+          aggregated[col] += value;
+        }
       }
     });
   });
