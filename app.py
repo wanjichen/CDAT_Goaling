@@ -1,3 +1,4 @@
+from product_config import DT_PRODUCTS, PCH_PRODUCTS, OLB_GOAL_FACTOR_DT, OLB_GOAL_FACTOR_NON_DT, get_olb_goal_factor
 import urllib.parse
 import csv
 import math
@@ -98,31 +99,8 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = _engine_opts
 db = SQLAlchemy(app)
 
 
-# ---------------------------------------------------------------------------
-# OLB goal-factor configuration
-# ---------------------------------------------------------------------------
-# prodgroup3 values that belong to the DT (Desktop) product family.
-# These use OLB_GOAL_FACTOR_DT (0.8).
-# All other prodgroup3 values use OLB_GOAL_FACTOR_NON_DT (0.8 * 0.8 = 0.64).
-#
-# To add or remove a product, edit DT_PRODUCTS below.
-DT_PRODUCTS: set[str] = {
-    'ADP',
-    'ADPIOT',
-    'MTP',
-    'ARLS816L',
-    'ARLR816L',
-    'ARLS681',
-    'RPLS881',
-    'RPRS881',
-    'RPLS601',
-    'RPRS601',
-}
-
-OLB_GOAL_FACTOR_DT: float = 0.8          # prodgroup3 IN DT_PRODUCTS
-# prodgroup3 NOT IN DT_PRODUCTS (0.64)
-OLB_GOAL_FACTOR_NON_DT: float = 0.8 * 0.8
-# ---------------------------------------------------------------------------
+# Product family configuration (DT vs. Mobile classification) lives in
+# product_config.py so it can be reused outside of this module.
 
 # Register isolated areas (kept separate from production assembly modules).
 register_test_routes(app)
@@ -1344,8 +1322,8 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
         ).scalar() or 0
 
         # Calculate OLB goal: (V8 + HDMx) * goal_factor + shift_start_wip
-        # Factor depends on whether prodgroup3 belongs to the DT product family.
-        goal_factor = OLB_GOAL_FACTOR_DT if prodgroup3 in DT_PRODUCTS else OLB_GOAL_FACTOR_NON_DT
+        # Factor depends on whether prodgroup3 belongs to the DT or PCH product family.
+        goal_factor = get_olb_goal_factor(prodgroup3)
         shift_start_wip = float(olb_row.shift_start_wip or 0) if olb_row else 0
         olb_goal = round((float(v8_goal) + float(hdmx_goal))
                          * goal_factor + shift_start_wip, 1)

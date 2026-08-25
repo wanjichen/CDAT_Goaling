@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260708b">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/test_expand_collapse.css') }}?v=20260825a">
 </head>
 
 <body>
@@ -132,6 +133,12 @@
                     class="tab-link{% if tab == current_page %} active{% endif %}">{{
                     tab }}</a>
                 {% endfor %}
+                <span class="expand-collapse-separator"></span>
+                <a href="javascript:void(0)" onclick="expandAllFinishGroups()" class="tab-link expand-collapse-tab-btn"
+                    title="Expand all product family groups">➕ Expand All</a>
+                <a href="javascript:void(0)" onclick="collapseAllFinishGroups()"
+                    class="tab-link expand-collapse-tab-btn" title="Collapse all product family groups">➖ Collapse
+                    All</a>
             </div>
             <a class="tab-link copy-tab-btn quick-link-btn" href="{{ url_for('test_home') }}" title="Go to Test Modules"
                 aria-label="Go to Test Modules" target="_blank" rel="noopener noreferrer">
@@ -425,9 +432,15 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/progress_scale.js') }}?v=20260520"></script>
+    <script src="{{ url_for('static', filename='js/finish_expand_collapse.js') }}?v=20260825a"></script>
     <script>
         const FINISH_PAGE = '{{ current_page }}';
         const SELECTED_SHIFT = '{{ selected_shift }}';
+
+        // Product family classification (single source of truth: product_config.py)
+        window.DT_PRODUCTS = {{ (dt_products or[]) | tojson }};
+        window.PCH_PRODUCTS = {{ (pch_products or[]) | tojson }};
+        window.PRODUCT_FAMILY_ORDER = {{ (product_family_order or[]) | tojson }};
 
         // === URL helpers (handles IIS sub-application prefix e.g. /CDAT_Goaling) ===
         // Base path is injected server-side by Flask so it's always correct.
@@ -652,6 +665,16 @@
 
             if (current === original) return;
 
+            // Keep totals and group aggregates live as the user types,
+            // the same way STHI/HDMx (test.js) does - don't wait for the
+            // server round-trip before reflecting the change on screen.
+            if (type === 'goal' || type === 'cellqty') {
+                calculateFinishTotals();
+                if (typeof refreshFinishGroupAggregatesForRow === 'function') {
+                    refreshFinishGroupAggregatesForRow(row);
+                }
+            }
+
             let payload = { id: parseInt(id, 10) };
             if (type === 'goal') {
                 payload.goal = current === '' ? null : parseFloat(current);
@@ -682,6 +705,9 @@
                             }
 
                             calculateFinishTotals();
+                            if (typeof refreshFinishGroupAggregatesForRow === 'function') {
+                                refreshFinishGroupAggregatesForRow(row);
+                            }
                         } else {
                             showToast(data.message || 'Update failed.', 'error');
                         }
@@ -716,6 +742,9 @@
                             }
 
                             calculateFinishTotals();
+                            if (typeof refreshFinishGroupAggregatesForRow === 'function') {
+                                refreshFinishGroupAggregatesForRow(row);
+                            }
                         } else {
                             showToast(data.message || 'Update failed.', 'error');
                         }
@@ -770,9 +799,17 @@
                     throw new Error(errMsg);
                 }
 
+                const family = row.getAttribute('data-group');
                 row.remove();
                 showToast('Row deleted.', 'success');
                 calculateFinishTotals();
+                if (family && typeof refreshFinishGroupAggregatesForRow === 'function') {
+                    // Row is already removed from the DOM; pass a stand-in with the
+                    // same data-group so the helper can locate the remaining child rows.
+                    const stub = document.createElement('tr');
+                    stub.setAttribute('data-group', family);
+                    refreshFinishGroupAggregatesForRow(stub);
+                }
             } catch (e) {
                 showToast(String(e.message || e), 'error');
             } finally {
@@ -896,6 +933,12 @@
         // Initialize totals on page load
         calculateFinishTotals();
 
+        // Group rows into DT / PCH / Mobile product family sections
+        // (see static/js/finish_expand_collapse.js).
+        if (typeof initFinishGrouping === 'function') {
+            initFinishGrouping();
+        }
+
         // Keep sticky pinned offsets correct.
         // - Run once immediately
         // - Run again after the browser has laid out fonts/styles
@@ -905,6 +948,7 @@
         setTimeout(() => updateFinishPinnedOffsets(), 250);
         window.addEventListener('resize', () => updateFinishPinnedOffsets());
     </script>
+    <script src="{{ url_for('static', filename='js/finish_expand_collapse.js') }}?v=20260825a"></script>
 </body>
 
 </html>
