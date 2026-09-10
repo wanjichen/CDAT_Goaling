@@ -27,14 +27,21 @@ PCH_PRODUCTS: set[str] = {
     'MTP',
 }
 
+# prodgroup3 values that belong to the Server product family.
+# These also use OLB_GOAL_FACTOR_DT (0.8), same as DT_PRODUCTS.
+SERVER_PRODUCTS: set[str] = {
+    'SPRXCS',
+    'SPRXCC',
+}
+
 # ---------------------------------------------------------------------------
 # OLB goal-factor configuration
 # ---------------------------------------------------------------------------
-# DT and PCH products use OLB_GOAL_FACTOR_DT (0.8).
-# All other (Mobile / non-DT / non-PCH) products use OLB_GOAL_FACTOR_NON_DT (0.8 * 0.8 = 0.64).
-# prodgroup3 IN DT_PRODUCTS or PCH_PRODUCTS
+# DT, PCH, and Server products use OLB_GOAL_FACTOR_DT (0.8).
+# All other (Mobile / non-DT / non-PCH / non-Server) products use OLB_GOAL_FACTOR_NON_DT (0.8 * 0.8 = 0.64).
+# prodgroup3 IN DT_PRODUCTS, PCH_PRODUCTS, or SERVER_PRODUCTS
 OLB_GOAL_FACTOR_DT: float = 0.8
-# prodgroup3 NOT IN DT_PRODUCTS or PCH_PRODUCTS (0.64)
+# prodgroup3 NOT IN DT_PRODUCTS, PCH_PRODUCTS, or SERVER_PRODUCTS (0.64)
 OLB_GOAL_FACTOR_NON_DT: float = 0.8 * 0.8
 
 
@@ -48,13 +55,33 @@ def is_pch_product(prodgroup3: str) -> bool:
     return prodgroup3 in PCH_PRODUCTS
 
 
+def is_server_product(prodgroup3: str) -> bool:
+    """Return True if the given prodgroup3 belongs to the Server product family."""
+    return prodgroup3 in SERVER_PRODUCTS
+
+
+# prodgroup3 values that should be fully excluded from OLB goal syncing.
+# No OLB goal is calculated, created, or updated for these products.
+# NOTE: this exclusion applies only to the Test Modules (test.html) OLB tab
+# (see sync_olb_goal / /api/test/add-new-goal in app.py). Assembly (index.html)
+# and Finish (finish.html) have no OLB module, so they are unaffected.
+EXCLUDE_PRODUCTS: set[str] = {
+    'MTP',
+}
+
+
+def is_excluded_product(prodgroup3: str) -> bool:
+    """Return True if the given prodgroup3 should be excluded from OLB goal sync."""
+    return prodgroup3 in EXCLUDE_PRODUCTS
+
+
 def get_olb_goal_factor(prodgroup3: str) -> float:
     """Return the OLB goal factor for a given prodgroup3.
 
-    DT and PCH products use OLB_GOAL_FACTOR_DT; everything else uses
-    OLB_GOAL_FACTOR_NON_DT.
+    DT, PCH, and Server products use OLB_GOAL_FACTOR_DT; everything else
+    uses OLB_GOAL_FACTOR_NON_DT.
     """
-    if is_dt_product(prodgroup3) or is_pch_product(prodgroup3):
+    if is_dt_product(prodgroup3) or is_pch_product(prodgroup3) or is_server_product(prodgroup3):
         return OLB_GOAL_FACTOR_DT
     return OLB_GOAL_FACTOR_NON_DT
 
@@ -64,10 +91,11 @@ def get_olb_goal_factor(prodgroup3: str) -> float:
 # ---------------------------------------------------------------------------
 FAMILY_DT = 'DT Products'
 FAMILY_PCH = 'PCH Products'
+FAMILY_SERVER = 'Server Products'
 FAMILY_MOBILE = 'Mobile Products'
 
 # Display order used by any UI that groups rows by product family.
-PRODUCT_FAMILY_ORDER = [FAMILY_DT, FAMILY_PCH, FAMILY_MOBILE]
+PRODUCT_FAMILY_ORDER = [FAMILY_DT, FAMILY_PCH, FAMILY_SERVER, FAMILY_MOBILE]
 
 
 def get_product_family(prodgroup3: str) -> str:
@@ -75,10 +103,13 @@ def get_product_family(prodgroup3: str) -> str:
 
     - DT_PRODUCTS -> 'DT Products'
     - PCH_PRODUCTS -> 'PCH Products'
+    - SERVER_PRODUCTS -> 'Server Products'
     - everything else -> 'Mobile Products'
     """
     if is_dt_product(prodgroup3):
         return FAMILY_DT
     if is_pch_product(prodgroup3):
         return FAMILY_PCH
+    if is_server_product(prodgroup3):
+        return FAMILY_SERVER
     return FAMILY_MOBILE

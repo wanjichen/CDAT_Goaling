@@ -614,11 +614,46 @@ window.handleTestInput = function handleTestInput(input, type) {
     if (isDirty) showActions(actionGroup);
     else hideActions(actionGroup);
 
+    // Live-preview Capacity as the user types, before the server round-trip
+    // (same formula the backend uses in /api/test/update-cellqty):
+    //   STHI, BI, V8: capacity = mor * qty
+    //   HDMx (and others): capacity = mor * qty / 30
+    previewTestCapacity(row);
+
     calculateTestTotals();
     refreshGroupHeaderIfNeeded(row);
   scheduleTestAutoSave(row, 'cellqty');
   }
 };
+
+// Recalculate and display the Capacity cell client-side from the row's
+// current MOR and the in-progress Cell Qty input value. This is purely a
+// preview - the server remains the source of truth and overwrites this
+// value once the autosave round-trip completes (see saveTestRowInternal).
+function previewTestCapacity(row) {
+  if (!row) return;
+  const capTd = row.querySelector('td[data-col="capacity"]');
+  const qtyInput = row.querySelector('.cellqty-input');
+  const morTd = row.querySelector('td[data-col="mor"]');
+  if (!capTd || !qtyInput) return;
+
+  const rawQty = String(qtyInput.value ?? '').trim();
+  if (rawQty === '') {
+    capTd.textContent = '0';
+    return;
+  }
+
+  const qtyVal = parseFloat(rawQty);
+  const morVal = parseFloat((morTd?.textContent || '').trim()) || 0;
+  if (!Number.isFinite(qtyVal)) return;
+
+  const currentPage = getCurrentTestPageFromUrl();
+  const capacityVal = (currentPage === 'STHI' || currentPage === 'BI' || currentPage === 'V8')
+    ? morVal * qtyVal
+    : (morVal * qtyVal) / 30.0;
+
+  capTd.textContent = Number.isFinite(capacityVal) ? capacityVal.toFixed(1) : '';
+}
 
 window.cancelTestRow = function cancelTestRow(btn, type) {
   const row = btn.closest('tr');
@@ -639,6 +674,7 @@ window.cancelTestRow = function cancelTestRow(btn, type) {
     qty.value = qty.getAttribute('data-original') || '';
     setInputDirtyState(qty, false);
     hideActions(document.getElementById(`group-cellqty-${row.getAttribute('data-id')}`));
+    previewTestCapacity(row);
     calculateTestTotals();
     refreshGroupHeaderIfNeeded(row);
   }

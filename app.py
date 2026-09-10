@@ -1,4 +1,4 @@
-from product_config import DT_PRODUCTS, PCH_PRODUCTS, OLB_GOAL_FACTOR_DT, OLB_GOAL_FACTOR_NON_DT, get_olb_goal_factor
+from product_config import DT_PRODUCTS, PCH_PRODUCTS, OLB_GOAL_FACTOR_DT, OLB_GOAL_FACTOR_NON_DT, get_olb_goal_factor, is_excluded_product
 import urllib.parse
 import csv
 import math
@@ -149,7 +149,7 @@ def download_goal_output():
     rows_data = []
 
     # Test modules (should only come from TestReport table, not Report)
-    test_modules = ['HDMx', 'PHVI', 'V8', 'OLB', 'BI', 'STHI']
+    test_modules = ['HDMx', 'PHVI', 'V8', 'OLB', 'BI', 'STHI', 'MARK', 'DVI']
 
     # Query assembly modules (exclude test modules)
     assembly_query = db.session.query(
@@ -162,7 +162,8 @@ def download_goal_output():
                              Report.system_suggested_goal, 0)
         ).label('total_goal'),
         db.func.sum(db.func.coalesce(Report.output, 0)).label('total_output'),
-        db.func.sum(db.func.coalesce(Report.qps1, 0)).label('total_qps1')
+        db.func.sum(db.func.coalesce(Report.qps1, 0)).label('total_qps1'),
+        db.func.sum(db.func.coalesce(Report.qps2, 0)).label('total_qps2')
     ).filter(
         Report.shift.in_(shifts),
         Report.module.notin_(test_modules),
@@ -174,20 +175,28 @@ def download_goal_output():
         Report.entity
     ).all()
 
-    # Query test modules: get the LATEST row per (shift, module, prodgroup3) using MAX(id)
-    # First, get the max IDs for each group
-    test_max_ids_query = db.session.query(
-        db.func.max(TestReport.id).label('max_id')
+    # Query test modules: get the LATEST row(s) per (shift, module) using the
+    # SAME grouping rules as the live UI (get_latest_test_report_ids_for_shift_and_page),
+    # instead of a separate ad-hoc (shift, module, prodgroup3)-only dedup which
+    # ignored operation/dlcp and could drop legitimate rows (e.g. DVI's
+    # multiple operations per prodgroup3, or STHI/HDMx's dlcp variants).
+    distinct_shift_modules = db.session.query(
+        TestReport.shift, TestReport.module
     ).filter(
         TestReport.shift.in_(shifts),
         (TestReport.is_deleted.is_(None)) | (TestReport.is_deleted.is_(False))
-    ).group_by(
-        TestReport.shift,
-        TestReport.module,
-        TestReport.prodgroup3
-    ).subquery()
+    ).distinct().all()
 
-    # Now get the actual rows using those max IDs
+    test_ids = []
+    for shift_val, module_val in distinct_shift_modules:
+        if not shift_val or not module_val:
+            continue
+        ids_subq = get_latest_test_report_ids_for_shift_and_page(
+            shift_val, module_val)
+        test_ids.extend(
+            row.id for row in db.session.query(ids_subq.c.id).all()
+        )
+
     test_query = db.session.query(
         TestReport.shift,
         TestReport.module,
@@ -195,18 +204,18 @@ def download_goal_output():
         db.literal(None).label('entity'),
         TestReport.goal.label('total_goal'),
         TestReport.output.label('total_output'),
-        TestReport.qps1.label('total_qps1')
+        TestReport.qps1.label('total_qps1'),
+        TestReport.qps2.label('total_qps2')
     ).filter(
-        TestReport.id.in_(
-            db.session.query(test_max_ids_query.c.max_id)
-        )
-    ).all()
+        TestReport.id.in_(test_ids)
+    ).all() if test_ids else []
 
     # Process assembly rows
     for row in assembly_query:
         goal = row.total_goal or 0
         output = row.total_output or 0
         qps1 = row.total_qps1 or 0
+        qps2 = row.total_qps2 or 0
         if goal == 0:  # Skip rows with no goal
             continue
         achievement = (output / goal * 100) if goal > 0 else 0
@@ -218,6 +227,7 @@ def download_goal_output():
             'goal': goal,
             'output': output,
             'qps1': qps1,
+            'qps2': qps2,
             'achievement': round(achievement, 1),
         })
 
@@ -226,6 +236,7 @@ def download_goal_output():
         goal = row.total_goal or 0
         output = row.total_output or 0
         qps1 = row.total_qps1 or 0
+        qps2 = row.total_qps2 or 0
         if goal == 0:  # Skip rows with no goal
             continue
         achievement = (output / goal * 100) if goal > 0 else 0
@@ -237,6 +248,7 @@ def download_goal_output():
             'goal': goal,
             'output': output,
             'qps1': qps1,
+            'qps2': qps2,
             'achievement': round(achievement, 1),
         })
 
@@ -251,7 +263,7 @@ def download_goal_output():
 
     # Write header
     writer.writerow(['Shift', 'Module', 'Prodgroup3',
-                    'Entity', 'Goal', 'Output', 'QPS1', 'Achievement %'])
+                    'Entity', 'Goal', 'Output', 'QPS1', 'QPS2', 'Achievement %'])
 
     # Helper function to format numbers: integer if whole, else 3 decimals
     def format_number(val):
@@ -281,6 +293,7 @@ def download_goal_output():
             format_number(row['goal']),
             format_number(row['output']),
             format_number(row['qps1']),
+            format_number(row['qps2']),
             format_achievement(row['achievement']),
         ])
 
@@ -445,9 +458,12 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
     """Mirror the assembly latest-per-group logic for the test table.
 
     For STHI and HDMx, rows are uniquely identified by (prodgroup3, operation, dlcp).
-    For MARK, DVI, and PHVI, rows are uniquely identified by prodgroup3 only
-      (operation is irrelevant - sync functions treat these modules at prodgroup3 level).
-    For BI, V8, OLB, and other modules, rows are uniquely identified by (prodgroup3, operation).
+    For PHVI, rows are uniquely identified by prodgroup3 only
+      (operation is irrelevant - sync functions treat this module at prodgroup3 level).
+    For MARK, DVI, BI, V8, OLB, and other modules, rows are uniquely identified
+      by (prodgroup3, operation).
+      (MARK and DVI support multiple active operations per prodgroup3 - see
+      sync_mark_goal / sync_dvi_goal.)
     """
     filtered = db.session.query(
         TestReport.id,
@@ -469,14 +485,15 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
             TestReport.operation,
             TestReport.dlcp,
         ).subquery()
-    # MARK, DVI, PHVI: one row per prodgroup3 - operation is ignored by sync logic
-    elif page_name in ('MARK', 'DVI', 'PHVI'):
+    # DVI, PHVI: one row per prodgroup3 - operation is ignored by sync logic
+    elif page_name in ('PHVI',):
         latest_ids = filtered.with_entities(
             db.func.max(TestReport.id).label('id')
         ).group_by(
             TestReport.prodgroup3,
         ).subquery()
     else:
+        # MARK, DVI, BI, V8, OLB, etc.: one row per (prodgroup3, operation)
         latest_ids = filtered.with_entities(
             db.func.max(TestReport.id).label('id')
         ).group_by(
@@ -958,16 +975,28 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
 
 
 def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
-    """Sync MARK goal when STHI goal changes.
+    """Sync MARK goal(s) when STHI goal changes.
 
-    Formula: MARK goal = STHI_goal_sum * 0.9 + MARK.shift_start_wip
+    Formula (per MARK operation row): MARK.goal = STHI_goal_sum * 0.9 + MARK.shift_start_wip
 
     - STHI is summed across ALL rows (all operations + all dlcp) for the same prodgroup3
-    - MARK is matched at the prodgroup3 level only (operation is ignored)
-    - If MARK row doesn't exist, create it with all-zero defaults
-    - If STHI is deleted/absent AND MARK.shift_start_wip = 0, soft-delete MARK row
+    - MARK supports MULTIPLE active rows per prodgroup3, one per operation.
+      Each MARK row is matched/updated independently by (prodgroup3, operation);
+      the shared STHI-driven portion (STHI_goal_sum * 0.9) is applied to EVERY
+      active MARK operation row for this prodgroup3, on top of that row's own
+      shift_start_wip. (Option A: no splitting/proration across operations.)
+    - If NO active MARK row exists yet for this prodgroup3 at all, one is
+      auto-created with the default operation code '7300' and all-zero
+      defaults (same as before multi-operation support was added). If one or
+      more MARK rows already exist, no new row is auto-created - only the
+      existing rows are updated.
+    - If STHI is deleted/absent AND a MARK row's shift_start_wip = 0, that
+      MARK row is soft-deleted. If shift_start_wip != 0, its goal is reset to
+      just the shift_start_wip.
+    - Duplicate active MARK rows for the SAME (prodgroup3, operation) are
+      still deduped down to the MAX(id) row (true duplicates only - different
+      operations are never considered duplicates of each other).
     - No prodgroup3 exclusions
-    - Uses MAX(id) to find the MARK row, matching how the UI fetches the latest row
     """
     try:
         # Check if any active STHI rows exist for this prodgroup3
@@ -980,9 +1009,11 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
                 TestReport.is_deleted == False)
         ).first() is not None
 
-        # Find existing MARK row using MAX(id) to match UI's latest-row logic
-        mark_max_id = db.session.query(
-            db.func.max(TestReport.id)
+        # Find all active MARK operations for this prodgroup3, one MAX(id) per operation
+        # (dedupes true duplicates - same prodgroup3 + same operation - while
+        # keeping distinct operations as separate rows).
+        mark_ids_per_op = db.session.query(
+            db.func.max(TestReport.id).label('id')
         ).filter(
             TestReport.year == year,
             TestReport.shift == shift,
@@ -990,21 +1021,34 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.module == 'MARK',
             (TestReport.is_deleted.is_(None)) | (
                 TestReport.is_deleted == False)
-        ).scalar()
+        ).group_by(TestReport.operation).all()
 
-        mark_row = db.session.get(
-            TestReport, mark_max_id) if mark_max_id else None
+        mark_ids = [row.id for row in mark_ids_per_op]
+        mark_rows = db.session.query(TestReport).filter(
+            TestReport.id.in_(mark_ids)).all() if mark_ids else []
 
-        # If STHI doesn't exist, handle MARK deletion or WIP-only update
+        # Soft-delete any duplicate active MARK rows for the same (prodgroup3, operation)
+        # (lower id than the MAX(id) kept above).
+        if mark_ids:
+            db.session.query(TestReport).filter(
+                TestReport.year == year,
+                TestReport.shift == shift,
+                TestReport.prodgroup3 == prodgroup3,
+                TestReport.module == 'MARK',
+                ~TestReport.id.in_(mark_ids),
+                (TestReport.is_deleted.is_(None)) | (
+                    TestReport.is_deleted == False)
+            ).update({TestReport.is_deleted: True}, synchronize_session='fetch')
+
+        # If STHI doesn't exist, handle MARK deletion or WIP-only update for each row
         if not sthi_exists:
-            if mark_row:
+            for mark_row in mark_rows:
                 shift_start_wip = float(mark_row.shift_start_wip or 0)
                 if shift_start_wip == 0:
-                    # No STHI and no WIP - soft delete MARK
+                    # No STHI and no WIP - soft delete this MARK row
                     mark_row.is_deleted = True
                     mark_row.goal_adjusted_at = datetime.now()
                     mark_row.goal_adjusted_by = user
-                    db.session.commit()
                 else:
                     # No STHI but has WIP - set MARK goal = shift_start_wip
                     mark_goal = round(shift_start_wip, 1)
@@ -1014,10 +1058,10 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
                         mark_goal, mor_val)
                     mark_row.goal_adjusted_at = datetime.now()
                     mark_row.goal_adjusted_by = user
-                    db.session.commit()
-                # Cascade: MARK changed (deleted or WIP-only goal) - sync DVI too.
-                db.session.flush()
-                sync_dvi_goal(year, shift, prodgroup3, user)
+            db.session.commit()
+            # Cascade: MARK changed (deleted or WIP-only goal) - sync DVI too.
+            db.session.flush()
+            sync_dvi_goal(year, shift, prodgroup3, user)
             return
 
         # Get STHI goal sum for this shift + prodgroup3 (across all operations/dlcp)
@@ -1032,34 +1076,22 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
                 TestReport.is_deleted == False)
         ).scalar() or 0
 
-        # Calculate MARK goal: STHI * 0.9 + shift_start_wip
-        shift_start_wip = float(
-            mark_row.shift_start_wip or 0) if mark_row else 0
-        mark_goal = round(float(sthi_goal) * 0.9 + shift_start_wip, 1)
+        # Apply STHI * 0.9 + own shift_start_wip to EVERY active MARK operation row.
+        for mark_row in mark_rows:
+            shift_start_wip = float(mark_row.shift_start_wip or 0)
+            mark_goal = round(float(sthi_goal) * 0.9 + shift_start_wip, 1)
+            mor_val = float(mark_row.mor or 0)
+            calculated_tr = compute_tr_from_goal_and_mor(mark_goal, mor_val)
 
-        # Calculate TR (default MOR is 0 for auto-created MARK rows)
-        mor_val = float(mark_row.mor or 0) if mark_row else 0
-        calculated_tr = compute_tr_from_goal_and_mor(mark_goal, mor_val)
-
-        if mark_row:
-            # Soft-delete any duplicate active MARK rows (same shift/prodgroup3, lower id)
-            db.session.query(TestReport).filter(
-                TestReport.year == year,
-                TestReport.shift == shift,
-                TestReport.prodgroup3 == prodgroup3,
-                TestReport.module == 'MARK',
-                TestReport.id != mark_row.id,
-                (TestReport.is_deleted.is_(None)) | (
-                    TestReport.is_deleted == False)
-            ).update({TestReport.is_deleted: True}, synchronize_session='fetch')
-            # Update existing MARK row
             mark_row.goal = mark_goal
             mark_row.tr = calculated_tr
             mark_row.goal_adjusted_at = datetime.now()
             mark_row.goal_adjusted_by = user
-            db.session.commit()
-        else:
-            # Create new MARK row with all-zero defaults
+
+        if not mark_rows:
+            # No MARK row exists yet for this prodgroup3 at all - auto-create
+            # one with the default operation code, same as before.
+            mark_goal = round(float(sthi_goal) * 0.9, 1)
             new_mark = TestReport(
                 year=year,
                 shift=shift,
@@ -1068,7 +1100,7 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
                 module='MARK',
                 mor=0,
                 goal=mark_goal,
-                tr=calculated_tr,
+                tr=compute_tr_from_goal_and_mor(mark_goal, 0),
                 dlcp=None,
                 capacity=0,
                 link_cell_qty=0,
@@ -1077,7 +1109,8 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
                 goal_adjusted_by=user,
             )
             db.session.add(new_mark)
-            db.session.commit()
+
+        db.session.commit()
 
         # Cascade: MARK goal changed - keep DVI in sync too.
         db.session.flush()
@@ -1089,17 +1122,34 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
 
 
 def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
-    """Sync DVI goal when MARK goal changes.
+    """Sync DVI goal(s) when MARK goal changes.
 
-    Formula: DVI goal = MARK_goal_sum * 0.9 + DVI.shift_start_wip
+    Formula (per DVI operation row): DVI.goal = MARK_goal_sum * 0.9 + DVI.shift_start_wip
 
     - MARK is summed across ALL rows (all operations) for the same prodgroup3
-    - DVI is matched at the prodgroup3 level only (operation is ignored)
-    - If DVI row doesn't exist, create it with all-zero defaults
-    - If MARK is deleted/absent AND DVI.shift_start_wip = 0, soft-delete DVI row
-    - No prodgroup3 exclusions
-    - Uses MAX(id) to find the DVI row, matching how the UI fetches the latest row
+    - DVI supports MULTIPLE active rows per prodgroup3, one per operation.
+      Each DVI row is matched/updated independently by (prodgroup3, operation);
+      the shared MARK-driven portion (MARK_goal_sum * 0.9) is applied to EVERY
+      active DVI operation row for this prodgroup3, on top of that row's own
+      shift_start_wip (no splitting/proration across operations).
+    - If NO active DVI row exists yet for this prodgroup3 at all, one is
+      auto-created with the default operation code '1007' and all-zero
+      defaults (same as before multi-operation support was added). If one or
+      more DVI rows already exist, no new row is auto-created - only the
+      existing rows are updated.
+    - If MARK is deleted/absent AND a DVI row's shift_start_wip = 0, that
+      DVI row is soft-deleted. If shift_start_wip != 0, its goal is reset to
+      just the shift_start_wip.
+    - Duplicate active DVI rows for the SAME (prodgroup3, operation) are
+      still deduped down to the MAX(id) row (true duplicates only - different
+      operations are never considered duplicates of each other).
+    - PCH products (product_config.PCH_PRODUCTS) are excluded from DVI sync -
+      no DVI row is auto-created/updated for them (DVI-only exclusion; MARK
+      itself is unaffected).
     """
+    if prodgroup3 in PCH_PRODUCTS:
+        return
+
     try:
         # Check if any active MARK rows exist for this prodgroup3
         mark_exists = db.session.query(TestReport.id).filter(
@@ -1111,9 +1161,11 @@ def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
                 TestReport.is_deleted == False)
         ).first() is not None
 
-        # Find existing DVI row using MAX(id) to match UI's latest-row logic
-        dvi_max_id = db.session.query(
-            db.func.max(TestReport.id)
+        # Find all active DVI operations for this prodgroup3, one MAX(id) per operation
+        # (dedupes true duplicates - same prodgroup3 + same operation - while
+        # keeping distinct operations as separate rows).
+        dvi_ids_per_op = db.session.query(
+            db.func.max(TestReport.id).label('id')
         ).filter(
             TestReport.year == year,
             TestReport.shift == shift,
@@ -1121,21 +1173,34 @@ def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.module == 'DVI',
             (TestReport.is_deleted.is_(None)) | (
                 TestReport.is_deleted == False)
-        ).scalar()
+        ).group_by(TestReport.operation).all()
 
-        dvi_row = db.session.get(
-            TestReport, dvi_max_id) if dvi_max_id else None
+        dvi_ids = [row.id for row in dvi_ids_per_op]
+        dvi_rows = db.session.query(TestReport).filter(
+            TestReport.id.in_(dvi_ids)).all() if dvi_ids else []
 
-        # If MARK doesn't exist, handle DVI deletion or WIP-only update
+        # Soft-delete any duplicate active DVI rows for the same (prodgroup3, operation)
+        # (lower id than the MAX(id) kept above).
+        if dvi_ids:
+            db.session.query(TestReport).filter(
+                TestReport.year == year,
+                TestReport.shift == shift,
+                TestReport.prodgroup3 == prodgroup3,
+                TestReport.module == 'DVI',
+                ~TestReport.id.in_(dvi_ids),
+                (TestReport.is_deleted.is_(None)) | (
+                    TestReport.is_deleted == False)
+            ).update({TestReport.is_deleted: True}, synchronize_session='fetch')
+
+        # If MARK doesn't exist, handle DVI deletion or WIP-only update for each row
         if not mark_exists:
-            if dvi_row:
+            for dvi_row in dvi_rows:
                 shift_start_wip = float(dvi_row.shift_start_wip or 0)
                 if shift_start_wip == 0:
-                    # No MARK and no WIP - soft delete DVI
+                    # No MARK and no WIP - soft delete this DVI row
                     dvi_row.is_deleted = True
                     dvi_row.goal_adjusted_at = datetime.now()
                     dvi_row.goal_adjusted_by = user
-                    db.session.commit()
                 else:
                     # No MARK but has WIP - set DVI goal = shift_start_wip
                     dvi_goal = round(shift_start_wip, 1)
@@ -1145,7 +1210,7 @@ def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
                         dvi_goal, mor_val)
                     dvi_row.goal_adjusted_at = datetime.now()
                     dvi_row.goal_adjusted_by = user
-                    db.session.commit()
+            db.session.commit()
             return
 
         # Get MARK goal sum for this shift + prodgroup3 (across all operations)
@@ -1160,34 +1225,23 @@ def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
                 TestReport.is_deleted == False)
         ).scalar() or 0
 
-        # Calculate DVI goal: MARK * 0.9 + shift_start_wip
-        shift_start_wip = float(
-            dvi_row.shift_start_wip or 0) if dvi_row else 0
-        dvi_goal = round(float(mark_goal_sum) * 0.9 + shift_start_wip, 1)
+        # Apply MARK * 0.9 + own shift_start_wip to EVERY active DVI operation row.
+        for dvi_row in dvi_rows:
+            shift_start_wip = float(dvi_row.shift_start_wip or 0)
+            dvi_goal = round(float(mark_goal_sum) *
+                             0.9 + shift_start_wip, 1)
+            mor_val = float(dvi_row.mor or 0)
+            calculated_tr = compute_tr_from_goal_and_mor(dvi_goal, mor_val)
 
-        # Calculate TR (default MOR is 0 for auto-created DVI rows)
-        mor_val = float(dvi_row.mor or 0) if dvi_row else 0
-        calculated_tr = compute_tr_from_goal_and_mor(dvi_goal, mor_val)
-
-        if dvi_row:
-            # Soft-delete any duplicate active DVI rows (same shift/prodgroup3, lower id)
-            db.session.query(TestReport).filter(
-                TestReport.year == year,
-                TestReport.shift == shift,
-                TestReport.prodgroup3 == prodgroup3,
-                TestReport.module == 'DVI',
-                TestReport.id != dvi_row.id,
-                (TestReport.is_deleted.is_(None)) | (
-                    TestReport.is_deleted == False)
-            ).update({TestReport.is_deleted: True}, synchronize_session='fetch')
-            # Update existing DVI row
             dvi_row.goal = dvi_goal
             dvi_row.tr = calculated_tr
             dvi_row.goal_adjusted_at = datetime.now()
             dvi_row.goal_adjusted_by = user
-            db.session.commit()
-        else:
-            # Create new DVI row with all-zero defaults
+
+        if not dvi_rows:
+            # No DVI row exists yet for this prodgroup3 at all - auto-create
+            # one with the default operation code, same as before.
+            dvi_goal = round(float(mark_goal_sum) * 0.9, 1)
             new_dvi = TestReport(
                 year=year,
                 shift=shift,
@@ -1196,7 +1250,7 @@ def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
                 module='DVI',
                 mor=0,
                 goal=dvi_goal,
-                tr=calculated_tr,
+                tr=compute_tr_from_goal_and_mor(dvi_goal, 0),
                 dlcp=None,
                 capacity=0,
                 link_cell_qty=0,
@@ -1205,7 +1259,8 @@ def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
                 goal_adjusted_by=user,
             )
             db.session.add(new_dvi)
-            db.session.commit()
+
+        db.session.commit()
 
     except Exception as e:
         app.logger.warning(f"DVI sync failed for {shift}/{prodgroup3}: {e}")
@@ -1224,7 +1279,14 @@ def sync_olb_goal(year: int, shift: str, prodgroup3: str, user: str):
     - Prefers the operation='7571' row when updating; falls back to MAX(id) if none exists
     - When creating a new row, always uses operation='7571'
     - Special case: V8 with prodgroup3='CFLH62' and operation='7757' is excluded from OLB calculation
+    - Products in EXCLUDE_PRODUCTS (product_config.py) are skipped entirely: no OLB goal is
+      calculated, created, or updated for these products. This exclusion applies only to the
+      Test Modules (test.html) OLB tab; it has no effect on Assembly (index.html) or Finish
+      (finish.html), which don't have an OLB module.
     """
+    if is_excluded_product(prodgroup3):
+        return
+
     try:
         # Build V8 base filter
         v8_base_filter = [
@@ -2006,6 +2068,51 @@ def test_update_cellqty():
         return json_error(str(e))
 
 
+@app.route('/api/test/resync-capacity', methods=['POST'])
+def test_resync_capacity():
+    """Recalculate and persist `capacity` for all active Test Modules rows
+    so it always matches the formula:
+      - STHI, BI, V8: capacity = mor * link_cell_qty
+      - all other modules (HDMx, etc.): capacity = mor * link_cell_qty / 30
+
+    This exists because `mor` is populated by an external refresh job that
+    does not recompute `capacity` when it changes, which can leave stale
+    capacity values in the DB (independent of any edits made through this
+    app's own /api/test/update-cellqty and /api/test/add-new-goal routes,
+    which already keep capacity correct at write time).
+
+    Optional JSON body: {"module": "HDMx"} to limit the resync to one module;
+    otherwise all modules are resynced.
+    """
+    data = get_request_payload() or {}
+    module_filter = (data.get('module') or '').strip()
+
+    query = TestReport.query.filter(TestReport.is_deleted.is_(False))
+    if module_filter:
+        query = query.filter(TestReport.module == module_filter)
+
+    rows = query.all()
+    updated = 0
+    for row in rows:
+        mor_val = float(row.mor or 0)
+        qty_val = row.link_cell_qty
+        if qty_val is None:
+            new_capacity = None
+        elif row.module in ('STHI', 'BI', 'V8'):
+            new_capacity = round(mor_val * float(qty_val), 1)
+        else:
+            new_capacity = round(mor_val * float(qty_val) / 30.0, 1)
+
+        old_capacity = float(
+            row.capacity) if row.capacity is not None else None
+        if new_capacity != old_capacity:
+            row.capacity = new_capacity
+            updated += 1
+
+    db.session.commit()
+    return json_success(checked=len(rows), updated=updated, module=module_filter or 'ALL')
+
+
 @app.route('/api/test/add-new-goal', methods=['POST'])
 def test_add_new_goal():
     """Insert a new Test Modules row.
@@ -2039,6 +2146,10 @@ def test_add_new_goal():
         # Use the page (tab) name as the module - this is sent from the frontend
         page_val = (data.get('page') or '').strip()
         module_val = page_val if page_val else 'Unknown'
+
+        # OLB goals are never created for excluded products (see product_config.EXCLUDE_PRODUCTS).
+        if module_val == 'OLB' and is_excluded_product(prodgroup3):
+            return json_error(f'OLB goals are not tracked for excluded product "{prodgroup3}".', 400)
 
         # Reuse MOR when possible so Capacity can be calculated immediately.
         # MOR is normally populated by the refresh job; for user-inserted rows,

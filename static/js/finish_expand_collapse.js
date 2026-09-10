@@ -2,13 +2,15 @@
 //
 // Unlike static/js/test_expand_collapse.js (which groups STHI/HDMx rows by
 // their own prodgroup3), this groups finish rows by PRODUCT FAMILY:
-//   - DT Products   (product_config.DT_PRODUCTS)
-//   - PCH Products  (product_config.PCH_PRODUCTS)
+//   - DT Products     (product_config.DT_PRODUCTS)
+//   - PCH Products    (product_config.PCH_PRODUCTS)
+//   - Server Products (product_config.SERVER_PRODUCTS)
 //   - Mobile Products (everything else)
 //
 // The classification lists are rendered server-side (single source of truth
 // in product_config.py) into window.DT_PRODUCTS / window.PCH_PRODUCTS /
-// window.PRODUCT_FAMILY_ORDER by finish.html. This script only reads them.
+// window.SERVER_PRODUCTS / window.PRODUCT_FAMILY_ORDER by finish.html.
+// This script only reads them.
 //
 // Call initFinishGrouping() after the page loads.
 
@@ -16,8 +18,10 @@ function getFinishProductFamily(prodgroup3) {
   const pg3 = (prodgroup3 || '').trim();
   const dtList = window.DT_PRODUCTS || [];
   const pchList = window.PCH_PRODUCTS || [];
+  const serverList = window.SERVER_PRODUCTS || [];
   if (dtList.includes(pg3)) return 'DT Products';
   if (pchList.includes(pg3)) return 'PCH Products';
+  if (serverList.includes(pg3)) return 'Server Products';
   return 'Mobile Products';
 }
 
@@ -42,7 +46,7 @@ function initFinishGrouping() {
 
   const order = (window.PRODUCT_FAMILY_ORDER && window.PRODUCT_FAMILY_ORDER.length)
     ? window.PRODUCT_FAMILY_ORDER
-    : ['DT Products', 'PCH Products', 'Mobile Products'];
+    : ['DT Products', 'PCH Products', 'Server Products', 'Mobile Products'];
 
   order.forEach(family => {
     const childRows = groups[family];

@@ -199,7 +199,7 @@ def register_test_routes(app) -> None:
 
         if not selected_shift:
             # No data in DB for this page yet.
-            from product_config import DT_PRODUCTS, PCH_PRODUCTS, PRODUCT_FAMILY_ORDER
+            from product_config import DT_PRODUCTS, PCH_PRODUCTS, SERVER_PRODUCTS, PRODUCT_FAMILY_ORDER
             return render_template(
                 'finish.html',
                 tabs=tabs,
@@ -214,6 +214,7 @@ def register_test_routes(app) -> None:
                 shift_mismatch=False,
                 dt_products=sorted(DT_PRODUCTS),
                 pch_products=sorted(PCH_PRODUCTS),
+                server_products=sorted(SERVER_PRODUCTS),
                 product_family_order=PRODUCT_FAMILY_ORDER,
             )
 
@@ -271,7 +272,7 @@ def register_test_routes(app) -> None:
         shift_mismatch = bool(
             selected_shift and current_shift and selected_shift != current_shift)
 
-        from product_config import DT_PRODUCTS, PCH_PRODUCTS, PRODUCT_FAMILY_ORDER
+        from product_config import DT_PRODUCTS, PCH_PRODUCTS, SERVER_PRODUCTS, PRODUCT_FAMILY_ORDER
         return render_template(
             'finish.html',
             tabs=tabs,
@@ -288,5 +289,6 @@ def register_test_routes(app) -> None:
             last_refresh_source=last_refresh_source,
             dt_products=sorted(DT_PRODUCTS),
             pch_products=sorted(PCH_PRODUCTS),
+            server_products=sorted(SERVER_PRODUCTS),
             product_family_order=PRODUCT_FAMILY_ORDER,
         )

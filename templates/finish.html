@@ -410,12 +410,12 @@
                         <td data-col="start_wip_onhold" id="finish-total-start_wip_onhold"></td>
                         <td data-col="commit1"></td>
                         <td data-col="commit2"></td>
-                        <td data-col="qtg1"></td>
+                        <td data-col="qtg1" id="finish-total-qtg1"></td>
                         <td data-col="stg1"></td>
-                        <td data-col="qtg2"></td>
-                        <td data-col="qps2"></td>
+                        <td data-col="qtg2" id="finish-total-qtg2"></td>
+                        <td data-col="qps2" id="finish-total-qps2"></td>
                         <td data-col="stg2"></td>
-                        <td data-col="qps1"></td>
+                        <td data-col="qps1" id="finish-total-qps1"></td>
                         <td data-col="mor"></td>
                         <td data-col="tr" id="finish-total-tr"></td>
                         <td data-col="link_cell_qty" id="finish-total-link_cell_qty"></td>
@@ -440,6 +440,7 @@
         // Product family classification (single source of truth: product_config.py)
         window.DT_PRODUCTS = {{ (dt_products or[]) | tojson }};
         window.PCH_PRODUCTS = {{ (pch_products or[]) | tojson }};
+        window.SERVER_PRODUCTS = {{ (server_products or[]) | tojson }};
         window.PRODUCT_FAMILY_ORDER = {{ (product_family_order or[]) | tojson }};
 
         // === URL helpers (handles IIS sub-application prefix e.g. /CDAT_Goaling) ===
@@ -572,7 +573,8 @@
         function calculateFinishTotals() {
             const rows = getFinishDataRows();
             let totalShiftStartWip = 0, totalStartWipOnhold = 0, totalTr = 0,
-                totalCellQty = 0, totalCapacity = 0, totalGoal = 0, totalOutput = 0;
+                totalCellQty = 0, totalCapacity = 0, totalGoal = 0, totalOutput = 0,
+                totalQtg1 = 0, totalQps1 = 0, totalQtg2 = 0, totalQps2 = 0;
 
             rows.forEach(row => {
                 if (row.style.display === 'none') return;
@@ -588,6 +590,10 @@
                 totalCapacity += getVal('capacity');
                 totalGoal += getVal('goal');
                 totalOutput += getVal('output');
+                totalQtg1 += getVal('qtg1');
+                totalQps1 += getVal('qps1');
+                totalQtg2 += getVal('qtg2');
+                totalQps2 += getVal('qps2');
             });
 
             setFinishTotalText('finish-total-shift_start_wip', totalShiftStartWip, 3);
@@ -597,6 +603,10 @@
             setFinishTotalText('finish-total-capacity', totalCapacity, 1);
             setFinishTotalText('finish-total-goal', totalGoal, 1);
             setFinishTotalText('finish-total-output', totalOutput, 1);
+            setFinishTotalText('finish-total-qtg1', totalQtg1, 3);
+            setFinishTotalText('finish-total-qps1', totalQps1, 3);
+            setFinishTotalText('finish-total-qtg2', totalQtg2, 3);
+            setFinishTotalText('finish-total-qps2', totalQps2, 3);
             updateFinishProgressBars();
         }
 
