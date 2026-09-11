@@ -127,6 +127,96 @@ def download_wip_goal_reckon_raw():
     )
 
 
+@app.route('/shared_sspec.html')
+@app.route('/shared_sspec')
+def shared_sspec_home():
+    """Display the shared s-spec QTG/QPS report from a static CSV file.
+
+    Read-only view: data is not stored in the DB, just read directly from
+    data/SharedSspec/QTGQPS_Report.csv on every request.
+    """
+    csv_path = os.path.join(
+        app.root_path, 'data', 'SharedSspec', 'QTGQPS_Report.csv')
+
+    # Only display these prodgroup3 values for now.
+    ALLOWED_PRODGROUP3 = {
+        'ARLS816L', 'ARLR816L', 'BTLS601', 'RPRS601', 'RPLP682', 'RPRP682',
+    }
+
+    rows = []
+    last_refresh_at = None
+
+    def _to_float_or_none(value):
+        if value is None:
+            return None
+        s = str(value).strip()
+        if s == '':
+            return None
+        try:
+            f = float(s)
+        except (TypeError, ValueError):
+            return None
+        return f if math.isfinite(f) else None
+
+    if os.path.exists(csv_path):
+        try:
+            last_refresh_at = datetime.fromtimestamp(
+                os.path.getmtime(csv_path))
+        except Exception:
+            last_refresh_at = None
+
+        try:
+            with open(csv_path, newline='', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                numeric_cols = (
+                    'wip', 'yield', 'shipout', 'commit1', 'commit2',
+                    'qtg1', 'qtg2', 'qps1', 'qps2', 'stg1', 'stg2',
+                )
+                for raw_row in reader:
+                    row = dict(raw_row)
+                    if (row.get('prodgroup3') or '').strip() not in ALLOWED_PRODGROUP3:
+                        continue
+                    for col in numeric_cols:
+                        row[col] = _to_float_or_none(row.get(col))
+                    rows.append(row)
+        except Exception as e:
+            app.logger.warning(f"Failed to read QTGQPS_Report.csv: {e}")
+            rows = []
+
+    def _sequence_sort_key(value):
+        s = (value or '').strip()
+        try:
+            return (0, float(s))
+        except (TypeError, ValueError):
+            return (1, s)
+
+    rows.sort(key=lambda r: (
+        (r.get('prodgroup3') or '').strip(),
+        (r.get('dlcp') or '').strip(),
+        _sequence_sort_key(r.get('sdd_sequence')),
+    ))
+
+    prodgroup3_options = sorted(
+        {(r.get('prodgroup3') or '').strip() for r in rows if r.get('prodgroup3')})
+    operation_options = sorted(
+        {(r.get('operation') or '').strip() for r in rows if r.get('operation')})
+    dlcp_options = sorted(
+        {(r.get('dlcp') or '').strip() for r in rows if r.get('dlcp')})
+    sdd_sequence_options = sorted(
+        {(r.get('sdd_sequence') or '').strip() for r in rows if r.get('sdd_sequence')})
+
+    return render_template(
+        'shared_sspec.html',
+        rows=rows,
+        current_user=get_current_user(),
+        last_refresh_at=last_refresh_at,
+        prodgroup3_options=prodgroup3_options,
+        operation_options=operation_options,
+        dlcp_options=dlcp_options,
+        sdd_sequence_options=sdd_sequence_options,
+    )
+
+
 @app.route('/api/download-goal-output')
 def download_goal_output():
     """Download goal vs output table data as CSV (all recent shifts, all modules)."""

@@ -499,6 +499,37 @@ body {
             width: 100%;
         }
 
+        /* Shared Sspec quick link lives in the shift-filter row (row 1) instead of
+           the nav-tabs row (row 2), pinned to the far right via margin-left: auto.
+           Styling mirrors .shift-filter-bar .nav-tabs .tab-link/.copy-tab-btn exactly. */
+        .shift-filter-controls .shared-sspec-quicklink {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 26px;
+            padding: 4px 10px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--nav-item-text);
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1;
+            letter-spacing: 0.1px;
+            text-decoration: none;
+            box-shadow: none;
+            transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+            white-space: nowrap;
+        }
+
+        .shift-filter-controls .shared-sspec-quicklink:hover {
+            background: var(--nav-item-hover-bg);
+            color: var(--pane-text);
+            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+        }
+
         .shift-filter-bar .nav-tabs {
             margin: 0;
             padding: 0;
