@@ -405,11 +405,12 @@ def shared_sspec_home():
 
     # --- BP Summary table: Prodgroup3, Dlcp, Commit1, Commit2, Shipout ---
     # Source: MI_Configured_BP.csv (columns: ww, prodgroup3, dlcp, bp, shipout).
-    # Only the current work-week (ww) rows are shown, per the current
-    # shift/date as determined from calendar.csv. Each (prodgroup3, dlcp)
-    # normally has a single row for the current ww; that row's bp becomes
-    # Commit1 (Commit2 stays blank since only one ww is shown), and Shipout
-    # is that same row's shipout value.
+    # Only the current work-week (ww) and next work-week rows are shown, per
+    # the current shift/date as determined from calendar.csv. Each
+    # (prodgroup3, dlcp) normally has a single row for the current ww and a
+    # single row for the next ww; the current ww row's bp becomes Commit1,
+    # and the next ww row's bp becomes Commit2. Shipout is taken from the
+    # current ww row.
     bp_csv_path = os.path.join(
         app.root_path, 'data', 'SharedSspec', 'MI_Configured_BP.csv')
 
@@ -418,6 +419,12 @@ def shared_sspec_home():
         current_ww = get_current_ww_from_calendar()
     except Exception:
         current_ww = None
+
+    next_ww = None
+    try:
+        next_ww = get_next_ww_from_calendar()
+    except Exception:
+        next_ww = None
 
     bp_groups = {}
     if os.path.exists(bp_csv_path):
@@ -432,7 +439,12 @@ def shared_sspec_home():
                         continue
                     if pg3 not in selected_pg3_members_set:
                         continue
-                    if current_ww and ww.upper() != current_ww:
+                    ww_upper = ww.upper()
+                    if current_ww and ww_upper == current_ww:
+                        pass
+                    elif next_ww and ww_upper == next_ww:
+                        pass
+                    else:
                         continue
                     bp_val = _to_float_or_none(raw_row.get('bp'))
                     shipout_val = _to_float_or_none(raw_row.get('shipout'))
@@ -440,21 +452,27 @@ def shared_sspec_home():
                         raw_row.get('LastWW_Shipout'))
                     key = (pg3, dlcp)
                     bp_groups.setdefault(key, []).append(
-                        (ww, bp_val, shipout_val, lastww_shipout_val))
+                        (ww_upper, bp_val, shipout_val, lastww_shipout_val))
         except Exception as e:
             app.logger.warning(f"Failed to read MI_Configured_BP.csv: {e}")
             bp_groups = {}
 
     bp_summary_rows = []
     for (pg3, dlcp), entries in bp_groups.items():
-        entries.sort(key=lambda e: e[0])
-        commit1 = entries[0][1] if len(entries) > 0 else None
-        commit2 = entries[1][1] if len(entries) > 1 else None
+        commit1 = next(
+            (e[1] for e in entries if current_ww and e[0] == current_ww), None)
+        commit2 = next(
+            (e[1] for e in entries if next_ww and e[0] == next_ww), None)
         shipout_val = next(
-            (e[2] for e in entries if e[2] is not None), None)
+            (e[2] for e in entries if current_ww and e[0]
+             == current_ww and e[2] is not None),
+            next((e[2] for e in entries if e[2] is not None), None))
         lastww_shipout_val = next(
-            (e[3] for e in entries if e[3] is not None), None)
+            (e[3] for e in entries if current_ww and e[0]
+             == current_ww and e[3] is not None),
+            next((e[3] for e in entries if e[3] is not None), None))
         bp_summary_rows.append({
+
             'prodgroup3': pg3,
             'dlcp': dlcp,
             'commit1': commit1,
@@ -1164,6 +1182,51 @@ def get_current_ww_from_calendar():
                     if shift:
                         return shift[:4].upper()
                     return None
+    except Exception:
+        return None
+    return None
+
+
+def get_next_ww_from_calendar():
+    """Scan calendar.csv for the current shift's row, then continue scanning
+    forward (chronologically) for the first row whose WW differs from the
+    current one. Returns the first 4 characters of that row's SHIFT value
+    (e.g. 'WW39'), or None if it can't be determined.
+    """
+    calendar_path = os.path.join(
+        os.path.dirname(__file__), 'data', 'calendar.csv')
+    now = datetime.now()
+    try:
+        with open(calendar_path, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            all_rows = list(reader)
+
+        current_ww = None
+        current_idx = None
+        for idx, row in enumerate(all_rows):
+            start_raw = (row.get('START_DATE') or '').strip()
+            end_raw = (row.get('END_DATE') or '').strip()
+            if not start_raw or not end_raw:
+                continue
+            try:
+                start_dt = datetime.strptime(start_raw, '%Y-%m-%d %H:%M:%S')
+                end_dt = datetime.strptime(end_raw, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                continue
+            if start_dt <= now <= end_dt:
+                shift = (row.get('SHIFT') or '').strip()
+                current_ww = shift[:4].upper() if shift else None
+                current_idx = idx
+                break
+
+        if current_ww is None or current_idx is None:
+            return None
+
+        for row in all_rows[current_idx + 1:]:
+            shift = (row.get('SHIFT') or '').strip()
+            ww = shift[:4].upper() if shift else ''
+            if ww and ww != current_ww:
+                return ww
     except Exception:
         return None
     return None
