@@ -5,7 +5,6 @@
   background: var(--bg-surface, #ffffff);
   border-radius: 6px;
   overflow: auto;
-  flex: 1;
   width: 100%;
   border: 1px solid var(--ios-separator, var(--border-color, #cbd5e1));
   position: relative;
@@ -141,6 +140,390 @@
 
 #testTable th[data-col="sfgi_wip"] {
   white-space: nowrap;
+}
+
+/* Shared Sspec page only: let the table stretch to fill the full-width
+   detail panel (see .shared-sspec-tab-panel[data-tab-panel="detail"]),
+   while columns still size themselves to content first via width:1px hints
+   below, only growing beyond that to fill any remaining table width. */
+#testTable.shared-sspec-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: auto;
+}
+
+#testTable.shared-sspec-table th,
+#testTable.shared-sspec-table td {
+  width: 1px;
+  white-space: nowrap;
+}
+
+/* Override the generic Operation min-width guard for this page; let it shrink to header size. */
+#testTable.shared-sspec-table th[data-col="operation"],
+#testTable.shared-sspec-table td[data-col="operation"] {
+  min-width: 0;
+  width: 1px;
+}
+
+/* All other per-column filter dropdowns: shrink to fit their column too. */
+#testTable.shared-sspec-table thead tr.filter-row select.filter-input-field {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 10px;
+  padding-left: 2px;
+  padding-right: 2px;
+  box-sizing: border-box;
+}
+
+/* Row count indicator above the detail table. */
+.shared-sspec-row-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-text, #64748b);
+  padding: 4px 2px 8px;
+}
+
+.shared-sspec-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pane-text, #1e293b);
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.shared-sspec-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  color: var(--ios-blue, var(--primary, #2563eb));
+  margin-right: 6px;
+}
+
+.shared-sspec-group-select {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pane-text, #1e293b);
+  padding: 6px 30px 6px 10px;
+  min-width: 200px;
+  background-color: #ffffff;
+  border: 1px solid var(--ios-blue, var(--primary, #2563eb));
+  border-radius: 8px;
+  box-shadow: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M6.5 9.5l5.5 5.5 5.5-5.5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px 14px;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+
+.shared-sspec-group-select:hover {
+  border-color: var(--primary-hover, #1d4ed8);
+}
+
+.shared-sspec-group-select:focus {
+  outline: none;
+  border-color: var(--ios-blue, var(--primary, #2563eb));
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+.shared-sspec-group-select option {
+  color: #0f172a;
+  background: #ffffff;
+  font-weight: 500;
+}
+
+
+/* Yield: narrow numeric column, no need for extra room. */
+#testTable.shared-sspec-table th[data-col="yield"],
+#testTable.shared-sspec-table td[data-col="yield"] {
+  width: 65px;
+  min-width: 65px;
+  max-width: 70px;
+  padding-left: 4px;
+  padding-right: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Shipout: narrow numeric column, no need for extra room. */
+#testTable.shared-sspec-table th[data-col="shipout"],
+#testTable.shared-sspec-table td[data-col="shipout"] {
+  width: 90px;
+  min-width: 90px;
+  max-width: 95px;
+  padding-left: 4px;
+  padding-right: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Shared Sspec page: vertically stacked, collapsible sections
+   (BP Summary / Shared Sspec Shipout / Detail QTG/QPS) ---
+   IMPORTANT: index.css's base `body { height:100vh; overflow:hidden; }` and
+   `.content { flex:1; overflow:hidden; }` are designed for a single
+   page-filling table with its own internal scrollbar. With three stacked
+   sections that combined content can be taller than the viewport, so for
+   this page specifically we drop those constraints entirely and let the
+   normal page scrollbar handle everything instead of relying on nested
+   flex/overflow containers (which was clipping/blocking scroll). */
+body.shared-sspec-page {
+  height: auto !important;
+  min-height: 100vh;
+  overflow: visible !important;
+}
+
+.shared-sspec-content {
+  display: block !important;
+  flex: none !important;
+  overflow: visible !important;
+  height: auto !important;
+  padding-bottom: 40px;
+}
+
+.shared-sspec-section {
+  border: 1px solid var(--ios-separator, #d7deea);
+  border-radius: 12px;
+  margin-bottom: 18px;
+  background: var(--bg-surface, #ffffff);
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.shared-sspec-section-header {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-left: 4px solid var(--ss-accent, var(--ios-blue, #007aff));
+  background: var(--ss-accent-soft, #eaf1ff);
+  color: #12233d;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1px;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color .15s ease;
+}
+
+.shared-sspec-section-header:hover {
+  filter: brightness(0.97);
+}
+
+.shared-sspec-section-header:active {
+  filter: brightness(0.94);
+}
+
+/* Colored accent + icon per section so the three views are instantly
+   distinguishable at a glance (iOS-style grouped-list section headers).
+   Each section gets its own tinted solid background (not a gray gradient)
+   so it reads clearly as a *different kind of header* than the plain
+   gray table column headers underneath. */
+.shared-sspec-section[data-section="bp"] .shared-sspec-section-header {
+  --ss-accent: #007aff;
+  --ss-accent-soft: #e8f1ff;
+}
+
+.shared-sspec-section[data-section="shipout"] .shared-sspec-section-header {
+  --ss-accent: #34c759;
+  --ss-accent-soft: #eafaef;
+}
+
+.shared-sspec-section[data-section="detail"] .shared-sspec-section-header {
+  --ss-accent: #ff9500;
+  --ss-accent-soft: #fff3e2;
+}
+
+.shared-sspec-section-icon {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ss-accent, var(--ios-blue, #007aff));
+  flex: none;
+}
+
+.shared-sspec-section-title {
+  flex: 1 1 auto;
+}
+
+.shared-sspec-section-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ios-label-secondary, #6b7280);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  padding: 2px 8px;
+  flex: none;
+}
+
+.shared-sspec-section-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 11px;
+  color: var(--ios-label-secondary, #6b7280);
+  transition: transform .18s ease;
+  flex: none;
+}
+
+.shared-sspec-section.collapsed .shared-sspec-section-caret {
+  transform: rotate(-90deg);
+}
+
+.shared-sspec-section-body {
+  padding: 10px 12px 14px;
+  border-top: 1px solid var(--ios-separator, #eef1f6);
+}
+
+.shared-sspec-section.collapsed .shared-sspec-section-body {
+  display: none;
+}
+
+.shared-sspec-main-table {
+  flex: none;
+  min-width: 0;
+}
+
+.shared-sspec-summary-card {
+  display: block;
+}
+
+.shared-sspec-summary-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pane-text, #1e293b);
+  margin-bottom: 2px;
+}
+
+.shared-sspec-summary-card .table-container {
+  display: block;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.shared-sspec-summary-table {
+  border-collapse: collapse;
+  font-size: 11px;
+  width: 100%;
+  min-width: 0;
+  table-layout: auto;
+}
+
+.shared-sspec-summary-table th {
+  background: linear-gradient(180deg, var(--table-head-bg, #f8fafc) 0%, var(--table-head-bg-strong, #edf2f7) 100%);
+  color: #0f172a;
+  font-weight: 700;
+  padding: 2px 4px;
+  border: none;
+  border-right: 1px solid var(--ios-separator, var(--table-head-border, #d7dfe8));
+  border-bottom: 1px solid var(--ios-separator, var(--table-head-border, #d7dfe8));
+  text-align: left;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.shared-sspec-summary-table th:last-child {
+  border-right: none;
+}
+
+/* Filter row (Prod/Sspec dropdowns) sticks just below the header row. */
+.shared-sspec-summary-table tr.filter-row th {
+  top: 22px;
+  z-index: 1;
+  padding: 2px 4px;
+  background: var(--table-head-bg, #f8fafc);
+  border-right: 1px solid var(--ios-separator, var(--table-head-border, #d7dfe8));
+  border-bottom: 1px solid var(--ios-separator, var(--table-head-border, #d7dfe8));
+}
+
+.shared-sspec-summary-table tr.filter-row th:last-child {
+  border-right: none;
+}
+
+.shared-sspec-summary-table tr.filter-row select.filter-input-field {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 11px;
+  padding: 1px 2px;
+  border: 1px solid var(--ios-separator, var(--border-color, #cbd5e1));
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.shared-sspec-summary-table td {
+  padding: 1px 4px;
+  border: none;
+  border-right: 1px solid var(--ios-separator, #e5e9f0);
+  border-bottom: 1px solid var(--ios-separator, #e5e9f0);
+  white-space: nowrap;
+  height: 22px;
+  color: #0f172a;
+}
+
+.shared-sspec-summary-table td:last-child {
+  border-right: none;
+}
+
+.shared-sspec-summary-table tbody tr td {
+  background-color: var(--bg-surface, #ffffff);
+}
+
+/* "Miss Or Meet" style highlight cells: any cell whose text is MET gets a green badge look. */
+.shared-sspec-summary-table td:last-child {
+  font-weight: 700;
+}
+
+/* Cap the BP Summary / Shared Sspec Shipout tables at a reasonable height
+   with their own internal scrollbar so a long CSV doesn't push the Detail
+   QTG/QPS section far down the page. */
+.shared-sspec-summary-card .shared-sspec-summary-table-container {
+  max-height: 320px;
+  overflow: auto;
+  display: block;
+}
+
+.shared-sspec-detail-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pane-text, #1e293b);
+  padding: 2px 2px 2px;
+}
+
+/* Total row (tfoot) for BP Summary / Shared Sspec Shipout / Detail QTG-QPS. */
+.shared-sspec-summary-table tfoot td,
+#testTable.shared-sspec-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  background: var(--ios-fill-tertiary, #eef1f6);
+  font-weight: 700;
+  color: #0f172a;
+  border-top: 2px solid var(--ios-separator, var(--table-head-border, #d7dfe8));
+  border-right: 1px solid var(--ios-separator, #e5e9f0);
+  border-bottom: none;
+}
+
+.shared-sspec-summary-table tfoot td:last-child,
+#testTable.shared-sspec-table tfoot td:last-child {
+  border-right: none;
 }
 
 /* Keep header label + sort icon on one row without changing table cell display semantics. */
@@ -513,6 +896,35 @@
 
 #testTable tbody tr:not(.child-row):not(.group-header-row):nth-child(even) td.pinned-col {
   background-color: var(--ios-table-stripe, #e9edf5) !important;
+}
+
+/* Shared Sspec Detail table: use light grid lines instead of zebra striping
+   so all three Shared Sspec tables (BP Summary / Shipout / Detail) look the same. */
+#testTable.shared-sspec-table tbody tr.stripe-odd td,
+#testTable.shared-sspec-table tbody tr.stripe-even td,
+#testTable.shared-sspec-table tbody tr:not(.child-row):not(.group-header-row):nth-child(odd) td,
+#testTable.shared-sspec-table tbody tr:not(.child-row):not(.group-header-row):nth-child(even) td {
+  background-color: var(--bg-surface, #ffffff);
+  border-bottom: 1px solid var(--ios-separator, #e5e9f0);
+}
+
+#testTable.shared-sspec-table tbody tr.stripe-odd td.pinned-col,
+#testTable.shared-sspec-table tbody tr.stripe-even td.pinned-col,
+#testTable.shared-sspec-table tbody tr:not(.child-row):not(.group-header-row):nth-child(odd) td.pinned-col,
+#testTable.shared-sspec-table tbody tr:not(.child-row):not(.group-header-row):nth-child(even) td.pinned-col {
+  background-color: var(--bg-surface, #ffffff) !important;
+  border-bottom: 1px solid var(--ios-separator, #e5e9f0);
+}
+
+/* Vertical grid lines for the Detail table (matches the summary tables' grid look). */
+#testTable.shared-sspec-table th,
+#testTable.shared-sspec-table td {
+  border-right: 1px solid var(--ios-separator, #e5e9f0);
+}
+
+#testTable.shared-sspec-table th:last-child,
+#testTable.shared-sspec-table td:last-child {
+  border-right: none;
 }
 
 /* Footer (Total row) should scroll with the table.

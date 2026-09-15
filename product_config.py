@@ -17,6 +17,8 @@ DT_PRODUCTS: set[str] = {
     'RPRS881',
     'RPLS601',
     'RPRS601',
+    'MEV',
+    'ARLR816LK'
 }
 
 # prodgroup3 values that belong to the PCH product family.
@@ -113,3 +115,40 @@ def get_product_family(prodgroup3: str) -> str:
     if is_server_product(prodgroup3):
         return FAMILY_SERVER
     return FAMILY_MOBILE
+
+
+# ---------------------------------------------------------------------------
+# Shared Sspec page: Prodgroup3 group dropdown configuration
+# ---------------------------------------------------------------------------
+# Each entry defines one option in the "Prodgroup3 group" dropdown on the
+# Shared Sspec page (templates/shared_sspec.html). Selecting a group filters
+# every table on that page (Detail QTG/QPS Analysis, Shipout Summary, and
+# Shipout by Sspec) down to just the prodgroup3 values listed in "members".
+#
+# "sspec_filter" additionally restricts the "Shipout by Sspec" table to only
+# the given Sspec values for that group. Set it to None to show all Sspecs
+# for that group (no restriction).
+#
+# To add, remove, or change a group: just edit the list below. The first
+# entry is the default selection when the page loads with no group chosen.
+SHARED_SSPEC_PG3_GROUPS = [
+    {
+        'label': 'ARLS816L/ARLR816L',
+        'members': ['ARLS816L', 'ARLR816L'],
+        'sspec_filter': None,  # show all Sspecs
+        # Extra prodgroup3 values shown only in the "Shipout by Sspec"
+        # side table for this group (does not affect the main report
+        # table or BP Summary table).
+        'shipout_extra_members': ['ARLR816LK'],
+    },
+    {
+        'label': 'RPLP682/RPRP682',
+        'members': ['RPLP682', 'RPRP682'],
+        'sspec_filter': {'RMHX'},
+    },
+    {
+        'label': 'BTLS601/RPRS601',
+        'members': ['BTLS601', 'RPRS601'],
+        'sspec_filter': {'RN3J', 'RN3K'},
+    },
+]

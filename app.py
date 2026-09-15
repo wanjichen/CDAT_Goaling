@@ -1,4 +1,4 @@
-from product_config import DT_PRODUCTS, PCH_PRODUCTS, OLB_GOAL_FACTOR_DT, OLB_GOAL_FACTOR_NON_DT, get_olb_goal_factor, is_excluded_product
+from product_config import DT_PRODUCTS, PCH_PRODUCTS, OLB_GOAL_FACTOR_DT, OLB_GOAL_FACTOR_NON_DT, get_olb_goal_factor, is_excluded_product, SHARED_SSPEC_PG3_GROUPS
 import urllib.parse
 import csv
 import math
@@ -16,6 +16,17 @@ from sqlalchemy import desc, inspect, text
 from test_modules.routes import register_test_routes
 
 app = Flask(__name__)
+
+# --- Template/static freshness under IIS + wfastcgi ---
+# The IIS handler imports `app.app` directly and never runs the
+# `if __name__ == '__main__': app.run(debug=...)` block below, so app.debug
+# stays False and Jinja's default auto-reload (tied to app.debug) is off.
+# That means the long-lived wfastcgi worker process caches each compiled
+# template after its first render and silently ignores later edits to the
+# .html files until the worker/app pool is recycled. Force auto-reload on
+# unconditionally so template edits always show up on the next request.
+app.jinja_env.auto_reload = True
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # --- IIS / wfastcgi logging ---
 # Ensure unhandled exceptions end up in the WSGI_LOG file (web.config sets it).
@@ -79,8 +90,30 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
     "?sslmode=require"
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# cache static assets for 1 hour
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 3600
+# Static assets are actively changing during development (CSS/JS edits on the
+# Shared Sspec page), and this environment sits behind a corporate proxy that
+# can cache responses by path even when a `?v=...` cache-busting query string
+# changes. Disable Flask's default max-age on static files so every request
+# re-validates instead of silently serving a stale cached copy.
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+
+@app.after_request
+def _add_no_cache_headers_for_static(response):
+    """Force intermediaries/browsers to always revalidate static assets.
+
+    Without this, some corporate proxies/browsers keep serving an old
+    cached copy of static/css/js/js files even after the cache-busting
+    `?v=` query string on the <link>/<script> tag is bumped, because they
+    key their cache on the path alone. This makes template/CSS/JS edits
+    show up immediately after every deploy.
+    """
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
 
 engine_connect_args = {}
 if db_schema:
@@ -143,6 +176,29 @@ def shared_sspec_home():
         'ARLS816L', 'ARLR816L', 'BTLS601', 'RPRS601', 'RPLP682', 'RPRP682',
     }
 
+    # Prodgroup3 "pair" groups selectable from the dropdown in the nav bar.
+    # Selecting a group filters every table on the page (detail table,
+    # Shipout Summary, Shipout by Sspec) down to just its two members.
+    # `sspec_filter` additionally restricts the "Shipout by Sspec" table to
+    # only the given Sspec values for that group (None = show all Sspecs).
+    # Edit the SHARED_SSPEC_PG3_GROUPS list in product_config.py to add,
+    # remove, or change groups/sspec filters.
+    PG3_GROUPS = SHARED_SSPEC_PG3_GROUPS
+    pg3_group_labels = [g['label'] for g in PG3_GROUPS]
+    selected_pg3_group = request.args.get('pg3group') or pg3_group_labels[0]
+    if selected_pg3_group not in pg3_group_labels:
+        selected_pg3_group = pg3_group_labels[0]
+    selected_pg3_group_info = next(
+        g for g in PG3_GROUPS if g['label'] == selected_pg3_group)
+    selected_pg3_members = selected_pg3_group_info['members']
+    selected_pg3_members_set = set(selected_pg3_members)
+    selected_pg3_sspec_filter = selected_pg3_group_info['sspec_filter']
+    # Some groups define extra prodgroup3 values that should only appear in
+    # the "Shipout by Sspec" side table (not the main report table or BP
+    # Summary table). Combine them here for that lookup only.
+    selected_pg3_shipout_members_set = selected_pg3_members_set | set(
+        selected_pg3_group_info.get('shipout_extra_members') or [])
+
     rows = []
     last_refresh_at = None
 
@@ -174,7 +230,7 @@ def shared_sspec_home():
                 )
                 for raw_row in reader:
                     row = dict(raw_row)
-                    if (row.get('prodgroup3') or '').strip() not in ALLOWED_PRODGROUP3:
+                    if (row.get('prodgroup3') or '').strip() not in selected_pg3_members_set:
                         continue
                     for col in numeric_cols:
                         row[col] = _to_float_or_none(row.get(col))
@@ -182,6 +238,36 @@ def shared_sspec_home():
         except Exception as e:
             app.logger.warning(f"Failed to read QTGQPS_Report.csv: {e}")
             rows = []
+
+    # --- Aggregate across DLCP ---
+    # The Detail QTG/QPS table does not display a DLCP column, but the
+    # source CSV has one row per (prodgroup3, dlcp, operation). Collapse all
+    # DLCP rows for the same (prodgroup3, operation) into a single row so
+    # what the user sees isn't several near-duplicate rows that only differ
+    # by a hidden DLCP value. Wip, Shipout, Commit1, Commit2, Qtg1, Qtg2,
+    # Qps1, Qps2 are summed across DLCPs; Yield/Stg1/Stg2 (ratios, not
+    # counts) and Sdd_sequence keep the first DLCP row's value since summing
+    # a percentage/ratio wouldn't be meaningful.
+    SUM_COLS = ('wip', 'shipout', 'commit1', 'commit2',
+                'qtg1', 'qtg2', 'qps1', 'qps2')
+    agg_groups = {}
+    agg_order = []
+    for r in rows:
+        pg3 = (r.get('prodgroup3') or '').strip()
+        op = (r.get('operation') or '').strip()
+        key = (pg3, op)
+        if key not in agg_groups:
+            agg_groups[key] = dict(r)
+            for col in SUM_COLS:
+                agg_groups[key][col] = r.get(col) or 0
+            agg_order.append(key)
+        else:
+            existing = agg_groups[key]
+            for col in SUM_COLS:
+                cur = existing.get(col) or 0
+                new = r.get(col) or 0
+                existing[col] = cur + new
+    rows = [agg_groups[key] for key in agg_order]
 
     def _sequence_sort_key(value):
         s = (value or '').strip()
@@ -192,9 +278,49 @@ def shared_sspec_home():
 
     rows.sort(key=lambda r: (
         (r.get('prodgroup3') or '').strip(),
-        (r.get('dlcp') or '').strip(),
         _sequence_sort_key(r.get('sdd_sequence')),
     ))
+
+    def _fmt3(v):
+        if v is None:
+            return ''
+        return str(int(v)) if v == int(v) else f'{v:.3f}'
+
+    def _fmt1(v):
+        if v is None:
+            return ''
+        return str(int(v)) if v == int(v) else f'{v:.1f}'
+
+    fmt3_cols = ('wip', 'yield', 'shipout', 'commit1',
+                 'commit2', 'qtg1', 'qtg2', 'qps1', 'qps2')
+    fmt1_cols = ('stg1', 'stg2')
+    for r in rows:
+        for col in fmt3_cols:
+            r[f'{col}_disp'] = _fmt3(r.get(col))
+        for col in fmt1_cols:
+            r[f'{col}_disp'] = _fmt1(r.get(col))
+
+    def _disp_options(col):
+        vals = {r[f'{col}_disp'] for r in rows if r.get(f'{col}_disp')}
+
+        def _key(s):
+            try:
+                return (0, float(s))
+            except (TypeError, ValueError):
+                return (1, s)
+        return sorted(vals, key=_key)
+
+    wip_options = _disp_options('wip')
+    yield_options = _disp_options('yield')
+    shipout_options = _disp_options('shipout')
+    commit1_options = _disp_options('commit1')
+    commit2_options = _disp_options('commit2')
+    qtg1_options = _disp_options('qtg1')
+    qtg2_options = _disp_options('qtg2')
+    qps1_options = _disp_options('qps1')
+    qps2_options = _disp_options('qps2')
+    stg1_options = _disp_options('stg1')
+    stg2_options = _disp_options('stg2')
 
     prodgroup3_options = sorted(
         {(r.get('prodgroup3') or '').strip() for r in rows if r.get('prodgroup3')})
@@ -205,15 +331,198 @@ def shared_sspec_home():
     sdd_sequence_options = sorted(
         {(r.get('sdd_sequence') or '').strip() for r in rows if r.get('sdd_sequence')})
 
+    # Build a prodgroup3 -> [dlcp,...] map so the DLCP dropdown can be
+    # dynamically narrowed to whatever DLCPs actually exist for the
+    # currently selected prodgroup3 (used for cascading defaults on the
+    # client side).
+    prodgroup3_dlcp_map = {}
+    for pg3 in prodgroup3_options:
+        dlcps_for_pg3 = sorted({
+            (r.get('dlcp') or '').strip()
+            for r in rows
+            if (r.get('prodgroup3') or '').strip() == pg3 and r.get('dlcp')
+        })
+        prodgroup3_dlcp_map[pg3] = dlcps_for_pg3
+
+    # --- Small side table: Shipout by Sspec (read-only, filtered by prodgroup3 only) ---
+    shipout_by_sspec_csv_path = os.path.join(
+        app.root_path, 'data', 'SharedSspec', 'ShipOutBySspec.csv')
+
+    shipout_by_sspec_rows = []
+    if os.path.exists(shipout_by_sspec_csv_path):
+        try:
+            with open(shipout_by_sspec_csv_path, newline='', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                for raw_row in reader:
+                    pg3 = (raw_row.get('prodgroup3') or '').strip()
+                    sspec = (raw_row.get('sspec') or '').strip()
+                    shipout_val = _to_float_or_none(
+                        raw_row.get('ShipOutBySspec'))
+                    l15wip_val = _to_float_or_none(
+                        raw_row.get('L15WipBySspec'))
+                    if not pg3 or not sspec:
+                        continue
+                    if pg3 not in selected_pg3_shipout_members_set:
+                        continue
+                    if selected_pg3_sspec_filter is not None and sspec not in selected_pg3_sspec_filter:
+                        continue
+                    shipout_by_sspec_rows.append({
+                        'prodgroup3': pg3,
+                        'sspec': sspec,
+                        'shipout': shipout_val,
+                        'shipout_disp': _fmt3(shipout_val) or '0',
+                        'l15wip': l15wip_val,
+                        'l15wip_disp': _fmt3(l15wip_val) or '0',
+                    })
+        except Exception as e:
+            app.logger.warning(f"Failed to read ShipOutBySspec.csv: {e}")
+            shipout_by_sspec_rows = []
+
+    shipout_by_sspec_rows.sort(key=lambda r: (r['prodgroup3'], r['sspec']))
+
+    shipout_by_sspec_prod_options = sorted(
+        {r['prodgroup3'] for r in shipout_by_sspec_rows if r['prodgroup3']})
+    shipout_by_sspec_sspec_options = sorted(
+        {r['sspec'] for r in shipout_by_sspec_rows if r['sspec']})
+    shipout_by_sspec_shipout_options = sorted(
+        {r['shipout_disp']
+            for r in shipout_by_sspec_rows if r['shipout_disp']},
+        key=lambda s: (0, float(s)) if s.replace('.', '', 1).isdigit() else (1, s))
+    shipout_by_sspec_l15wip_options = sorted(
+        {r['l15wip_disp']
+            for r in shipout_by_sspec_rows if r['l15wip_disp']},
+        key=lambda s: (0, float(s)) if s.replace('.', '', 1).isdigit() else (1, s))
+
+    # Build a prodgroup3 -> [{sspec, shipout}, ...] map for client-side
+    # filtering, keyed off the same Prodgroup3 dropdown used by the main table.
+    shipout_by_sspec_map = {}
+    for r in shipout_by_sspec_rows:
+        shipout_by_sspec_map.setdefault(r['prodgroup3'], []).append({
+            'sspec': r['sspec'],
+            'shipout': r['shipout'],
+            'l15wip': r['l15wip'],
+        })
+
+    # --- BP Summary table: Prodgroup3, Dlcp, Commit1, Commit2, Shipout ---
+    # Source: MI_Configured_BP.csv (columns: ww, prodgroup3, dlcp, bp, shipout).
+    # Only the current work-week (ww) rows are shown, per the current
+    # shift/date as determined from calendar.csv. Each (prodgroup3, dlcp)
+    # normally has a single row for the current ww; that row's bp becomes
+    # Commit1 (Commit2 stays blank since only one ww is shown), and Shipout
+    # is that same row's shipout value.
+    bp_csv_path = os.path.join(
+        app.root_path, 'data', 'SharedSspec', 'MI_Configured_BP.csv')
+
+    current_ww = None
+    try:
+        current_ww = get_current_ww_from_calendar()
+    except Exception:
+        current_ww = None
+
+    bp_groups = {}
+    if os.path.exists(bp_csv_path):
+        try:
+            with open(bp_csv_path, newline='', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                for raw_row in reader:
+                    pg3 = (raw_row.get('prodgroup3') or '').strip()
+                    dlcp = (raw_row.get('dlcp') or '').strip()
+                    ww = (raw_row.get('ww') or '').strip()
+                    if not pg3 or not dlcp:
+                        continue
+                    if pg3 not in selected_pg3_members_set:
+                        continue
+                    if current_ww and ww.upper() != current_ww:
+                        continue
+                    bp_val = _to_float_or_none(raw_row.get('bp'))
+                    shipout_val = _to_float_or_none(raw_row.get('shipout'))
+                    lastww_shipout_val = _to_float_or_none(
+                        raw_row.get('LastWW_Shipout'))
+                    key = (pg3, dlcp)
+                    bp_groups.setdefault(key, []).append(
+                        (ww, bp_val, shipout_val, lastww_shipout_val))
+        except Exception as e:
+            app.logger.warning(f"Failed to read MI_Configured_BP.csv: {e}")
+            bp_groups = {}
+
+    bp_summary_rows = []
+    for (pg3, dlcp), entries in bp_groups.items():
+        entries.sort(key=lambda e: e[0])
+        commit1 = entries[0][1] if len(entries) > 0 else None
+        commit2 = entries[1][1] if len(entries) > 1 else None
+        shipout_val = next(
+            (e[2] for e in entries if e[2] is not None), None)
+        lastww_shipout_val = next(
+            (e[3] for e in entries if e[3] is not None), None)
+        bp_summary_rows.append({
+            'prodgroup3': pg3,
+            'dlcp': dlcp,
+            'commit1': commit1,
+            'commit1_disp': _fmt3(commit1) or '0',
+            'commit2': commit2,
+            'commit2_disp': _fmt3(commit2) or '0',
+            'shipout': shipout_val,
+            'shipout_disp': _fmt3(shipout_val) or '0',
+            'lastww_shipout': lastww_shipout_val,
+            'lastww_shipout_disp': _fmt3(lastww_shipout_val) or '0',
+        })
+    bp_summary_rows.sort(key=lambda r: (r['prodgroup3'], r['dlcp']))
+
+    def _bp_options(key, formatted=False):
+        vals = {r[key] for r in bp_summary_rows if r.get(key)}
+        if formatted:
+            def _key(s):
+                try:
+                    return (0, float(s))
+                except (TypeError, ValueError):
+                    return (1, s)
+            return sorted(vals, key=_key)
+        return sorted(vals)
+
+    bp_prodgroup3_options = _bp_options('prodgroup3')
+    bp_dlcp_options = _bp_options('dlcp')
+    bp_commit1_options = _bp_options('commit1_disp', formatted=True)
+    bp_commit2_options = _bp_options('commit2_disp', formatted=True)
+    bp_shipout_options = _bp_options('shipout_disp', formatted=True)
+    bp_lastww_shipout_options = _bp_options(
+        'lastww_shipout_disp', formatted=True)
+
     return render_template(
         'shared_sspec.html',
         rows=rows,
         current_user=get_current_user(),
         last_refresh_at=last_refresh_at,
+        pg3_group_labels=pg3_group_labels,
+        selected_pg3_group=selected_pg3_group,
+        shipout_by_sspec_rows=shipout_by_sspec_rows,
+        shipout_by_sspec_prod_options=shipout_by_sspec_prod_options,
+        shipout_by_sspec_sspec_options=shipout_by_sspec_sspec_options,
+        shipout_by_sspec_shipout_options=shipout_by_sspec_shipout_options,
+        shipout_by_sspec_l15wip_options=shipout_by_sspec_l15wip_options,
+        bp_summary_rows=bp_summary_rows,
+        bp_prodgroup3_options=bp_prodgroup3_options,
+        bp_dlcp_options=bp_dlcp_options,
+        bp_commit1_options=bp_commit1_options,
+        bp_commit2_options=bp_commit2_options,
+        bp_shipout_options=bp_shipout_options,
+        bp_lastww_shipout_options=bp_lastww_shipout_options,
         prodgroup3_options=prodgroup3_options,
         operation_options=operation_options,
         dlcp_options=dlcp_options,
         sdd_sequence_options=sdd_sequence_options,
+        wip_options=wip_options,
+        yield_options=yield_options,
+        shipout_options=shipout_options,
+        commit1_options=commit1_options,
+        commit2_options=commit2_options,
+        qtg1_options=qtg1_options,
+        qtg2_options=qtg2_options,
+        qps1_options=qps1_options,
+        qps2_options=qps2_options,
+        stg1_options=stg1_options,
+        stg2_options=stg2_options,
+        prodgroup3_dlcp_map=prodgroup3_dlcp_map,
+        shipout_by_sspec_map=shipout_by_sspec_map,
     )
 
 
@@ -824,6 +1133,40 @@ def get_current_year_and_shift_from_calendar():
 def get_current_shift_from_calendar():
     _, shift = _read_calendar_file()
     return shift
+
+
+def get_current_ww_from_calendar():
+    """Scan calendar.csv for the row whose START_DATE/END_DATE window
+    contains the current time, and return the first 4 characters of its
+    SHIFT value (e.g. 'WW37' from 'WW37.5D'). Returns None if no matching
+    row is found or the file can't be read.
+    """
+    calendar_path = os.path.join(
+        os.path.dirname(__file__), 'data', 'calendar.csv')
+    now = datetime.now()
+    try:
+        with open(calendar_path, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                start_raw = (row.get('START_DATE') or '').strip()
+                end_raw = (row.get('END_DATE') or '').strip()
+                if not start_raw or not end_raw:
+                    continue
+                try:
+                    start_dt = datetime.strptime(
+                        start_raw, '%Y-%m-%d %H:%M:%S')
+                    end_dt = datetime.strptime(
+                        end_raw, '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    continue
+                if start_dt <= now <= end_dt:
+                    shift = (row.get('SHIFT') or '').strip()
+                    if shift:
+                        return shift[:4].upper()
+                    return None
+    except Exception:
+        return None
+    return None
 
 
 def get_latest_report_ids_for_shift_and_page(latest_shift, page_name):

@@ -8,10 +8,10 @@
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260910a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260911z10">
 </head>
 
-<body>
+<body class="shared-sspec-page">
     <div id="toast-container"></div>
 
     <div class="header">
@@ -63,14 +63,18 @@
 
     <div class="shift-filter-bar" role="region" aria-label="Shared Sspec navigation">
         <div class="shift-filter-controls">
-            <div class="shift-filter-note" role="note" aria-label="Data source note">
-                * Read-only reference data sourced from SharedSspec/QTGQPS_Report.csv.
-            </div>
         </div>
 
         <div class="nav-tabs">
             <div class="nav-tabs-links">
-                <span class="tab-link active">Shared Sspec</span>
+                <label for="ss_pg3_group_select" class="shared-sspec-group-label">Select Group</label>
+                <select id="ss_pg3_group_select" class="filter-input-field shared-sspec-group-select"
+                    aria-label="Select Prodgroup3 Group"
+                    onchange="location.href = '{{ url_for('shared_sspec_home') }}?pg3group=' + encodeURIComponent(this.value);">
+                    {% for opt in (pg3_group_labels or []) %}
+                    <option value="{{ opt }}" {% if opt==selected_pg3_group %}selected{% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <a class="tab-link copy-tab-btn quick-link-btn" href="{{ url_for('index') }}" title="Go to Assembly Modules"
                 aria-label="Go to Assembly Modules" target="_blank" rel="noopener noreferrer">
@@ -124,149 +128,437 @@
         </div>
     </div>
 
-    <div class="content">
-        <div class="table-container" style="max-height: 75vh;">
-            <table id="testTable">
-                <thead>
-                    <tr>
-                        <th class="sortable" data-col="prodgroup3" onclick="sortSharedSspecTable(this, 'prodgroup3')">
-                            Prodgroup3 <span class="sort-icon">⇕</span></th>
-                        <th class="sortable" data-col="dlcp" onclick="sortSharedSspecTable(this, 'dlcp')">
-                            DLCP <span class="sort-icon">⇕</span></th>
-                        <th class="sortable" data-col="sdd_sequence"
-                            onclick="sortSharedSspecTable(this, 'sdd_sequence')">
-                            Sequence <span class="sort-icon">⇕</span></th>
-                        <th class="sortable" data-col="operation" onclick="sortSharedSspecTable(this, 'operation')">
-                            Operation <span class="sort-icon">⇕</span></th>
-                        <th class="sortable" data-col="wip" onclick="sortSharedSspecTable(this, 'wip')">WIP
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="yield" onclick="sortSharedSspecTable(this, 'yield')">Yield
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="commit1" onclick="sortSharedSspecTable(this, 'commit1')">Commit1
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="commit2" onclick="sortSharedSspecTable(this, 'commit2')">Commit2
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="shipout" onclick="sortSharedSspecTable(this, 'shipout')">Shipout
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="qtg1" onclick="sortSharedSspecTable(this, 'qtg1')">QTG1
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="qtg2" onclick="sortSharedSspecTable(this, 'qtg2')">QTG2
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="qps1" onclick="sortSharedSspecTable(this, 'qps1')">QPS1
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="qps2" onclick="sortSharedSspecTable(this, 'qps2')">QPS2
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="stg1" onclick="sortSharedSspecTable(this, 'stg1')">STG1
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                        <th class="sortable" data-col="stg2" onclick="sortSharedSspecTable(this, 'stg2')">STG2
-                            <span class="sort-icon">⇕</span>
-                        </th>
-                    </tr>
+    <div class="content shared-sspec-content">
+        <div class="shared-sspec-section collapsed" id="ssSectionBp" data-section="bp">
+            <button type="button" class="shared-sspec-section-header" onclick="toggleSharedSspecSection('bp')"
+                aria-expanded="false" aria-controls="ssSectionBpBody">
+                <span class="shared-sspec-section-icon"></span>
+                <span class="shared-sspec-section-title">BP Summary</span>
+                <span class="shared-sspec-section-caret">▾</span>
+            </button>
+            <div class="shared-sspec-section-body" id="ssSectionBpBody">
+                <div class="shared-sspec-summary-card">
+                    <div class="table-container shared-sspec-summary-table-container">
+                        <table id="bpSummaryTable" class="shared-sspec-summary-table">
+                            <thead>
+                                <tr>
+                                    <th data-col="prodgroup3">Prodgroup3</th>
+                                    <th data-col="dlcp">DLCP</th>
+                                    <th data-col="commit1">Commit1</th>
+                                    <th data-col="commit2">Commit2</th>
+                                    <th data-col="shipout">Shipout</th>
+                                    <th data-col="lastww_shipout">Last WW Shipout</th>
+                                </tr>
+                                <tr class="filter-row">
+                                    <th data-col="prodgroup3">
+                                        <select class="filter-input-field" data-filter-col="prodgroup3"
+                                            onchange="applyBpSummaryFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (bp_prodgroup3_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                    <th data-col="dlcp">
+                                        <select class="filter-input-field" data-filter-col="dlcp"
+                                            onchange="applyBpSummaryFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (bp_dlcp_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                    <th data-col="commit1">
+                                        <select class="filter-input-field" data-filter-col="commit1"
+                                            onchange="applyBpSummaryFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (bp_commit1_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                    <th data-col="commit2">
+                                        <select class="filter-input-field" data-filter-col="commit2"
+                                            onchange="applyBpSummaryFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (bp_commit2_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                    <th data-col="shipout">
+                                        <select class="filter-input-field" data-filter-col="shipout"
+                                            onchange="applyBpSummaryFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (bp_shipout_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                    <th data-col="lastww_shipout">
+                                        <select class="filter-input-field" data-filter-col="lastww_shipout"
+                                            onchange="applyBpSummaryFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (bp_lastww_shipout_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if bp_summary_rows and bp_summary_rows|length > 0 %}
+                                {% for r in bp_summary_rows %}
+                                <tr>
+                                    <td data-col="prodgroup3">{{ r.prodgroup3 }}</td>
+                                    <td data-col="dlcp">{{ r.dlcp }}</td>
+                                    <td data-col="commit1">{{ r.commit1_disp }}</td>
+                                    <td data-col="commit2">{{ r.commit2_disp }}</td>
+                                    <td data-col="shipout">{{ r.shipout_disp }}</td>
+                                    <td data-col="lastww_shipout">{{ r.lastww_shipout_disp }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr class="empty-state-row">
+                                    <td colspan="6" style="text-align:center; padding:16px;">No data available.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="total-row">
+                                    <td data-col="prodgroup3"><strong>Total</strong></td>
+                                    <td data-col="dlcp"></td>
+                                    <td data-col="commit1"></td>
+                                    <td data-col="commit2"></td>
+                                    <td data-col="shipout"></td>
+                                    <td data-col="lastww_shipout"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Filter Row -->
-                    <tr class="filter-row">
-                        <th data-col="prodgroup3">
-                            <select class="filter-input-field" data-filter-col="prodgroup3"
-                                onchange="applySharedSspecFilters()">
-                                <option value="">All</option>
-                                {% for opt in (prodgroup3_options or []) %}
-                                <option value="{{ opt }}">{{ opt }}</option>
+        <div class="shared-sspec-section collapsed" id="ssSectionShipout" data-section="shipout">
+            <button type="button" class="shared-sspec-section-header" onclick="toggleSharedSspecSection('shipout')"
+                aria-expanded="false" aria-controls="ssSectionShipoutBody">
+                <span class="shared-sspec-section-icon"></span>
+                <span class="shared-sspec-section-title">Shared Sspec Shipout</span>
+                <span class="shared-sspec-section-caret">▾</span>
+            </button>
+            <div class="shared-sspec-section-body" id="ssSectionShipoutBody">
+                <div class="shared-sspec-summary-card">
+                    <div class="table-container shared-sspec-summary-table-container">
+                        <table id="shipoutBySspecTable" class="shared-sspec-summary-table">
+                            <thead>
+                                <tr>
+                                    <th>Prodgroup3</th>
+                                    <th>Sspec</th>
+                                    <th>L1.5 WIP</th>
+                                    <th>Shipout</th>
+                                </tr>
+                                <tr class="filter-row">
+                                    <th data-col="prodgroup3">
+                                        <select class="filter-input-field" data-filter-col="prodgroup3"
+                                            onchange="applyShipoutBySspecFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (shipout_by_sspec_prod_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                    <th data-col="sspec">
+                                        <select class="filter-input-field" data-filter-col="sspec"
+                                            onchange="applyShipoutBySspecFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (shipout_by_sspec_sspec_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                    <th data-col="l15wip">
+                                        <select class="filter-input-field" data-filter-col="l15wip"
+                                            onchange="applyShipoutBySspecFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (shipout_by_sspec_l15wip_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                    <th data-col="shipout">
+                                        <select class="filter-input-field" data-filter-col="shipout"
+                                            onchange="applyShipoutBySspecFilters()">
+                                            <option value="">Filter: All</option>
+                                            {% for opt in (shipout_by_sspec_shipout_options or []) %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if shipout_by_sspec_rows and shipout_by_sspec_rows|length > 0 %}
+                                {% for r in shipout_by_sspec_rows %}
+                                <tr>
+                                    <td data-col="prodgroup3">{{ r.prodgroup3 }}</td>
+                                    <td data-col="sspec">{{ r.sspec }}</td>
+                                    <td data-col="l15wip">{{ r.l15wip_disp }}</td>
+                                    <td data-col="shipout">{{ r.shipout_disp }}</td>
+                                </tr>
                                 {% endfor %}
-                            </select>
-                        </th>
-                        <th data-col="dlcp">
-                            <select class="filter-input-field" data-filter-col="dlcp"
-                                onchange="applySharedSspecFilters()">
-                                <option value="">All</option>
-                                {% for opt in (dlcp_options or []) %}
-                                <option value="{{ opt }}">{{ opt }}</option>
-                                {% endfor %}
-                            </select>
-                        </th>
-                        <th data-col="sdd_sequence">
-                            <select class="filter-input-field" data-filter-col="sdd_sequence"
-                                onchange="applySharedSspecFilters()">
-                                <option value="">All</option>
-                                {% for opt in (sdd_sequence_options or []) %}
-                                <option value="{{ opt }}">{{ opt }}</option>
-                                {% endfor %}
-                            </select>
-                        </th>
-                        <th data-col="operation">
-                            <select class="filter-input-field" data-filter-col="operation"
-                                onchange="applySharedSspecFilters()">
-                                <option value="">All</option>
-                                {% for opt in (operation_options or []) %}
-                                <option value="{{ opt }}">{{ opt }}</option>
-                                {% endfor %}
-                            </select>
-                        </th>
-                        <th data-col="wip"></th>
-                        <th data-col="yield"></th>
-                        <th data-col="commit1"></th>
-                        <th data-col="commit2"></th>
-                        <th data-col="shipout"></th>
-                        <th data-col="qtg1"></th>
-                        <th data-col="qtg2"></th>
-                        <th data-col="qps1"></th>
-                        <th data-col="qps2"></th>
-                        <th data-col="stg1"></th>
-                        <th data-col="stg2"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if rows and rows|length > 0 %}
-                    {% for r in rows %}
-                    <tr>
-                        <td data-col="prodgroup3">{{ r.prodgroup3 }}</td>
-                        <td data-col="dlcp">{{ r.dlcp }}</td>
-                        <td data-col="sdd_sequence">{{ r.sdd_sequence }}</td>
-                        <td data-col="operation">{{ r.operation }}</td>
-                        <td data-col="wip">{% if r.wip is none %}{% elif r.wip == (r.wip|int) %}{{ r.wip|int }}{% else
-                            %}{{ '%.3f'|format(r.wip) }}{% endif %}</td>
-                        <td data-col="yield">{% if r.yield is none %}{% elif r.yield == (r.yield|int) %}{{ r.yield|int
-                            }}{% else %}{{ '%.3f'|format(r.yield) }}{% endif %}</td>
-                        <td data-col="commit1">{% if r.commit1 is none %}{% elif r.commit1 == (r.commit1|int) %}{{
-                            r.commit1|int }}{% else %}{{ '%.3f'|format(r.commit1) }}{% endif %}</td>
-                        <td data-col="commit2">{% if r.commit2 is none %}{% elif r.commit2 == (r.commit2|int) %}{{
-                            r.commit2|int }}{% else %}{{ '%.3f'|format(r.commit2) }}{% endif %}</td>
-                        <td data-col="shipout">{% if r.shipout is none %}{% elif r.shipout == (r.shipout|int) %}{{
-                            r.shipout|int }}{% else %}{{ '%.3f'|format(r.shipout) }}{% endif %}</td>
-                        <td data-col="qtg1">{% if r.qtg1 is none %}{% elif r.qtg1 == (r.qtg1|int) %}{{ r.qtg1|int }}{%
-                            else %}{{ '%.3f'|format(r.qtg1) }}{% endif %}</td>
-                        <td data-col="qtg2">{% if r.qtg2 is none %}{% elif r.qtg2 == (r.qtg2|int) %}{{ r.qtg2|int }}{%
-                            else %}{{ '%.3f'|format(r.qtg2) }}{% endif %}</td>
-                        <td data-col="qps1">{% if r.qps1 is none %}{% elif r.qps1 == (r.qps1|int) %}{{ r.qps1|int }}{%
-                            else %}{{ '%.3f'|format(r.qps1) }}{% endif %}</td>
-                        <td data-col="qps2">{% if r.qps2 is none %}{% elif r.qps2 == (r.qps2|int) %}{{ r.qps2|int }}{%
-                            else %}{{ '%.3f'|format(r.qps2) }}{% endif %}</td>
-                        <td data-col="stg1">{% if r.stg1 is none %}{% elif r.stg1 == (r.stg1|int) %}{{ r.stg1|int }}{%
-                            else %}{{ '%.1f'|format(r.stg1) }}{% endif %}</td>
-                        <td data-col="stg2">{% if r.stg2 is none %}{% elif r.stg2 == (r.stg2|int) %}{{ r.stg2|int }}{%
-                            else %}{{ '%.1f'|format(r.stg2) }}{% endif %}</td>
-                    </tr>
-                    {% endfor %}
-                    {% else %}
-                    <tr class="empty-state-row">
-                        <td colspan="15" style="text-align:center; padding:24px;">No data available.</td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+                                {% else %}
+                                <tr class="empty-state-row">
+                                    <td colspan="4" style="text-align:center; padding:16px;">No data available.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="total-row">
+                                    <td data-col="prodgroup3"><strong>Total</strong></td>
+                                    <td data-col="sspec"></td>
+                                    <td data-col="l15wip"></td>
+                                    <td data-col="shipout"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="shared-sspec-section" id="ssSectionDetail" data-section="detail">
+            <button type="button" class="shared-sspec-section-header" onclick="toggleSharedSspecSection('detail')"
+                aria-expanded="true" aria-controls="ssSectionDetailBody">
+                <span class="shared-sspec-section-icon"></span>
+                <span class="shared-sspec-section-title">Detail QTG/QPS</span>
+                <span class="shared-sspec-section-caret">▾</span>
+            </button>
+            <div class="shared-sspec-section-body" id="ssSectionDetailBody">
+                <div class="shared-sspec-row-count" id="ss-row-count">Filter: 0 of 0</div>
+
+                <div class="table-container shared-sspec-main-table" style="max-height: 75vh;">
+                    <table id="testTable" class="shared-sspec-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-col="prodgroup3"
+                                    onclick="sortSharedSspecTable(this, 'prodgroup3')">
+                                    Product Group3 <span class="sort-icon">⇕</span></th>
+                                <th class="sortable" data-col="operation"
+                                    onclick="sortSharedSspecTable(this, 'operation')">
+                                    Operation <span class="sort-icon">⇕</span></th>
+                                <th class="sortable" data-col="wip" onclick="sortSharedSspecTable(this, 'wip')">Usable
+                                    Wip
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="commit1" onclick="sortSharedSspecTable(this, 'commit1')">
+                                    Commit1
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="commit2" onclick="sortSharedSspecTable(this, 'commit2')">
+                                    Commit2
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="shipout" onclick="sortSharedSspecTable(this, 'shipout')">
+                                    Shipout
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="yield" onclick="sortSharedSspecTable(this, 'yield')">
+                                    Yield
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="qtg1" onclick="sortSharedSspecTable(this, 'qtg1')">QTG1
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="qtg2" onclick="sortSharedSspecTable(this, 'qtg2')">QTG2
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="stg1" onclick="sortSharedSspecTable(this, 'stg1')">STG1
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="stg2" onclick="sortSharedSspecTable(this, 'stg2')">STG2
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="qps1" onclick="sortSharedSspecTable(this, 'qps1')">QPS1
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                                <th class="sortable" data-col="qps2" onclick="sortSharedSspecTable(this, 'qps2')">QPS2
+                                    <span class="sort-icon">⇕</span>
+                                </th>
+                            </tr>
+
+                            <!-- Filter Row -->
+                            <tr class="filter-row">
+                                <th data-col="prodgroup3">
+                                    <select class="filter-input-field" data-filter-col="prodgroup3"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (prodgroup3_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="operation">
+                                    <select class="filter-input-field" data-filter-col="operation"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (operation_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="wip">
+                                    <select class="filter-input-field" data-filter-col="wip"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (wip_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="commit1">
+                                    <select class="filter-input-field" data-filter-col="commit1"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (commit1_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="commit2">
+                                    <select class="filter-input-field" data-filter-col="commit2"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (commit2_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="shipout">
+                                    <select class="filter-input-field" data-filter-col="shipout"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (shipout_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="yield">
+                                    <select class="filter-input-field" data-filter-col="yield"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (yield_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="qtg1">
+                                    <select class="filter-input-field" data-filter-col="qtg1"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (qtg1_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="qtg2">
+                                    <select class="filter-input-field" data-filter-col="qtg2"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (qtg2_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="stg1">
+                                    <select class="filter-input-field" data-filter-col="stg1"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (stg1_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="stg2">
+                                    <select class="filter-input-field" data-filter-col="stg2"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (stg2_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="qps1">
+                                    <select class="filter-input-field" data-filter-col="qps1"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (qps1_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th data-col="qps2">
+                                    <select class="filter-input-field" data-filter-col="qps2"
+                                        onchange="applySharedSspecFilters()">
+                                        <option value="">Filter: All</option>
+                                        {% for opt in (qps2_options or []) %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if rows and rows|length > 0 %}
+                            {% for r in rows %}
+                            <tr>
+                                <td data-col="prodgroup3">{{ r.prodgroup3 }}</td>
+                                <td data-col="operation">{{ r.operation }}</td>
+                                <td data-col="wip">{{ r.wip_disp }}</td>
+                                <td data-col="commit1">{{ r.commit1_disp }}</td>
+                                <td data-col="commit2">{{ r.commit2_disp }}</td>
+                                <td data-col="shipout">{{ r.shipout_disp }}</td>
+                                <td data-col="yield">{{ r.yield_disp }}</td>
+                                <td data-col="qtg1">{{ r.qtg1_disp }}</td>
+                                <td data-col="qtg2">{{ r.qtg2_disp }}</td>
+                                <td data-col="stg1">{{ r.stg1_disp }}</td>
+                                <td data-col="stg2">{{ r.stg2_disp }}</td>
+                                <td data-col="qps1">{{ r.qps1_disp }}</td>
+                                <td data-col="qps2">{{ r.qps2_disp }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr class="empty-state-row">
+                                <td colspan="13" style="text-align:center; padding:24px;">No data available.</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td data-col="prodgroup3"><strong>Total</strong></td>
+                                <td data-col="operation"></td>
+                                <td data-col="wip"></td>
+                                <td data-col="commit1"></td>
+                                <td data-col="commit2"></td>
+                                <td data-col="shipout"></td>
+                                <td data-col="yield"></td>
+                                <td data-col="qtg1"></td>
+                                <td data-col="qtg2"></td>
+                                <td data-col="stg1"></td>
+                                <td data-col="stg2"></td>
+                                <td data-col="qps1"></td>
+                                <td data-col="qps2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/shared_sspec.js') }}?v=20260910a"></script>
+
+
+    <script src="{{ url_for('static', filename='js/shared_sspec.js') }}?v=20260911h"></script>
     <script>
         function confirmReportIssue(event) {
             return confirm('This will open your email client to report an issue. Continue?');

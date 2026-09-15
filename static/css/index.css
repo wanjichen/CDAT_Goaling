@@ -558,6 +558,36 @@ body {
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
         }
 
+        .shift-filter-bar .nav-tabs .nav-tabs-links.shared-sspec-select-group {
+            background: transparent;
+            box-shadow: none;
+            gap: 8px;
+            padding: 2px 4px;
+        }
+
+        .shift-filter-bar .nav-tabs .nav-tabs-links.shared-sspec-select-group select.filter-input-field {
+            min-width: 160px;
+            padding: 6px 8px;
+            border: 1px solid var(--ios-separator, var(--primary-border));
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--primary-ink);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
         .shift-filter-bar .nav-tabs .tab-link,
         .shift-filter-bar .nav-tabs .wip-link,
         .shift-filter-bar .nav-tabs .copy-tab-btn {
