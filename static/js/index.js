@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // --- FLEXIBLE COLUMN VISIBILITY ---
     const columnVisibilityConfig = {
         'entity': ['TCB', 'HBC-JDC', 'DIA', 'BA', 'EPX'],
-        'subcell_info': ['TCB', 'DIA', 'BA']
+        'subcell_info': ['TCB', 'BA']
     };
 
     const activePage = currentPage;

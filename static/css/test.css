@@ -487,6 +487,42 @@ body.shared-sspec-page {
   background-color: var(--bg-surface, #ffffff);
 }
 
+/* BP Summary / Shared Sspec Shipout tables: alternate background banding
+   grouped by Prodgroup3 (not just per-row) so all Dlcp/Sspec rows
+   belonging to the same Prodgroup3 are visually grouped together, and
+   adjacent Prodgroup3 groups are easy to tell apart at a glance. A
+   colored left border on the first column reinforces the grouping. */
+#bpSummaryTable tbody tr.bp-band-0 td,
+#shipoutBySspecTable tbody tr.bp-band-0 td {
+  background-color: var(--bg-surface, #ffffff);
+}
+
+#bpSummaryTable tbody tr.bp-band-1 td,
+#shipoutBySspecTable tbody tr.bp-band-1 td {
+  background-color: var(--ios-fill-quaternary, #eef3fb);
+}
+
+/* Emphasize the Shipout and Last WW Shipout columns in BP Summary. */
+#bpSummaryTable td[data-col="shipout"],
+#bpSummaryTable td[data-col="lastww_shipout"] {
+  font-weight: 700;
+}
+
+#bpSummaryTable tbody tr.bp-band-0 td[data-col="prodgroup3"],
+#shipoutBySspecTable tbody tr.bp-band-0 td[data-col="prodgroup3"] {
+  /* Use an inset box-shadow instead of border-left: with
+     border-collapse: collapse + sticky headers, per-cell borders can
+     visually "leak"/misalign during scroll repaints in some browsers.
+     box-shadow isn't affected by border-collapse and renders reliably
+     while scrolling. */
+  box-shadow: inset 3px 0 0 #60a5fa;
+}
+
+#bpSummaryTable tbody tr.bp-band-1 td[data-col="prodgroup3"],
+#shipoutBySspecTable tbody tr.bp-band-1 td[data-col="prodgroup3"] {
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+
 /* "Miss Or Meet" style highlight cells: any cell whose text is MET gets a green badge look. */
 .shared-sspec-summary-table td:last-child {
   font-weight: 700;

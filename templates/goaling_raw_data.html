@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goaling Report - Raw Data</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}?v=20260921d">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/goaling_raw_data.css') }}?v=20261019b">
+</head>
+
+<body class="goaling-raw-data-page">
+    <div id="toast-container"></div>
+
+    <div class="header">
+        <div class="header-left">
+            <h2><a class="header-home-link" href="{{ url_for('index') }}">CDAT MFG Goaling Report</a></h2>
+            <div class="header-meta-banner">
+                <span class="meta-chip">
+                    <span class="icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 2.25A9.75 9.75 0 1 0 21.75 12 9.76 9.76 0 0 0 12 2.25Zm0 18A8.25 8.25 0 1 1 20.25 12 8.26 8.26 0 0 1 12 20.25Z" />
+                            <path
+                                d="M12 12.25a3.5 3.5 0 1 0-3.5-3.5 3.5 3.5 0 0 0 3.5 3.5Zm0-5.5a2 2 0 1 1-2 2 2 2 0 0 1 2-2Z" />
+                            <path
+                                d="M12 13.75c-3.6 0-6.25 1.76-6.25 4.25a.75.75 0 0 0 1.5 0c0-1.48 1.88-2.75 4.75-2.75s4.75 1.27 4.75 2.75a.75.75 0 0 0 1.5 0c0-2.49-2.65-4.25-6.25-4.25Z" />
+                        </svg>
+                    </span>
+                    <span class="value">{{ current_user or 'N/A' }}</span>
+                </span>
+
+                <span class="meta-chip">
+                    <span class="icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 4.2a7.8 7.8 0 0 1 6.9 4.2.75.75 0 1 0 1.33-.7A9.3 9.3 0 0 0 3.6 11a.75.75 0 1 0 1.5 0A7.8 7.8 0 0 1 12 4.2Zm0 15.6a7.8 7.8 0 0 1-6.9-4.2.75.75 0 1 0-1.33.7A9.3 9.3 0 0 0 20.4 13a.75.75 0 1 0-1.5 0 7.8 7.8 0 0 1-6.9 6.8Z" />
+                            <path
+                                d="M20.3 5.8a.75.75 0 0 0-1.06 0l-1.2 1.2a.75.75 0 1 0 1.06 1.06l.67-.67.67.67A.75.75 0 0 0 21.5 7l-1.2-1.2Zm-16.6 12.4a.75.75 0 0 0 1.06 0l1.2-1.2A.75.75 0 0 0 4.93 16l-.67.67-.67-.67A.75.75 0 0 0 2.5 17l1.2 1.2Z" />
+                        </svg>
+                    </span>
+                    <span class="value">Last refresh: {{ last_refresh_at.strftime('%Y-%m-%d %H:%M:%S') if
+                        last_refresh_at else 'N/A' }}</span>
+                </span>
+
+                <span class="meta-chip">
+                    <span class="value">Rows: {{ row_count }}</span>
+                </span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="tab-link btn-secondary btn-export" onclick="exportRawDataToCSV()">
+                <span class="btn-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                        <path
+                            d="M12 3a.75.75 0 0 1 .75.75v9.69l2.72-2.72a.75.75 0 1 1 1.06 1.06l-4 4a.75.75 0 0 1-1.06 0l-4-4a.75.75 0 1 1 1.06-1.06l2.72 2.72V3.75A.75.75 0 0 1 12 3Z" />
+                        <path
+                            d="M4.75 15a.75.75 0 0 1 .75.75v2.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-2.5a.75.75 0 0 1 1.5 0v2.5A2.75 2.75 0 0 1 17.25 21H6.75A2.75 2.75 0 0 1 4 18.25v-2.5a.75.75 0 0 1 .75-.75Z" />
+                    </svg>
+                </span>Export CSV
+            </button>
+            <a class="tab-link btn-secondary btn-issue" href="mailto:wanji.chen@intel.com"
+                onclick="return confirmReportIssue(event)">
+                <span class="btn-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                        <path
+                            d="M5.5 5.25A2.25 2.25 0 0 0 3.25 7.5v9A2.25 2.25 0 0 0 5.5 18.75h13A2.25 2.25 0 0 0 20.75 16.5v-9A2.25 2.25 0 0 0 18.5 5.25h-13Zm-.2 2.28a.75.75 0 0 1 1.02-.27L12 10.4l5.68-3.14a.75.75 0 1 1 .72 1.32l-6.04 3.34a.75.75 0 0 1-.72 0L5.57 8.55a.75.75 0 0 1-.27-1.02Z" />
+                    </svg>
+                </span>Report Issue
+            </a>
+        </div>
+    </div>
+
+    <div class="raw-data-container table-container">
+        <table id="rawDataTable" class="shared-sspec-table" data-prodgroup3-col="{{ prodgroup3_col or '' }}">
+            <thead>
+                <tr>
+                    {% for col in columns %}
+                    <th data-col="{{ col }}">{{ col }}</th>
+                    {% endfor %}
+                </tr>
+                <tr class="filter-row">
+                    {% for col in columns %}
+                    <th data-col="{{ col }}">
+                        <select class="filter-input-field" data-filter-col="{{ col }}" onchange="applyRawDataFilters()">
+                            <option value="">Filter: All</option>
+                            {% for opt in (column_options.get(col) or []) %}
+                            <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% if rows and rows|length > 0 %}
+                {% for r in rows %}
+                <tr>
+                    {% for col in columns %}
+                    <td data-col="{{ col }}">{{ r.get(col, '') }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr class="empty-state-row">
+                    <td colspan="{{ columns|length }}" style="text-align:center; padding:16px;">No data available.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/goaling_raw_data.js') }}"></script>
+    <script>
+        function confirmReportIssue(event) {
+            return confirm('This will open your email client to report an issue. Continue?');
+        }
+    </script>
+</body>
+
+</html>

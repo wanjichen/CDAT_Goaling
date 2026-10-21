@@ -18,7 +18,11 @@ DT_PRODUCTS: set[str] = {
     'RPLS601',
     'RPRS601',
     'MEV',
-    'ARLR816LK'
+    'ARLR816LK',
+    'RPLPS2',
+    'RPLPS6',
+    'M4G',
+    'BTLS601'
 }
 
 # prodgroup3 values that belong to the PCH product family.
@@ -27,6 +31,7 @@ PCH_PRODUCTS: set[str] = {
     'ADP',
     'ADPIOT',
     'MTP',
+    'NVP'
 }
 
 # prodgroup3 values that belong to the Server product family.
@@ -140,15 +145,44 @@ SHARED_SSPEC_PG3_GROUPS = [
         # side table for this group (does not affect the main report
         # table or BP Summary table).
         'shipout_extra_members': ['ARLR816LK'],
+        # Dlcp codes that should always appear in the BP Summary table for
+        # every member of this group, even if MI_Configured_BP.csv has no
+        # row for that (prodgroup3, dlcp) in the current/next work-week.
+        # Missing combinations are shown with blank/zero values.
+        'bp_summary_dlcps': ['FF', 'UV', 'UX'],
     },
     {
         'label': 'RPLP682/RPRP682',
         'members': ['RPLP682', 'RPRP682'],
         'sspec_filter': {'RMHX'},
+        'bp_summary_dlcps': ['FF', 'UV', 'UX', 'UL'],
     },
     {
-        'label': 'BTLS601/RPRS601',
-        'members': ['BTLS601', 'RPRS601'],
-        'sspec_filter': {'RN3J', 'RN3K'},
+        'label': 'BTLS601/RPNS601/RPRS601',
+        'members': ['BTLS601', 'RPNS601', 'RPRS601'],
+        'sspec_filter': {'RN3J', 'RN3K', 'RMX0'},
+        'bp_summary_dlcps': ['FF', 'UV', 'UX'],
     },
 ]
+
+# ---------------------------------------------------------------------------
+# M4G / PP-M4G operation group hover labels
+# ---------------------------------------------------------------------------
+# For prodgroup3 values M4G or PP-M4G, the Operation column on the main
+# Assembly table (index.html) shows a hover tooltip identifying which
+# assembly line the operation code belongs to. Operation codes are matched
+# as strings with any trailing ".0" stripped (to match how they're displayed).
+M4G_ASSEMBLY1_OPS: set[str] = {
+    '1209', '1204', '5651', '2004', '1225', '1987', '2135', '730', '1429',
+    '970', '1430', '1237', '1299', '5653', '2036', '1895', '2150', '2090',
+    '1264', '1501', '2977', '1366', '2978', '4992', '265', '2171', '7666',
+    '5001', '11', '6261', '6262', '6212', '7571', '3777', '7290', '5006',
+}
+
+M4G_ASSEMBLY2_OPS: set[str] = {
+    '488', '2035', '700', '6445', '1867', '1525', '2975', '1031', '2976',
+    '1975', '1535', '1976', '1286', '2237', '6437', '2037', '1545', '2139',
+    '2133', '2633', '565', '2634', '6197', '6245', '9585', '8585', '6511',
+    '7297', '7899', '7300', '1007', '6547', '1991', '8792', '7226', '7356',
+    '7354', '7475', '7345', '7399',
+}

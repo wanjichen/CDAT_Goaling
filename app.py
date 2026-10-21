@@ -1,4 +1,4 @@
-from product_config import DT_PRODUCTS, PCH_PRODUCTS, OLB_GOAL_FACTOR_DT, OLB_GOAL_FACTOR_NON_DT, get_olb_goal_factor, is_excluded_product, SHARED_SSPEC_PG3_GROUPS
+from product_config import DT_PRODUCTS, PCH_PRODUCTS, OLB_GOAL_FACTOR_DT, OLB_GOAL_FACTOR_NON_DT, get_olb_goal_factor, is_excluded_product, SHARED_SSPEC_PG3_GROUPS, M4G_ASSEMBLY1_OPS, M4G_ASSEMBLY2_OPS
 import urllib.parse
 import csv
 import math
@@ -157,6 +157,144 @@ def download_wip_goal_reckon_raw():
         mimetype='text/csv',
         conditional=False,
         max_age=0,
+    )
+
+
+@app.route('/goaling_raw_data.html')
+@app.route('/goaling_raw_data')
+def goaling_raw_data_home():
+    """Display the raw Assembly Goaling data straight from the source CSV.
+
+    Read-only view: data is not stored in the DB, just read directly from
+    data/Assembly_Goaling_Raw_Data.csv on every request.
+    """
+    csv_path = os.path.join(
+        app.root_path, 'data', 'Assembly_Goaling_Raw_Data.csv')
+
+    # Keep only these columns, in this order (matched case-insensitively
+    # against the CSV header since the source file uses upper-case names).
+    KEEP_COLUMNS = [
+        'PRODGROUP3', 'SEQUENCE', 'OPERATION', 'OPER_SHORT_DESC', 'CT',
+        'SHIFTSTARTWIP', 'ENTITY', 'LOT_SAMPLING', 'MOR', 'GOAL', 'GOAL_TYPE',
+    ]
+
+    rows = []
+    columns = []
+    last_refresh_at = None
+    prodgroup3_col = None
+
+    def _strip_pp_prefix(value):
+        s = (value or '').strip()
+        return s[3:] if s.upper().startswith('PP-') else s
+
+    if os.path.exists(csv_path):
+        try:
+            last_refresh_at = datetime.fromtimestamp(
+                os.path.getmtime(csv_path))
+        except Exception:
+            last_refresh_at = None
+
+        try:
+            with open(csv_path, newline='', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                all_fieldnames = list(reader.fieldnames or [])
+                # Map desired column name -> actual CSV header name (case-insensitive).
+                fieldname_lookup = {name.strip(
+                ).upper(): name for name in all_fieldnames}
+                columns = [fieldname_lookup[c]
+                           for c in KEEP_COLUMNS if c in fieldname_lookup]
+                for raw_row in reader:
+                    row = {col: raw_row.get(col) for col in columns}
+                    rows.append(row)
+
+                # Sort so that for each product, the "PP-" prefixed
+                # prodgroup3 (e.g. PP-M4G) appears before the non-prefixed
+                # one (e.g. M4G), and within each, rows are ordered by
+                # SEQUENCE ascending.
+                prodgroup3_col = fieldname_lookup.get('PRODGROUP3')
+                sequence_col = fieldname_lookup.get('SEQUENCE')
+
+                def _sequence_key(value):
+                    s = (value or '').strip()
+                    try:
+                        return (0, float(s))
+                    except (TypeError, ValueError):
+                        return (1, s)
+
+                def _row_sort_key(r):
+                    pg3 = (r.get(prodgroup3_col) or '').strip(
+                    ) if prodgroup3_col else ''
+                    is_pp = pg3.upper().startswith('PP-')
+                    base_name = pg3[3:] if is_pp else pg3
+                    seq_val = r.get(sequence_col) if sequence_col else None
+                    return (base_name.upper(), 0 if is_pp else 1, _sequence_key(seq_val))
+
+                if prodgroup3_col and sequence_col:
+                    rows.sort(key=_row_sort_key)
+
+                # Drop an entire product (base prodgroup3, combining the
+                # "PP-" and non-"PP-" variants) when every row for it has a
+                # GOAL of 0 (or blank) -- i.e. nothing worth showing.
+                goal_col = fieldname_lookup.get('GOAL')
+                if prodgroup3_col and goal_col:
+                    def _goal_is_zero(value):
+                        s = (value or '').strip()
+                        if s == '':
+                            return True
+                        try:
+                            return float(s) == 0
+                        except (TypeError, ValueError):
+                            return False
+
+                    base_names_all_zero = {}
+                    for r in rows:
+                        pg3 = (r.get(prodgroup3_col) or '').strip()
+                        base_name = _strip_pp_prefix(pg3).upper()
+                        is_zero = _goal_is_zero(r.get(goal_col))
+                        base_names_all_zero[base_name] = base_names_all_zero.get(
+                            base_name, True) and is_zero
+
+                    rows = [
+                        r for r in rows
+                        if not base_names_all_zero.get(
+                            _strip_pp_prefix((r.get(prodgroup3_col) or '').strip()).upper(), False)
+                    ]
+        except Exception as e:
+            app.logger.warning(
+                f"Failed to read Assembly_Goaling_Raw_Data.csv: {e}")
+            rows = []
+            columns = []
+
+    # Build per-column filter dropdown options (distinct, non-blank values).
+    column_options = {}
+    for col in columns:
+        if prodgroup3_col and col == prodgroup3_col:
+            # Collapse "PP-M4G" and "M4G" into a single "M4G" option so
+            # selecting it shows both variants in the table.
+            vals = {
+                _strip_pp_prefix((r.get(col) or '').strip())
+                for r in rows if (r.get(col) or '').strip() != ''
+            }
+        else:
+            vals = {(r.get(col) or '').strip()
+                    for r in rows if (r.get(col) or '').strip() != ''}
+
+        def _sort_key(s):
+            try:
+                return (0, float(s))
+            except (TypeError, ValueError):
+                return (1, s)
+        column_options[col] = sorted(vals, key=_sort_key)
+
+    return render_template(
+        'goaling_raw_data.html',
+        rows=rows,
+        columns=columns,
+        column_options=column_options,
+        current_user=get_current_user(),
+        last_refresh_at=last_refresh_at,
+        row_count=len(rows),
+        prodgroup3_col=prodgroup3_col,
     )
 
 
@@ -405,12 +543,13 @@ def shared_sspec_home():
 
     # --- BP Summary table: Prodgroup3, Dlcp, Commit1, Commit2, Shipout ---
     # Source: MI_Configured_BP.csv (columns: ww, prodgroup3, dlcp, bp, shipout).
-    # Only the current work-week (ww) and next work-week rows are shown, per
-    # the current shift/date as determined from calendar.csv. Each
-    # (prodgroup3, dlcp) normally has a single row for the current ww and a
-    # single row for the next ww; the current ww row's bp becomes Commit1,
-    # and the next ww row's bp becomes Commit2. Shipout is taken from the
-    # current ww row.
+    # Only the current work-week (ww) rows are used to build each row's
+    # identity, Shipout, and Last WW Shipout (per the current shift/date as
+    # determined from calendar.csv). Commit1 is the current-week bp.
+    # Commit2 is looked up separately as the *next* work-week's bp (computed
+    # arithmetically from the current ww, e.g. WW39 -> WW40) for the same
+    # (prodgroup3, dlcp), regardless of whether that next-week row would
+    # otherwise be filtered out.
     bp_csv_path = os.path.join(
         app.root_path, 'data', 'SharedSspec', 'MI_Configured_BP.csv')
 
@@ -420,13 +559,46 @@ def shared_sspec_home():
     except Exception:
         current_ww = None
 
-    next_ww = None
-    try:
-        next_ww = get_next_ww_from_calendar()
-    except Exception:
-        next_ww = None
+    prev_ww = _prev_ww_label(current_ww)
+    next_ww = _next_ww_label(current_ww)
+
+    # --- Shipout_Summary.csv: authoritative per-(ww, prodgroup3, dlcp)
+    # shipout values (column newqty1, in units of 1/1000 vs. the "shipout"
+    # scale used elsewhere on this page). Used to fill/override the
+    # Shipout and Last WW Shipout columns of the BP Summary table so they
+    # don't depend on MI_Configured_BP.csv having its own shipout/
+    # LastWW_Shipout columns populated.
+    shipout_summary_csv_path = os.path.join(
+        app.root_path, 'data', 'SharedSspec', 'Shipout_Summary.csv')
+    shipout_summary_map = {}
+    if os.path.exists(shipout_summary_csv_path):
+        try:
+            with open(shipout_summary_csv_path, newline='', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                for raw_row in reader:
+                    ww = (raw_row.get('ww') or '').strip().upper()
+                    pg3 = (raw_row.get('prodgroup3') or '').strip()
+                    dlcp = (raw_row.get('dlcp') or '').strip()
+                    if not ww or not pg3 or not dlcp:
+                        continue
+                    newqty1 = _to_float_or_none(raw_row.get('newqty1'))
+                    if newqty1 is None:
+                        continue
+                    shipout_summary_map[(ww, pg3, dlcp)] = newqty1 / 1000.0
+        except Exception as e:
+            app.logger.warning(f"Failed to read Shipout_Summary.csv: {e}")
+            shipout_summary_map = {}
+
+    def _shipout_summary_lookup(ww, pg3, dlcp):
+        if not ww:
+            return None
+        return shipout_summary_map.get((ww, pg3, dlcp))
 
     bp_groups = {}
+    # Separate map of every (prodgroup3, dlcp, ww) -> bp seen in the CSV,
+    # regardless of week filtering above. Used solely to resolve Commit2
+    # (next work-week's bp) for each row below.
+    bp_by_pg3_dlcp_ww = {}
     if os.path.exists(bp_csv_path):
         try:
             with open(bp_csv_path, newline='', encoding='utf-8-sig') as f:
@@ -440,13 +612,11 @@ def shared_sspec_home():
                     if pg3 not in selected_pg3_members_set:
                         continue
                     ww_upper = ww.upper()
-                    if current_ww and ww_upper == current_ww:
-                        pass
-                    elif next_ww and ww_upper == next_ww:
-                        pass
-                    else:
-                        continue
                     bp_val = _to_float_or_none(raw_row.get('bp'))
+                    bp_by_pg3_dlcp_ww[(pg3, dlcp, ww_upper)] = bp_val
+
+                    if not current_ww or ww_upper != current_ww:
+                        continue
                     shipout_val = _to_float_or_none(raw_row.get('shipout'))
                     lastww_shipout_val = _to_float_or_none(
                         raw_row.get('LastWW_Shipout'))
@@ -456,13 +626,16 @@ def shared_sspec_home():
         except Exception as e:
             app.logger.warning(f"Failed to read MI_Configured_BP.csv: {e}")
             bp_groups = {}
+            bp_by_pg3_dlcp_ww = {}
 
     bp_summary_rows = []
     for (pg3, dlcp), entries in bp_groups.items():
         commit1 = next(
             (e[1] for e in entries if current_ww and e[0] == current_ww), None)
-        commit2 = next(
-            (e[1] for e in entries if next_ww and e[0] == next_ww), None)
+        # Commit2 = next work-week's bp for this (prodgroup3, dlcp), looked
+        # up independently of the current-week row filtering above.
+        commit2 = bp_by_pg3_dlcp_ww.get(
+            (pg3, dlcp, next_ww)) if next_ww else None
         shipout_val = next(
             (e[2] for e in entries if current_ww and e[0]
              == current_ww and e[2] is not None),
@@ -471,6 +644,17 @@ def shared_sspec_home():
             (e[3] for e in entries if current_ww and e[0]
              == current_ww and e[3] is not None),
             next((e[3] for e in entries if e[3] is not None), None))
+
+        # Prefer Shipout_Summary.csv as the authoritative source for Shipout
+        # and Last WW Shipout when it has data for this (ww, pg3, dlcp);
+        # fall back to whatever MI_Configured_BP.csv provided above.
+        summary_shipout = _shipout_summary_lookup(current_ww, pg3, dlcp)
+        if summary_shipout is not None:
+            shipout_val = summary_shipout
+        summary_lastww_shipout = _shipout_summary_lookup(prev_ww, pg3, dlcp)
+        if summary_lastww_shipout is not None:
+            lastww_shipout_val = summary_lastww_shipout
+
         bp_summary_rows.append({
 
             'prodgroup3': pg3,
@@ -484,6 +668,40 @@ def shared_sspec_home():
             'lastww_shipout': lastww_shipout_val,
             'lastww_shipout_disp': _fmt3(lastww_shipout_val) or '0',
         })
+
+    # Ensure certain (prodgroup3, dlcp) combinations always appear in the BP
+    # Summary table for the currently selected group, even if
+    # MI_Configured_BP.csv has no matching row for the current/next
+    # work-week. This keeps a stable set of Dlcp rows visible per group
+    # (e.g. RPRP682/RPLP682 should always show FF, UV, UX, UL) instead of
+    # silently disappearing when the upstream data feed is missing a row.
+    # Shipout / Last WW Shipout for these backfilled rows are pulled from
+    # Shipout_Summary.csv when available.
+    required_dlcps = selected_pg3_group_info.get('bp_summary_dlcps') or []
+    if required_dlcps:
+        existing_keys = {(r['prodgroup3'], r['dlcp'])
+                         for r in bp_summary_rows}
+        for pg3 in selected_pg3_members:
+            for dlcp in required_dlcps:
+                if (pg3, dlcp) in existing_keys:
+                    continue
+                fill_shipout = _shipout_summary_lookup(
+                    current_ww, pg3, dlcp)
+                fill_lastww_shipout = _shipout_summary_lookup(
+                    prev_ww, pg3, dlcp)
+                bp_summary_rows.append({
+                    'prodgroup3': pg3,
+                    'dlcp': dlcp,
+                    'commit1': None,
+                    'commit1_disp': '0',
+                    'commit2': None,
+                    'commit2_disp': '0',
+                    'shipout': fill_shipout,
+                    'shipout_disp': _fmt3(fill_shipout) or '0',
+                    'lastww_shipout': fill_lastww_shipout,
+                    'lastww_shipout_disp': _fmt3(fill_lastww_shipout) or '0',
+                })
+
     bp_summary_rows.sort(key=lambda r: (r['prodgroup3'], r['dlcp']))
 
     def _bp_options(key, formatted=False):
@@ -568,7 +786,32 @@ def download_goal_output():
     # Test modules (should only come from TestReport table, not Report)
     test_modules = ['HDMx', 'PHVI', 'V8', 'OLB', 'BI', 'STHI', 'MARK', 'DVI']
 
-    # Query assembly modules (exclude test modules)
+    # Query assembly modules (exclude test modules).
+    #
+    # Use the SAME "latest row" + "hide blank-entity duplicate" rules as the
+    # live UI (get_latest_report_ids_for_shift_and_page), applied per
+    # (shift, module) pair. Without this, a stray/older blank-entity row for
+    # a prodgroup3+operation that the live table correctly hides would still
+    # get summed here as an extra line, producing a spurious duplicate
+    # prodgroup3 row (one with entity, one blank) in the export.
+    distinct_shift_assembly_modules = db.session.query(
+        Report.shift, Report.module
+    ).filter(
+        Report.shift.in_(shifts),
+        Report.module.notin_(test_modules),
+        (Report.is_deleted.is_(None)) | (Report.is_deleted.is_(False))
+    ).distinct().all()
+
+    assembly_ids = []
+    for shift_val, module_val in distinct_shift_assembly_modules:
+        if not shift_val or not module_val:
+            continue
+        ids_subq = get_latest_report_ids_for_shift_and_page(
+            shift_val, module_val)
+        assembly_ids.extend(
+            row.id for row in db.session.query(ids_subq.c.id).all()
+        )
+
     assembly_query = db.session.query(
         Report.shift,
         Report.module,
@@ -582,15 +825,13 @@ def download_goal_output():
         db.func.sum(db.func.coalesce(Report.qps1, 0)).label('total_qps1'),
         db.func.sum(db.func.coalesce(Report.qps2, 0)).label('total_qps2')
     ).filter(
-        Report.shift.in_(shifts),
-        Report.module.notin_(test_modules),
-        (Report.is_deleted.is_(None)) | (Report.is_deleted.is_(False))
+        Report.id.in_(assembly_ids)
     ).group_by(
         Report.shift,
         Report.module,
         Report.prodgroup3,
         Report.entity
-    ).all()
+    ).all() if assembly_ids else []
 
     # Query test modules: get the LATEST row(s) per (shift, module) using the
     # SAME grouping rules as the live UI (get_latest_test_report_ids_for_shift_and_page),
@@ -601,6 +842,7 @@ def download_goal_output():
         TestReport.shift, TestReport.module
     ).filter(
         TestReport.shift.in_(shifts),
+        TestReport.module.in_(test_modules),
         (TestReport.is_deleted.is_(None)) | (TestReport.is_deleted.is_(False))
     ).distinct().all()
 
@@ -875,12 +1117,13 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
     """Mirror the assembly latest-per-group logic for the test table.
 
     For STHI and HDMx, rows are uniquely identified by (prodgroup3, operation, dlcp).
-    For PHVI, rows are uniquely identified by prodgroup3 only
-      (operation is irrelevant - sync functions treat this module at prodgroup3 level).
-    For MARK, DVI, BI, V8, OLB, and other modules, rows are uniquely identified
+    For PHVI and MARK, rows are uniquely identified by prodgroup3 only
+      (operation is irrelevant - sync functions treat these modules at
+      prodgroup3 level; MARK multi-operation support was removed).
+    For DVI, BI, V8, OLB, and other modules, rows are uniquely identified
       by (prodgroup3, operation).
-      (MARK and DVI support multiple active operations per prodgroup3 - see
-      sync_mark_goal / sync_dvi_goal.)
+      (DVI supports multiple active operations per prodgroup3 - see
+      sync_dvi_goal.)
     """
     filtered = db.session.query(
         TestReport.id,
@@ -902,15 +1145,15 @@ def get_latest_test_report_ids_for_shift_and_page(latest_shift, page_name):
             TestReport.operation,
             TestReport.dlcp,
         ).subquery()
-    # DVI, PHVI: one row per prodgroup3 - operation is ignored by sync logic
-    elif page_name in ('PHVI',):
+    # PHVI, MARK: one row per prodgroup3 - operation is ignored by sync logic
+    elif page_name in ('PHVI', 'MARK'):
         latest_ids = filtered.with_entities(
             db.func.max(TestReport.id).label('id')
         ).group_by(
             TestReport.prodgroup3,
         ).subquery()
     else:
-        # MARK, DVI, BI, V8, OLB, etc.: one row per (prodgroup3, operation)
+        # DVI, BI, V8, OLB, etc.: one row per (prodgroup3, operation)
         latest_ids = filtered.with_entities(
             db.func.max(TestReport.id).label('id')
         ).group_by(
@@ -1232,6 +1475,44 @@ def get_next_ww_from_calendar():
     return None
 
 
+def _prev_ww_label(ww):
+    """Given a work-week label like 'WW38', return the previous work-week
+    label 'WW37'. Handles year rollover naively (WW01 -> WW52) since work
+    weeks reset per-year; returns None if ww can't be parsed.
+    """
+    if not ww:
+        return None
+    ww = ww.strip().upper()
+    if not ww.startswith('WW'):
+        return None
+    digits = ww[2:]
+    try:
+        n = int(digits)
+    except ValueError:
+        return None
+    prev_n = n - 1 if n > 1 else 52
+    return f"WW{prev_n:02d}"
+
+
+def _next_ww_label(ww):
+    """Given a work-week label like 'WW39', return the next work-week
+    label 'WW40'. Handles year rollover naively (WW52 -> WW01) since work
+    weeks reset per-year; returns None if ww can't be parsed.
+    """
+    if not ww:
+        return None
+    ww = ww.strip().upper()
+    if not ww.startswith('WW'):
+        return None
+    digits = ww[2:]
+    try:
+        n = int(digits)
+    except ValueError:
+        return None
+    next_n = n + 1 if n < 52 else 1
+    return f"WW{next_n:02d}"
+
+
 def get_latest_report_ids_for_shift_and_page(latest_shift, page_name):
     filtered = db.session.query(
         Report.id,
@@ -1473,25 +1754,19 @@ def sync_phvi_goal(year: int, shift: str, prodgroup3: str, user: str):
 def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
     """Sync MARK goal(s) when STHI goal changes.
 
-    Formula (per MARK operation row): MARK.goal = STHI_goal_sum * 0.9 + MARK.shift_start_wip
+    Formula: MARK.goal = STHI_goal_sum * 0.9 + MARK.shift_start_wip
 
     - STHI is summed across ALL rows (all operations + all dlcp) for the same prodgroup3
-    - MARK supports MULTIPLE active rows per prodgroup3, one per operation.
-      Each MARK row is matched/updated independently by (prodgroup3, operation);
-      the shared STHI-driven portion (STHI_goal_sum * 0.9) is applied to EVERY
-      active MARK operation row for this prodgroup3, on top of that row's own
-      shift_start_wip. (Option A: no splitting/proration across operations.)
-    - If NO active MARK row exists yet for this prodgroup3 at all, one is
+    - MARK supports only ONE active row per prodgroup3 (multi-operation
+      support was removed). Matched/updated using MAX(id), same as PHVI.
+    - If NO active MARK row exists yet for this prodgroup3, one is
       auto-created with the default operation code '7300' and all-zero
-      defaults (same as before multi-operation support was added). If one or
-      more MARK rows already exist, no new row is auto-created - only the
-      existing rows are updated.
-    - If STHI is deleted/absent AND a MARK row's shift_start_wip = 0, that
+      defaults.
+    - If STHI is deleted/absent AND the MARK row's shift_start_wip = 0, the
       MARK row is soft-deleted. If shift_start_wip != 0, its goal is reset to
       just the shift_start_wip.
-    - Duplicate active MARK rows for the SAME (prodgroup3, operation) are
-      still deduped down to the MAX(id) row (true duplicates only - different
-      operations are never considered duplicates of each other).
+    - Duplicate active MARK rows for the same prodgroup3 are deduped down to
+      the MAX(id) row.
     - No prodgroup3 exclusions
     """
     try:
@@ -1505,11 +1780,10 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
                 TestReport.is_deleted == False)
         ).first() is not None
 
-        # Find all active MARK operations for this prodgroup3, one MAX(id) per operation
-        # (dedupes true duplicates - same prodgroup3 + same operation - while
-        # keeping distinct operations as separate rows).
-        mark_ids_per_op = db.session.query(
-            db.func.max(TestReport.id).label('id')
+        # Find the existing MARK row using MAX(id) to match UI's latest-row
+        # logic (one row per prodgroup3, like PHVI).
+        mark_max_id = db.session.query(
+            db.func.max(TestReport.id)
         ).filter(
             TestReport.year == year,
             TestReport.shift == shift,
@@ -1517,31 +1791,30 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.module == 'MARK',
             (TestReport.is_deleted.is_(None)) | (
                 TestReport.is_deleted == False)
-        ).group_by(TestReport.operation).all()
+        ).scalar()
 
-        mark_ids = [row.id for row in mark_ids_per_op]
-        mark_rows = db.session.query(TestReport).filter(
-            TestReport.id.in_(mark_ids)).all() if mark_ids else []
+        mark_row = db.session.get(
+            TestReport, mark_max_id) if mark_max_id else None
 
-        # Soft-delete any duplicate active MARK rows for the same (prodgroup3, operation)
+        # Soft-delete any duplicate active MARK rows for this prodgroup3
         # (lower id than the MAX(id) kept above).
-        if mark_ids:
+        if mark_row:
             db.session.query(TestReport).filter(
                 TestReport.year == year,
                 TestReport.shift == shift,
                 TestReport.prodgroup3 == prodgroup3,
                 TestReport.module == 'MARK',
-                ~TestReport.id.in_(mark_ids),
+                TestReport.id != mark_row.id,
                 (TestReport.is_deleted.is_(None)) | (
                     TestReport.is_deleted == False)
             ).update({TestReport.is_deleted: True}, synchronize_session='fetch')
 
-        # If STHI doesn't exist, handle MARK deletion or WIP-only update for each row
+        # If STHI doesn't exist, handle MARK deletion or WIP-only update
         if not sthi_exists:
-            for mark_row in mark_rows:
+            if mark_row:
                 shift_start_wip = float(mark_row.shift_start_wip or 0)
                 if shift_start_wip == 0:
-                    # No STHI and no WIP - soft delete this MARK row
+                    # No STHI and no WIP - soft delete MARK
                     mark_row.is_deleted = True
                     mark_row.goal_adjusted_at = datetime.now()
                     mark_row.goal_adjusted_by = user
@@ -1554,7 +1827,7 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
                         mark_goal, mor_val)
                     mark_row.goal_adjusted_at = datetime.now()
                     mark_row.goal_adjusted_by = user
-            db.session.commit()
+                db.session.commit()
             # Cascade: MARK changed (deleted or WIP-only goal) - sync DVI too.
             db.session.flush()
             sync_dvi_goal(year, shift, prodgroup3, user)
@@ -1572,22 +1845,22 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
                 TestReport.is_deleted == False)
         ).scalar() or 0
 
-        # Apply STHI * 0.9 + own shift_start_wip to EVERY active MARK operation row.
-        for mark_row in mark_rows:
-            shift_start_wip = float(mark_row.shift_start_wip or 0)
-            mark_goal = round(float(sthi_goal) * 0.9 + shift_start_wip, 1)
-            mor_val = float(mark_row.mor or 0)
-            calculated_tr = compute_tr_from_goal_and_mor(mark_goal, mor_val)
+        # Calculate MARK goal: STHI * 0.9 + shift_start_wip
+        shift_start_wip = float(
+            mark_row.shift_start_wip or 0) if mark_row else 0
+        mark_goal = round(float(sthi_goal) * 0.9 + shift_start_wip, 1)
 
+        mor_val = float(mark_row.mor or 0) if mark_row else 0
+        calculated_tr = compute_tr_from_goal_and_mor(mark_goal, mor_val)
+
+        if mark_row:
             mark_row.goal = mark_goal
             mark_row.tr = calculated_tr
             mark_row.goal_adjusted_at = datetime.now()
             mark_row.goal_adjusted_by = user
-
-        if not mark_rows:
-            # No MARK row exists yet for this prodgroup3 at all - auto-create
-            # one with the default operation code, same as before.
-            mark_goal = round(float(sthi_goal) * 0.9, 1)
+        else:
+            # No MARK row exists yet for this prodgroup3 - auto-create one
+            # with the default operation code.
             new_mark = TestReport(
                 year=year,
                 shift=shift,
@@ -1596,7 +1869,7 @@ def sync_mark_goal(year: int, shift: str, prodgroup3: str, user: str):
                 module='MARK',
                 mor=0,
                 goal=mark_goal,
-                tr=compute_tr_from_goal_and_mor(mark_goal, 0),
+                tr=calculated_tr,
                 dlcp=None,
                 capacity=0,
                 link_cell_qty=0,
@@ -1657,9 +1930,10 @@ def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
                 TestReport.is_deleted == False)
         ).first() is not None
 
-        # Find all active DVI operations for this prodgroup3, one MAX(id) per operation
-        # (dedupes true duplicates - same prodgroup3 + same operation - while
-        # keeping distinct operations as separate rows).
+        # Find all active DVI operations for this prodgroup3, one MAX(id) per
+        # (prodgroup3, operation) - same pattern used elsewhere (see
+        # get_latest_test_report_ids_for_shift_and_page / sync_mark_goal) so
+        # duplicates are dedupe'd consistently across modules.
         dvi_ids_per_op = db.session.query(
             db.func.max(TestReport.id).label('id')
         ).filter(
@@ -1669,7 +1943,7 @@ def sync_dvi_goal(year: int, shift: str, prodgroup3: str, user: str):
             TestReport.module == 'DVI',
             (TestReport.is_deleted.is_(None)) | (
                 TestReport.is_deleted == False)
-        ).group_by(TestReport.operation).all()
+        ).group_by(TestReport.prodgroup3, TestReport.operation).all()
 
         dvi_ids = [row.id for row in dvi_ids_per_op]
         dvi_rows = db.session.query(TestReport).filter(
@@ -2048,6 +2322,8 @@ def index(page_name='TCB'):
         current_page=page_name,
         last_refresh_at=last_refresh_at,
         last_refresh_source=last_refresh_source,
+        m4g_assembly1_ops=M4G_ASSEMBLY1_OPS,
+        m4g_assembly2_ops=M4G_ASSEMBLY2_OPS,
     )
 
 
@@ -3020,13 +3296,27 @@ def finish_add_new_goal():
     try:
         default_year, default_shift = get_current_year_and_shift_from_calendar()
         page = (data.get('page') or '').strip()
+        requested_shift = (data.get('shift') or '').strip()
+
+        # Honor the shift the user is currently viewing (e.g. an older shift
+        # selected via the shift dropdown) instead of always defaulting to
+        # the current calendar shift. Otherwise the new row silently gets
+        # created under a different shift and never shows up after reload.
+        entry_shift = requested_shift or default_shift
+        entry_year = default_year
+        if requested_shift and requested_shift != default_shift:
+            existing_year = db.session.query(TestReport.year).filter(
+                TestReport.shift == requested_shift
+            ).order_by(TestReport.id.desc()).limit(1).scalar()
+            if existing_year is not None:
+                entry_year = existing_year
 
         # Use page (tab name) directly as module - matches database module values
         module_val = page if page else 'Unknown'
 
         new_entry = TestReport(
-            year=default_year,
-            shift=default_shift,
+            year=entry_year,
+            shift=entry_shift,
             prodgroup3=data.get('prodgroup3'),
             operation=data.get('operation'),
             module=module_val,
@@ -3036,7 +3326,7 @@ def finish_add_new_goal():
             capacity=0,
             link_cell_qty=data.get('link_cell_qty') or 0,
             shift_start_wip=0,
-            comment=data.get('comment'),
+            miss_goal_comment=data.get('comment'),
             goal_adjusted_at=datetime.now(),
             goal_adjusted_by=user,
         )
@@ -3051,7 +3341,7 @@ def finish_add_new_goal():
 
         # Sync DVI goal if a MARK goal was added
         if module_val == 'MARK':
-            sync_dvi_goal(default_year, default_shift,
+            sync_dvi_goal(entry_year, entry_shift,
                           new_entry.prodgroup3, user)
 
         return json_success(
